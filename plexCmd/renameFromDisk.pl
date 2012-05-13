@@ -16,9 +16,9 @@ if ($ENV{'DEBUG'}) {
 }
 
 # Parameters
-my ($host, $user, $pass, $section, $series) = @ARGV;
-if (!$host || !$user || !$pass || (!$section && !$series)) {
-	die('Usage: ' . basename($0) . ' host[:port] user passwd section_number [series_metadata_number]');
+my ($host, $section, $series, $season) = @ARGV;
+if (!$host || (!$section && !$series && !$season)) {
+	die('Usage: ' . basename($0) . ' host[:port] [section_number] [series_metadata_number] [season_metadata_number]');
 }
 
 # Globals
@@ -26,59 +26,68 @@ if (!($host =~ /\:\d+$/)) {
 	$host .= ':32400';
 }
 my $baseURL = 'http://' . $host;
-my $auth    = 'X-Plex-User=' . $user . '&X-Plex-Pass=' . $pass;
 my $xml     = new XML::Simple;
 
-my @shows = ();
-if ($series) {
+my @shows = ();	
+if (!$season) {
+	if ($series) {
 
-	# Fetch just the provided show
-	print STDERR 'Fetching show ' . $series . "\n";
-	@shows = ('/library/metadata/' . $series . '/children');
-} else {
+		# Fetch just the provided show
+		print STDERR 'Fetching show ' . $series . "\n";
+		@shows = ('/library/metadata/' . $series . '/children');
+	} else {
 
-	# Fetch the list of all shows in the section
-	print STDERR "Fetching shows...\n";
-	{
-		my $content = get($baseURL . '/library/sections/' . $section . '/all/?' . $auth);
-		if ($DEBUG) {
-			print STDERR $baseURL . '/library/sections/' . $section . '/all/?' . $auth . "\n";
-		}
-		if (!$content) {
-			die(basename($0) . ': Unable to fetch data for section: ' . $section . "\n");
-		}
-
-		# Find all TV shows in the section
+		# Fetch the list of all shows in the section
+		print STDERR "Fetching shows...\n";
 		{
-			my $tree = $xml->XMLin($content);
-			@shows = keys(%{ $tree->{'Directory'} });
+			my $content = get($baseURL . '/library/sections/' . $section . '/all/');
+			if ($DEBUG) {
+				print STDERR $baseURL . '/library/sections/' . $section . '/all/' . "\n";
+			}
+			if (!$content) {
+				die(basename($0) . ': Unable to fetch data for section: ' . $section . "\n");
+			}
+
+			# Find all TV shows in the section
+			{
+				my $tree = $xml->XMLin($content);
+				@shows = keys(%{ $tree->{'Directory'} });
+			}
 		}
+		print STDERR 'Found ' . scalar(@shows) . " shows\n";
 	}
-	print STDERR 'Found ' . scalar(@shows) . " shows\n";
 }
 
-# Fetch the list of all seasons in each show
 my @seasons = ();
-print STDERR "Fetching seasons...\n";
-foreach my $show (@shows) {
-	my $content = get($baseURL . $show . '?' . $auth);
-	if ($DEBUG) {
-		print STDERR $baseURL . $show . '?' . $auth . "\n";
-	}
-	if (!$content) {
-		warn(basename($0) . ': Could not fetch seasons for show: ' . $show . "\n");
-		next;
-	}
+if ($season) {
 
-	# Find all seasons in the show
-	{
-		my $tree = $xml->XMLin($content);
+	# Fetch just the provided season
+	print STDERR 'Fetching season ' . $season . "\n";
+	@seasons = ('/library/metadata/' . $season . '/children');
+} else {
 
-		# XML::Simple retuns different structure depending on the number of same-named child elements
-		if ($tree->{'Directory'}->{'key'}) {
-			push(@seasons, $tree->{'Directory'}->{'key'});
-		} else {
-			push(@seasons, keys(%{ $tree->{'Directory'} }));
+	# Fetch the list of all seasons in each show
+	print STDERR "Fetching seasons...\n";
+	foreach my $show (@shows) {
+		my $content = get($baseURL . $show);
+		if ($DEBUG) {
+			print STDERR $baseURL . $show . "\n";
+		}
+		if (!$content) {
+			warn(basename($0) . ': Could not fetch seasons for show: ' . $show . "\n");
+			next;
+		}
+
+		# Find all seasons in the show
+		{
+			my $tree = $xml->XMLin($content);
+
+			# XML::Simple retuns different structure depending on the number of same-named child elements
+			if ($tree->{'Directory'}->{'key'}) {
+				push(@seasons, $tree->{'Directory'}->{'key'});
+			} else {
+				push(@seasons, keys(%{ $tree->{'Directory'} }));
+			}
 		}
 	}
 }
@@ -91,9 +100,9 @@ undef(@shows);
 my @episodes = ();
 print STDERR "Fetching episodes...\n";
 foreach my $season (@seasons) {
-	my $content = get($baseURL . $season . '?' . $auth);
+	my $content = get($baseURL . $season);
 	if ($DEBUG) {
-		print STDERR $baseURL . $season . '?' . $auth . "\n";
+		print STDERR $baseURL . $season . "\n";
 	}
 	if (!$content) {
 		warn(basename($0) . ': Could not fetch episodes for season: ' . $season . "\n");
@@ -120,9 +129,9 @@ undef(@seasons);
 # Fetch the metadata from each episode
 print STDERR "Checking episodes...\n";
 foreach my $episode (@episodes) {
-	my $content = get($baseURL . $episode . '?' . $auth);
+	my $content = get($baseURL . $episode);
 	if ($DEBUG) {
-		print STDERR $baseURL . $episode . '?' . $auth . "\n";
+		print STDERR $baseURL . $episode . "\n";
 	}
 	if (!$content) {
 		warn(basename($0) . ': Could not fetch metadata for episode: ' . $episode . "\n");
@@ -131,8 +140,8 @@ foreach my $episode (@episodes) {
 
 	# Parse the metadata
 	{
-		my $tree    = $xml->XMLin($content);
-		my $title   = $tree->{'Video'}->{'title'};
+		my $tree  = $xml->XMLin($content);
+		my $title = $tree->{'Video'}->{'title'};
 		my $summary = $tree->{'Video'}->{'summary'};
 		my $file    = $tree->{'Video'}->{'Media'}->{'Part'}->{'file'};
 
@@ -161,18 +170,18 @@ foreach my $episode (@episodes) {
 		if ($file =~ /\s+S\d+D\d+\-\d+$/) {
 			print STDERR 'Skipping encoder-named file: ' . $file . "\n";
 		}
-		if ($title =~ /^Episode\s+\d+$/) {
+		if ($title =~ /^Episode\s+\d+$/ || $title =~ /^\d{4}\-\d{2}\-\d{2}$/) {
 			my $ua      = LWP::UserAgent->new();
 			my $encoded = uri_escape($file);
 
 			print STDERR 'Renaming ' . $episode . ' from "' . $title . '" to "' . $file . '"' . "\n";
-			my $url = $baseURL . $episode . '?title=' . $encoded . '&titleSort=' . $encoded . '&title.locked=1&titleSort.locked=1&' . $auth;
+			my $url = $baseURL . $episode . '?title=' . $encoded . '&titleSort=' . $encoded . '&title.locked=1&titleSort.locked=1';
 			my $request = HTTP::Request->new('PUT' => $url);
 			$ua->request($request);
 
 			if (!$summary) {
 				print STDERR "\tAlso setting summary\n";
-				$url = $baseURL . $episode . '?title=' . $encoded . '&summary=' . $encoded . '&summary.locked=1&' . $auth;
+				$url = $baseURL . $episode . '?title=' . $encoded . '&summary=' . $encoded . '&summary.locked=1';
 				$request = HTTP::Request->new('PUT' => $url);
 				$ua->request($request);
 			}
