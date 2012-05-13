@@ -1,0 +1,18 @@
+#!/usr/bin/perl -w
+use strict;
+
+my $prefix = '';
+while (<STDIN>) {
+	foreach my $field (split(/\>/, $_)) {
+		$field =~ s/\>/\>\n/g;
+		$field =~ s/\<\/?\w+$//g;
+		if ($field =~ /^\s*$/) {
+			next;
+		}
+		if ($field =~ /^\//) {
+			$prefix = $field;
+			next;
+		}
+		print $prefix . $field . "\n";
+	}
+}

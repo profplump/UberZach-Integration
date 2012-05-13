@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>UserName</key>
+	<string>tv</string>
+	<key>LimitLoadToHosts</key>
+	<array>
+		<string>heady.uberzach.com</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>Label</key>
+	<string>com.uberzach.ola.rope</string>
+	<key>KeepAlive</key>
+	<dict>
+		<key>OtherJobEnabled</key>
+		<dict>
+			<key>com.uberzach.ola.dmx</key>
+			<true/>
+			<key>com.uberzach.projector</key>
+			<true/>
+		</dict>
+	</dict>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/Users/tv/bin/video/dmx/rope.pl</string>
+		<string>0.25</string>
+	</array>
+</dict>
+</plist>

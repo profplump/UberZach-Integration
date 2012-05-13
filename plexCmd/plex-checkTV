@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# Path must be the default /Volumes and not /mnt -- Plex stores the former in its DB
+TV_PATH="/Volumes/media/TV"
+
+# Get the list of TV files in the library
+LIB_TEMP="`mktemp -t 'checkTV.XXXXXXXX'`"
+~/bin/video/plex-files | ~/bin/video/plex-filter | grep "^${TV_PATH}/" | sort -f > "${LIB_TEMP}"
+
+# Bail if we did not find anything
+if [ `cat "${LIB_TEMP}" | wc -l` -lt 1 ]; then
+	exit 1
+fi
+
+# Get the list of all files on the disk
+DISK_TEMP="`mktemp -t 'checkTV.XXXXXXXX'`"
+find "${TV_PATH}" -type f -name '*.m[op4k][4v]' | grep -v '\/\._' | sort -f > "${DISK_TEMP}"
+
+# Compare
+diff -i -U 0 "${DISK_TEMP}" "${LIB_TEMP}" | grep -v '^---' | grep -v '^+++' | grep -v '@@' | grep -v '^+'
+
+# Cleanup
+rm -rf "${LIB_TEMP}" "${DISK_TEMP}"

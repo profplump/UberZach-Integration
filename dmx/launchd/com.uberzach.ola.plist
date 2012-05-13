@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>UserName</key>
+	<string>tv</string>
+	<key>LimitLoadToHosts</key>
+	<array>
+		<string>heady.uberzach.com</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>Label</key>
+	<string>com.uberzach.ola</string>
+	<key>KeepAlive</key>
+	<dict>
+		<key>PathState</key>
+		<dict>
+			<key>/dev/tty.usbserial-EN099597</key>
+			<true/>
+		</dict>
+	</dict>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/opt/local/bin/olad</string>
+		<string>-s</string>
+		<string>-i</string>
+		<string>127.0.0.1</string>
+	</array>
+</dict>
+</plist>

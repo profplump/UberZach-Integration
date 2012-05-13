@@ -1,0 +1,56 @@
+#!/bin/bash
+
+# Parameters
+USER="plex"
+PASS="bobola22"
+HOST="localhost"
+PORT="3000"
+
+# Figure out what we should do
+CMD="`basename "${0}" | sed 's%^plex\-%%' | tr a-z A-Z`"
+
+# Reduce typing
+CURL="curl --silent --get --user ${USER}:${PASS}"
+RPATH="/xbmcCmds/xbmcHttp"
+URL="http://${HOST}:${PORT}${RPATH}"
+OUTPUT=0
+
+# Pick a command
+if [ "${CMD}" == "UPDATE" ]; then
+	URL="${URL}/?command=ExecBuiltIn&parameter=XBMC.updatelibrary(video)"
+elif [ "${CMD}" == "CLEAN" ]; then
+	URL="${URL}?command=ExecBuiltIn&parameter=XBMC.CleanLibrary(video)"
+elif [ "${CMD}" == "FILES" ]; then
+	URL="${URL}?command=queryvideodatabase(SELECT%20path.strPath,%20files.strFilename%20FROM%20path%20JOIN%20files%20ON%20path.idPath%20=%20files.idPath%20JOIN%20episode%20ON%20files.idFile%20=%20episode.idFile)"
+	OUTPUT=1
+elif [ "${CMD}" == "BUTTON" ]; then
+	URL="${URL}?command=SendKey(${1})"
+elif [ "${CMD}" == "PLAYING" ]; then
+	URL="${URL}?command=GetCurrentlyPlaying"
+	OUTPUT=1
+elif [ "${CMD}" == "RESOLUTION" ]; then
+	URL="${URL}?command=GetGuiDescription"
+	OUTPUT=1
+elif [ "${CMD}" == "GUI" ]; then
+	URL="${URL}?command=GetGuiStatus"
+	OUTPUT=1
+else
+	echo "Unknown command: ${CMD}" 1>&2
+	exit 1
+fi
+
+# Bail if Plex is not running
+if ! ps awx -o comm= | grep -v 'Media Server' | grep -q 'MacOS/Plex'; then
+	if [ $OUTPUT -gt 0 ]; then
+		echo "Plex is not running" 1>&2
+		exit 1
+	fi
+	exit 0
+fi
+
+# Run the command
+if [ $OUTPUT -gt 0 ]; then
+	$CURL "${URL}"
+else
+	$CURL "${URL}" >/dev/null
+fi
