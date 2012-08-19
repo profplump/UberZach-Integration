@@ -25,7 +25,7 @@
 	<key>ProgramArguments</key>
 	<array>
 		<string>/Users/tv/bin/video/dmx/fan.pl</string>
-		<string>1</string>
+		<string>0.5</string>
 	</array>
 </dict>
 </plist>
