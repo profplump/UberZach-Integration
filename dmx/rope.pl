@@ -10,56 +10,64 @@ sub mtime($);
 sub dim($$$);
 
 # Channels:
-#	0 => All channels
-#	1 => Couch-side hidden
-#	2 => Couch-side exposed
-#	3 => Stairs
-#	4 => <Unused>
-#	5 => Bar-side hidden
-#	6 => Bar-side bar-shelves
-#	7 => Bar-side exposed
-#	8 => Bar-side ceiling
+#	0  => All channels
+#	1  => Couch-side hidden
+#	2  => Couch-side exposed
+#	3  => Stairs
+#	4  => <Unused>
+#	5  => Bar-side hidden
+#	6  => Bar-side bar-shelves
+#	7  => Bar-side exposed
+#	8  => Bar-side ceiling
+#	9  => <Unused>
+#	10 => <Unused>
+#	11 => Fan
+#	12 => Bias Light
 
 # User config
 my %DIM = (
 	'OFF'    => [
-		{ 'channel' => 0, 'value' => 0,   'time' => 60000 }
+		{ 'channel' => 0,  'value' => 0,   'time' => 60000 }
 	],
 	'PLAY'      => [
-		{ 'channel' => 1, 'value' => 64,  'time' => 500   },
-		{ 'channel' => 2, 'value' => 32,  'time' => 500   },
-		{ 'channel' => 3, 'value' => 80,  'time' => 1500  },
-		{ 'channel' => 5, 'value' => 64,  'time' => 500   },
-		{ 'channel' => 6, 'value' => 36,  'time' => 500   },
-		{ 'channel' => 7, 'value' => 32,  'time' => 500   },
-		{ 'channel' => 8, 'value' => 16,  'time' => 500   },
+		{ 'channel' => 1,  'value' => 64,  'time' => 500   },
+		{ 'channel' => 2,  'value' => 32,  'time' => 500   },
+		{ 'channel' => 3,  'value' => 80,  'time' => 1500  },
+		{ 'channel' => 5,  'value' => 64,  'time' => 500   },
+		{ 'channel' => 6,  'value' => 36,  'time' => 500   },
+		{ 'channel' => 7,  'value' => 32,  'time' => 500   },
+		{ 'channel' => 8,  'value' => 16,  'time' => 500   },
+		{ 'channel' => 12, 'value' => 255, 'time' => 0     },
 	],
 	'PLAY_HIGH' => [
-		{ 'channel' => 1, 'value' => 255, 'time' => 500   },
-		{ 'channel' => 2, 'value' => 128, 'time' => 500   },
-		{ 'channel' => 3, 'value' => 192, 'time' => 1500  },
-		{ 'channel' => 5, 'value' => 128, 'time' => 500   },
-		{ 'channel' => 6, 'value' => 36,  'time' => 500   },
-		{ 'channel' => 7, 'value' => 128, 'time' => 500   },
-		{ 'channel' => 8, 'value' => 16,  'time' => 500   },
+		{ 'channel' => 1,  'value' => 255, 'time' => 500   },
+		{ 'channel' => 2,  'value' => 128, 'time' => 500   },
+		{ 'channel' => 3,  'value' => 192, 'time' => 1500  },
+		{ 'channel' => 5,  'value' => 128, 'time' => 500   },
+		{ 'channel' => 6,  'value' => 36,  'time' => 500   },
+		{ 'channel' => 7,  'value' => 128, 'time' => 500   },
+		{ 'channel' => 8,  'value' => 16,  'time' => 500   },
+		{ 'channel' => 12, 'value' => 255, 'time' => 0     },
 	],
 	'PAUSE'     => [
-		{ 'channel' => 1, 'value' => 255, 'time' => 1000  },
-		{ 'channel' => 2, 'value' => 192, 'time' => 10000 },
-		{ 'channel' => 3, 'value' => 192, 'time' => 5000  },
-		{ 'channel' => 5, 'value' => 255, 'time' => 1000  },
-		{ 'channel' => 6, 'value' => 104, 'time' => 12000 },
-		{ 'channel' => 7, 'value' => 192, 'time' => 10000 },
-		{ 'channel' => 8, 'value' => 92,  'time' => 16000 },
+		{ 'channel' => 1,  'value' => 255, 'time' => 1000  },
+		{ 'channel' => 2,  'value' => 192, 'time' => 10000 },
+		{ 'channel' => 3,  'value' => 192, 'time' => 5000  },
+		{ 'channel' => 5,  'value' => 255, 'time' => 1000  },
+		{ 'channel' => 6,  'value' => 104, 'time' => 12000 },
+		{ 'channel' => 7,  'value' => 192, 'time' => 10000 },
+		{ 'channel' => 8,  'value' => 92,  'time' => 16000 },
+		{ 'channel' => 12, 'value' => 255, 'time' => 0     },
 	],
 	'MOTION'    => [
-		{ 'channel' => 1, 'value' => 255, 'time' => 1000  },
-		{ 'channel' => 2, 'value' => 192, 'time' => 1000  },
-		{ 'channel' => 3, 'value' => 192, 'time' => 1000  },
-		{ 'channel' => 5, 'value' => 192, 'time' => 1000  },
-		{ 'channel' => 6, 'value' => 104, 'time' => 1000  },
-		{ 'channel' => 7, 'value' => 192, 'time' => 1000  },
-		{ 'channel' => 8, 'value' => 92,  'time' => 1000  },
+		{ 'channel' => 1,  'value' => 255, 'time' => 1000  },
+		{ 'channel' => 2,  'value' => 192, 'time' => 1000  },
+		{ 'channel' => 3,  'value' => 192, 'time' => 1000  },
+		{ 'channel' => 5,  'value' => 192, 'time' => 1000  },
+		{ 'channel' => 6,  'value' => 104, 'time' => 1000  },
+		{ 'channel' => 7,  'value' => 192, 'time' => 1000  },
+		{ 'channel' => 8,  'value' => 92,  'time' => 1000  },
+		{ 'channel' => 12, 'value' => 255, 'time' => 500   },
 	],
 );
 my $TIMEOUT = 180;
