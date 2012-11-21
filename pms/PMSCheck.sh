@@ -41,7 +41,7 @@ while [ $LOOP -ne 0 ]; do
 		if [ $LOOP -lt 1 ]; then
 			exit 1
 		elif [ -n "${ADMIN_EMAIL}" ]; then
-			echo "${ERR_MSG}" | sendmail "${ADMIN_EMAIL}"
+			echo -e "Subject: PMS Restart\n\n${ERR_MSG}" | sendmail "${ADMIN_EMAIL}"
 		fi
 	fi
 
