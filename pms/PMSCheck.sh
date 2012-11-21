@@ -35,9 +35,10 @@ while [ $LOOP -ne 0 ]; do
 	# If Plex has failed kill it
 	if [ -n "${FAILED}" ]; then
 		ERR_MSG="PMS is non-responsive (${FAILED}). Killing..."
+		echo "${ERR_MSG}" 1>&2
+
 		killall 'Plex Media Server'
 		if [ $LOOP -lt 1 ]; then
-			echo "${ERR_MSG}" 1>&2
 			exit 1
 		elif [ -n "${ADMIN_EMAIL}" ]; then
 			echo "${ERR_MSG}" | sendmail "${ADMIN_EMAIL}"
