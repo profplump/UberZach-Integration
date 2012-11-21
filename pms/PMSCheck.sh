@@ -2,7 +2,8 @@
 
 # Config
 CURL_TIMEOUT=2
-DATE_TIMEOUT=360
+DATE_TIMEOUT=600
+RESTART_DELAY=60
 PMS_URL="http://localhost:32400/"
 ADMIN_EMAIL="zach@kotlarek.com"
 
@@ -43,6 +44,10 @@ while [ $LOOP -ne 0 ]; do
 		elif [ -n "${ADMIN_EMAIL}" ]; then
 			echo -e "Subject: PMS Restart\n\n${ERR_MSG}" | sendmail "${ADMIN_EMAIL}"
 		fi
+
+		# Give plex a breather to get restarted before we check again
+		# (I would love to re-optimize here too, but that's tricky to time efficiently)
+		sleep "${RESTART_DELAY}"
 	fi
 
 	# Sleep for the next loop or exit
