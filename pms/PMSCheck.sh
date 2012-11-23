@@ -2,8 +2,7 @@
 
 # Config
 CURL_TIMEOUT=2
-DATE_TIMEOUT=1800
-RESTART_DELAY=60
+RESTART_DELAY=120
 PMS_URL="http://localhost:32400/"
 ADMIN_EMAIL="zach@kotlarek.com"
 
@@ -22,14 +21,8 @@ while [ $LOOP -ne 0 ]; do
 	UPDATE="`curl --silent --max-time "${CURL_TIMEOUT}" "${PMS_URL}" | \
 		grep 'updatedAt=' | sed 's%^.*updatedAt="\([0-9]*\)".*$%\1%'`"
 
-	# If Plex replied, check the update time
-	if [ -n "${UPDATE}" ]; then
-		DATE="`date '+%s'`"
-		DIFF=$(( $DATE - $UPDATE ));
-		if [ $DIFF -gt $DATE_TIMEOUT ]; then
-			FAILED="Update timeout"
-		fi
-	else
+	# If Plex replied, assume thing are workingcheck the update time
+	if [ -z "${UPDATE}" ]; then
 		FAILED="HTTP timeout"
 	fi
 
@@ -46,8 +39,11 @@ while [ $LOOP -ne 0 ]; do
 		fi
 
 		# Give plex a breather to get restarted before we check again
-		# (I would love to re-optimize here too, but that's tricky to time efficiently)
 		sleep "${RESTART_DELAY}"
+
+		# Re-index (in the background)
+		~/bin/video/isScanning && \
+			curl --silent --upload-file /dev/null "${PMS_URL}library/optimize" &
 	fi
 
 	# Sleep for the next loop or exit
