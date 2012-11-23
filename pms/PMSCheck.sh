@@ -2,7 +2,7 @@
 
 # Config
 CURL_TIMEOUT=2
-DATE_TIMEOUT=600
+DATE_TIMEOUT=1800
 RESTART_DELAY=60
 PMS_URL="http://localhost:32400/"
 ADMIN_EMAIL="zach@kotlarek.com"
