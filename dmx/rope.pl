@@ -27,8 +27,15 @@ sub dim($$$);
 # User config
 my %DIM = (
 	'OFF'    => [
-		{ 'channel' => 0,  'value' => 0,   'time' => 60000  },
-		{ 'channel' => 12,  'value' => 0,  'time' => 240000 }
+		{ 'channel' => 1,  'value' => 0,   'time' => 60000  },
+		{ 'channel' => 2,  'value' => 0,   'time' => 60000  },
+		{ 'channel' => 3,  'value' => 0,   'time' => 60000  },
+		{ 'channel' => 5,  'value' => 0,   'time' => 60000  },
+		{ 'channel' => 6,  'value' => 0,   'time' => 60000  },
+		{ 'channel' => 7,  'value' => 0,   'time' => 60000  },
+		{ 'channel' => 8,  'value' => 0,   'time' => 60000  },
+		{ 'channel' => 11, 'value' => 0,   'time' => 0      },
+		{ 'channel' => 12, 'value' => 0,   'time' => 120000 }
 	],
 	'PLAY'      => [
 		{ 'channel' => 1,  'value' => 64,  'time' => 500   },
