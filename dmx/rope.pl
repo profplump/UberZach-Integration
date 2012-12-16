@@ -7,7 +7,7 @@ use File::Temp qw( tempfile );
 
 # Prototypes
 sub mtime($);
-sub dim(%);
+sub dim($);
 
 # Channels:
 #	0  => All channels
@@ -262,12 +262,12 @@ sub mtime($) {
 }
 
 # Send the command
-sub dim(%) {
+sub dim($) {
 	my ($args) = @_;
 	if (! defined($args->{'delay'})) {
 		$args->{'delay'} = 0;
 	}
-	if (! defined($args->{'channel'}) || ! defined($args->{'channel'}) || ! defined($args->{'channel'})) {
+	if (! defined($args->{'channel'}) || ! defined($args->{'time'}) || ! defined($args->{'value'})) {
 		die('Invalid command for socket: ' . join(', ', keys(%{$args})) . ': ' . join(', ', values(%{$args})) . "\n");
 	}
 
