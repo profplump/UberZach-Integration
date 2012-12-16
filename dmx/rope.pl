@@ -7,7 +7,7 @@ use File::Temp qw( tempfile );
 
 # Prototypes
 sub mtime($);
-sub dim($$$);
+sub dim(%);
 
 # Channels:
 #	0  => All channels
@@ -27,7 +27,7 @@ sub dim($$$);
 # User config
 my %DIM = (
 	'OFF'    => [
-		{ 'channel' => 0,  'value' => 0,   'time' => 60000  }
+		{ 'channel' => 0,  'value' => 0,   'time' => 60000 }
 	],
 	'PLAY'      => [
 		{ 'channel' => 1,  'value' => 64,  'time' => 500   },
@@ -54,9 +54,9 @@ my %DIM = (
 		{ 'channel' => 2,  'value' => 192, 'time' => 10000 },
 		{ 'channel' => 3,  'value' => 192, 'time' => 5000  },
 		{ 'channel' => 5,  'value' => 255, 'time' => 1000  },
-		{ 'channel' => 6,  'value' => 104, 'time' => 12000 },
+		{ 'channel' => 6,  'value' => 104, 'time' => 6000, 'delay' => 3000 },
 		{ 'channel' => 7,  'value' => 192, 'time' => 10000 },
-		{ 'channel' => 8,  'value' => 92,  'time' => 16000 },
+		{ 'channel' => 8,  'value' => 92,  'time' => 6000, 'delay' => 6000 },
 		{ 'channel' => 12, 'value' => 255, 'time' => 0     },
 	],
 	'MOTION'    => [
@@ -113,7 +113,7 @@ my $lights     = 0;
 my $updateLast = 0;
 
 # Always force lights out at launch
-dim(0, 0, 0);
+dim({'channel' => 0, 'value' => 0, 'time' => 0});
 
 # Loop forever
 while (1) {
@@ -237,7 +237,7 @@ while (1) {
 		# Send the dim command
 		my @values = ();
 		foreach my $data (@{ $DIM{$state} }) {
-			dim($data->{'channel'}, $data->{'time'}, $data->{'value'});
+			dim($data);
 			push(@values, $data->{'channel'} . ' => ' . $data->{'value'} . ' @ ' . $data->{'time'});
 		}
 
@@ -262,9 +262,16 @@ sub mtime($) {
 }
 
 # Send the command
-sub dim($$$) {
-	my ($channel, $duration, $intensity) = @_;
-	my $cmd = join(':', $channel, $duration, $intensity);
+sub dim(%) {
+	my ($args) = @_;
+	if (! defined($args->{'delay'})) {
+		$args->{'delay'} = 0;
+	}
+	if (! defined($args->{'channel'}) || ! defined($args->{'channel'}) || ! defined($args->{'channel'})) {
+		die('Invalid command for socket: ' . join(', ', keys(%{$args})) . ': ' . join(', ', values(%{$args})) . "\n");
+	}
+
+	my $cmd = join(':', $args->{'channel'}, $args->{'time'}, $args->{'value'}, $args->{'delay'});
 	$sock->send($cmd)
 	  or die('Unable to write command to socket: ' . $CMD_FILE . ': ' . $cmd . ": ${!}\n");
 }
