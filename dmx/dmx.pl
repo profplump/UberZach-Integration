@@ -57,7 +57,7 @@ def SendDMXFrame():
     except ValueError:
       print 'Invalid command:', cmd
       channel = -1
-    if (channel >= 0 and channel <= 512 and intensity >= 0 and intensity <= 255 and duration >= 0 and duration <= 60000):
+    if (channel >= 0 and channel <= 512 and intensity >= 0 and intensity <= 255 and duration >= 0 and duration <= 300000):
       if (channel > 0):
         cmds['value'][channel - 1] = intensity
         cmds['ticks'][channel - 1] = duration / interval
@@ -76,13 +76,13 @@ def SendDMXFrame():
         delta = diff
       else:
         delta = float(diff) / float(cmds['ticks'][i])
-      state[i] += int(delta)
+      state[i] += delta
       cmds['ticks'][i] -= 1
     
   # Send all DMX channels
   data = array.array('B')
   for i in range(len(state)):
-    data.append(state[i])
+    data.append(int(state[i]))
   wrapper.Client().SendDmx(universe, data, DmxSent)
 
 # ====================================
