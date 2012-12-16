@@ -62,7 +62,7 @@ def SendDMXFrame():
       delay = 0
     
     # Save valid commands
-    if (channel >= 0 and channel <= 512 and intensity >= 0 and intensity <= 255 and duration >= 0 and duration <= 300000):
+    if (channel >= 0 and channel <= 512 and intensity >= 0 and intensity <= 255 and duration >= 0 and duration <= 300000 and delay >= 0 and delay < 300000):
       if (channel > 0):
         cmds['value'][channel - 1] = intensity
         cmds['ticks'][channel - 1] = duration / interval
@@ -73,7 +73,7 @@ def SendDMXFrame():
           cmds['ticks'][i] = duration / interval
           cmds['delay'][i] = delay / interval
     else:
-      print 'Invalid command parameters:', channel, duration, intensity
+      print 'Invalid command parameters:', channel, duration, intensity, delay
   
   # Update values for each channel
   for i in range(len(cmds['value'])):
