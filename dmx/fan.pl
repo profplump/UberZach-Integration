@@ -6,7 +6,7 @@ use Time::HiRes qw( usleep );
 use File::Temp qw( tempfile );
 
 # Prototypes
-sub dim($$$);
+sub dim($);
 
 # Channels:
 #	0  => All channels
@@ -73,7 +73,7 @@ my $fan        = 0;
 my $projector  = 0;
 
 # Always force lights out at launch
-dim(11, 0, 0);
+dim({'channel' => 11, 'value' => 0, 'time' => 0});
 
 # Loop forever
 while (1) {
@@ -137,7 +137,7 @@ while (1) {
 		# Send the dim command
 		my @values = ();
 		foreach my $data (@{ $DIM{$state} }) {
-			dim($data->{'channel'}, $data->{'time'}, $data->{'value'});
+			dim($data);
 			push(@values, $data->{'channel'} . ' => ' . $data->{'value'} . ' @ ' . $data->{'time'});
 		}
 
@@ -153,9 +153,16 @@ while (1) {
 }
 
 # Send the command
-sub dim($$$) {
-	my ($channel, $duration, $intensity) = @_;
-	my $cmd = join(':', $channel, $duration, $intensity);
+sub dim(%) {
+	my ($args) = @_;
+	if (! defined($args->{'delay'})) {
+		$args->{'delay'} = 0;
+	}
+	if (! defined($args->{'channel'}) || ! defined($args->{'time'}) || ! defined($args->{'value'})) {
+		die('Invalid command for socket: ' . join(', ', keys(%{$args})) . ': ' . join(', ', values(%{$args})) . "\n");
+	}
+
+	my $cmd = join(':', $args->{'channel'}, $args->{'time'}, $args->{'value'}, $args->{'delay'});
 	$sock->send($cmd)
 	  or die('Unable to write command to socket: ' . $CMD_FILE . ': ' . $cmd . ": ${!}\n");
 }
