@@ -11,10 +11,9 @@ if ~/bin/video/pms/isScanning.sh; then
 fi
 
 # Scan, appending any parameters passed to us
-/Applications/Zach/Media/Plex\ Media\ Server.app/Contents/MacOS/Plex\ Media\ Scanner --scan ${@}
+'/Applications/Zach/Media/Plex Media Server.app/Contents/MacOS/Plex Media Scanner' --scan ${@}
 
 # Check the return; kill the PMS if things did not go well
 if [ $? -ne 0 ]; then
 	~/bin/video/pms/killPMS.sh
 fi
-
