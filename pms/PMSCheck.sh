@@ -31,7 +31,7 @@ while [ $LOOP -ne 0 ]; do
 		ERR_MSG="PMS is non-responsive (${FAILED}). Killing..."
 		echo "${ERR_MSG}" 1>&2
 
-		killall 'Plex Media Server'
+		~/bin/video/pms/killPMS.sh
 		if [ $LOOP -lt 1 ]; then
 			exit 1
 		elif [ -n "${ADMIN_EMAIL}" ]; then
