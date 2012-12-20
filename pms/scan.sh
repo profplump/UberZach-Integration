@@ -17,3 +17,8 @@ fi
 if [ $? -ne 0 ]; then
 	~/bin/video/pms/killPMS.sh
 fi
+
+# Force an optimization after deep scans
+if echo "${@}" | grep -q -- '--deep'; then
+	~/bin/video/pms/optimize.sh
+fi
