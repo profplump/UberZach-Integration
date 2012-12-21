@@ -19,7 +19,7 @@ sub dim($);
 #	6  => Bar-side bar-shelves
 #	7  => Bar-side exposed
 #	8  => Bar-side ceiling
-#	9  => <Unused>
+#	9  => Screen backlight
 #	10 => <Unused>
 #	11 => Fan
 #	12 => Bias Light
@@ -37,6 +37,7 @@ my %DIM = (
 		{ 'channel' => 6,  'value' => 36,  'time' => 500   },
 		{ 'channel' => 7,  'value' => 32,  'time' => 500   },
 		{ 'channel' => 8,  'value' => 16,  'time' => 500   },
+		{ 'channel' => 9,  'value' => 16,  'time' => 500   },
 		{ 'channel' => 12, 'value' => 255, 'time' => 0     },
 	],
 	'PLAY_HIGH' => [
@@ -47,6 +48,7 @@ my %DIM = (
 		{ 'channel' => 6,  'value' => 36,  'time' => 500   },
 		{ 'channel' => 7,  'value' => 128, 'time' => 500   },
 		{ 'channel' => 8,  'value' => 16,  'time' => 500   },
+		{ 'channel' => 9,  'value' => 92,  'time' => 500   },
 		{ 'channel' => 12, 'value' => 255, 'time' => 0     },
 	],
 	'PAUSE'     => [
@@ -57,6 +59,7 @@ my %DIM = (
 		{ 'channel' => 6,  'value' => 104, 'time' => 6000, 'delay' => 3000 },
 		{ 'channel' => 7,  'value' => 192, 'time' => 10000 },
 		{ 'channel' => 8,  'value' => 92,  'time' => 6000, 'delay' => 6000 },
+		{ 'channel' => 9,  'value' => 92,  'time' => 6000, 'delay' => 3000 },
 		{ 'channel' => 12, 'value' => 255, 'time' => 0     },
 	],
 	'MOTION'    => [
@@ -66,8 +69,8 @@ my %DIM = (
 		{ 'channel' => 5,  'value' => 192, 'time' => 1000  },
 		{ 'channel' => 6,  'value' => 104, 'time' => 1000  },
 		{ 'channel' => 7,  'value' => 192, 'time' => 1000  },
+		{ 'channel' => 9,  'value' => 92,  'time' => 1000 },
 		{ 'channel' => 8,  'value' => 92,  'time' => 1000  },
-		{ 'channel' => 12, 'value' => 255, 'time' => 0     },
 	],
 );
 my $TIMEOUT = 180;
