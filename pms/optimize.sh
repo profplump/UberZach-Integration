@@ -8,7 +8,7 @@ while ~/bin/video/pms/isScanning.sh; do
 	sleep $DELAY
 	WAIT=$(( $WAIT + $DELAY ))
 	if [ $WAIT -ge $MAX_WAIT ]; then
-		echo "`basename "${0}"`: Waited ${MAX_DELAY} seconds for scanner. Exiting..." 1>&2
+		echo "`basename "${0}"`: Waited ${MAX_WAIT} seconds for scanner. Exiting..." 1>&2
 		exit 1
 	fi
 done
