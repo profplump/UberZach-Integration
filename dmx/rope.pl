@@ -69,8 +69,9 @@ my %DIM = (
 		{ 'channel' => 5,  'value' => 192, 'time' => 1000  },
 		{ 'channel' => 6,  'value' => 104, 'time' => 1000  },
 		{ 'channel' => 7,  'value' => 192, 'time' => 1000  },
-		{ 'channel' => 9,  'value' => 92,  'time' => 1000 },
 		{ 'channel' => 8,  'value' => 92,  'time' => 1000  },
+		{ 'channel' => 9,  'value' => 92,  'time' => 1000  },
+		{ 'channel' => 12, 'value' => 0,   'time' => 0     },
 	],
 );
 my $TIMEOUT = 180;
