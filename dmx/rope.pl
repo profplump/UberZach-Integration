@@ -14,7 +14,7 @@ sub dim($);
 #	1  => Couch-side hidden
 #	2  => Couch-side exposed
 #	3  => Stairs
-#	4  => <Unused>
+#	4  => Overhead
 #	5  => Bar-side hidden
 #	6  => Bar-side bar-shelves
 #	7  => Bar-side exposed
@@ -32,7 +32,8 @@ my %DIM = (
 	'PLAY'      => [
 		{ 'channel' => 1,  'value' => 64,  'time' => 500   },
 		{ 'channel' => 2,  'value' => 32,  'time' => 500   },
-		{ 'channel' => 3,  'value' => 80,  'time' => 1500  },
+		{ 'channel' => 3,  'value' => 80,  'time' => 2500  },
+		{ 'channel' => 3,  'value' => 16,  'time' => 500   },
 		{ 'channel' => 5,  'value' => 64,  'time' => 500   },
 		{ 'channel' => 6,  'value' => 36,  'time' => 500   },
 		{ 'channel' => 7,  'value' => 32,  'time' => 500   },
@@ -44,6 +45,7 @@ my %DIM = (
 		{ 'channel' => 1,  'value' => 255, 'time' => 500   },
 		{ 'channel' => 2,  'value' => 128, 'time' => 500   },
 		{ 'channel' => 3,  'value' => 192, 'time' => 1500  },
+		{ 'channel' => 4,  'value' => 16,  'time' => 500   },
 		{ 'channel' => 5,  'value' => 128, 'time' => 500   },
 		{ 'channel' => 6,  'value' => 36,  'time' => 500   },
 		{ 'channel' => 7,  'value' => 128, 'time' => 500   },
@@ -55,6 +57,7 @@ my %DIM = (
 		{ 'channel' => 1,  'value' => 255, 'time' => 1000  },
 		{ 'channel' => 2,  'value' => 192, 'time' => 10000 },
 		{ 'channel' => 3,  'value' => 192, 'time' => 5000  },
+		{ 'channel' => 4,  'value' => 92,  'time' => 6000, 'delay' => 9000 },
 		{ 'channel' => 5,  'value' => 255, 'time' => 1000  },
 		{ 'channel' => 6,  'value' => 104, 'time' => 6000, 'delay' => 3000 },
 		{ 'channel' => 7,  'value' => 192, 'time' => 10000 },
@@ -66,6 +69,7 @@ my %DIM = (
 		{ 'channel' => 1,  'value' => 255, 'time' => 1000  },
 		{ 'channel' => 2,  'value' => 192, 'time' => 1000  },
 		{ 'channel' => 3,  'value' => 192, 'time' => 1000  },
+		{ 'channel' => 4,  'value' => 92,  'time' => 1000  },
 		{ 'channel' => 5,  'value' => 192, 'time' => 1000  },
 		{ 'channel' => 6,  'value' => 104, 'time' => 1000  },
 		{ 'channel' => 7,  'value' => 192, 'time' => 1000  },
