@@ -69,7 +69,7 @@ my %DIM = (
 		{ 'channel' => 1,  'value' => 255, 'time' => 1000  },
 		{ 'channel' => 2,  'value' => 192, 'time' => 1000  },
 		{ 'channel' => 3,  'value' => 192, 'time' => 1000  },
-		{ 'channel' => 4,  'value' => 72,  'time' => 2500  },
+		{ 'channel' => 4,  'value' => 96,  'time' => 2500  },
 		{ 'channel' => 5,  'value' => 192, 'time' => 1000  },
 		{ 'channel' => 6,  'value' => 104, 'time' => 1000  },
 		{ 'channel' => 7,  'value' => 192, 'time' => 1000  },
