@@ -44,6 +44,8 @@ if (basename($0) =~ /PROJECTOR/i) {
 		'DVD'      => 'SIDVD',
 		'SURROUND' => 'MSDOLBY DIGITAL',
 		'STEREO'   => 'MS7CH STEREO',
+		'TV'       => 'SITV',
+		'INPUT'    => 'SI?',
 
 	);
 	$STATUS_ON = 'PWON';
@@ -90,7 +92,9 @@ my $CMD_FILE = $DATA_DIR . uc($DEV) . '.socket';
 my $DEBUG = 0;
 if ($ENV{'DEBUG'}) {
 	$DEBUG = 1;
+	print STDERR "Debug enabled\n";
 }
+
 
 # Command-line arguments
 my ($DELAY) = @ARGV;

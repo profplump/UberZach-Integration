@@ -86,6 +86,16 @@ while (1) {
 			$sock->send($state)
 			  or die('Unable to write command to socket: ' . $CMD_FILE . ': ' . $state . ": ${!}\n");
 		}
+
+		# Reset to TV @ 5.1 at power on
+		if ($state eq 'ON') {
+			# Wait for the amp to boot
+			sleep($DELAY);
+			$sock->send('TV')
+			  or die('Unable to write command to socket: ' . $CMD_FILE . ': TV' . ": ${!}\n");
+			$sock->send('SURROUND')
+			  or die('Unable to write command to socket: ' . $CMD_FILE . ': SURROUND' . ": ${!}\n");
+		}
 	}
 
 	# Wait and loop
