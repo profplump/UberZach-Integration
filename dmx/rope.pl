@@ -130,8 +130,8 @@ my $sub_fh = IO::Socket::UNIX->new(
 	'Type'    => SOCK_DGRAM,
 	'Timeout' => $SOCK_TIMEOUT
 ) or die('Unable to open socket: ' . $SUB_SOCK . ": ${@}\n");
-$sub_fh->send($STATE_SOCK) or
-die ('Unable to subscribe: ' . $! . "\n");
+$sub_fh->send($STATE_SOCK)
+  or die('Unable to subscribe: ' . $! . "\n");
 shutdown($sub_fh, 2);
 undef($sub_fh);
 

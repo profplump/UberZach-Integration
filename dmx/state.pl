@@ -18,7 +18,7 @@ chomp($TEMP_DIR);
 my $DATA_DIR    = $TEMP_DIR . 'plexMonitor/';
 my $CMD_FILE    = $DATA_DIR . 'STATE.socket';
 my $MAX_CMD_LEN = 4096;
-my $RESET_CMD = $ENV{'HOME'} . '/bin/video/dmx/reset.sh';
+my $RESET_CMD   = $ENV{'HOME'} . '/bin/video/dmx/reset.sh';
 
 # Debug
 my $DEBUG = 0;
@@ -206,7 +206,7 @@ while (1) {
 		foreach my $sub (@subscribers) {
 
 			# Drop subscribers that are not available
-			if (!eval{$sub->{'socket'}->send($state)}) {
+			if (!eval { $sub->{'socket'}->send($state) }) {
 				print STDERR 'Dropping bad socket from subscriber list: ' . $sub->{'path'} . "\n";
 
 				my @new_subscribers = ();
