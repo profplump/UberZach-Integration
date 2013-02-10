@@ -1,8 +1,8 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-use IO::Socket;
-use Time::HiRes qw( usleep );
+use IO::Select;
+use IO::Socket::UNIX;
 use File::Temp qw( tempfile );
 
 # Prototypes
@@ -78,14 +78,16 @@ my %DIM = (
 		{ 'channel' => 12, 'value' => 0,   'time' => 0     },
 	],
 );
-my $TIMEOUT = 180;
 
 # App config
 my $SOCK_TIMEOUT = 5;
 my $TEMP_DIR     = `getconf DARWIN_USER_TEMP_DIR`;
 chomp($TEMP_DIR);
-my $DATA_DIR = $TEMP_DIR . 'plexMonitor/';
-my $CMD_FILE = $DATA_DIR . 'DMX.socket';
+my $DATA_DIR    = $TEMP_DIR . 'plexMonitor/';
+my $DMX_SOCK    = $DATA_DIR . 'DMX.socket';
+my $SUB_SOCK    = $DATA_DIR . 'STATE.socket';
+my $STATE_SOCK  = $DATA_DIR . 'ROPE.socket';
+my $MAX_CMD_LEN = 1024;
 
 # Debug
 my $DEBUG = 0;
@@ -98,76 +100,82 @@ my ($DELAY) = @ARGV;
 if (!$DELAY) {
 	$DELAY = 0.5;
 }
-$DELAY *= 1000000;    # Microseconds;
 
 # Sanity check
-if (!-d $DATA_DIR || !-S $CMD_FILE) {
+if (!-d $DATA_DIR || !-S $DMX_SOCK || !-S $SUB_SOCK) {
 	die("Bad config\n");
 }
 
-# Socket init
-my $sock = IO::Socket::UNIX->new(
-	'Peer'    => $CMD_FILE,
+# State socket init
+if (-e $STATE_SOCK) {
+	unlink($STATE_SOCK);
+}
+my $state_fh = IO::Socket::UNIX->new(
+	'Local' => $STATE_SOCK,
+	'Type'  => SOCK_DGRAM
+) or die('Unable to open socket: ' . $STATE_SOCK . ": ${@}\n");
+my $select = IO::Select->new($state_fh)
+  or die('Unable to select socket: ' . $STATE_SOCK . ": ${!}\n");
+
+# DMX socket init
+my $dmx_fh = IO::Socket::UNIX->new(
+	'Peer'    => $DMX_SOCK,
 	'Type'    => SOCK_DGRAM,
 	'Timeout' => $SOCK_TIMEOUT
-) or die('Unable to open socket: ' . $CMD_FILE . ": ${@}\n");
+) or die('Unable to open socket: ' . $DMX_SOCK . ": ${@}\n");
+
+# Subscribe to state updates
+my $sub_fh = IO::Socket::UNIX->new(
+	'Peer'    => $SUB_SOCK,
+	'Type'    => SOCK_DGRAM,
+	'Timeout' => $SOCK_TIMEOUT
+) or die('Unable to open socket: ' . $SUB_SOCK . ": ${@}\n");
+$sub_fh->send($STATE_SOCK) or
+die ('Unable to subscribe: ' . $! . "\n");
+shutdown($sub_fh, 2);
+undef($sub_fh);
 
 # State
 my $state      = 'INIT';
 my $stateLast  = $state;
-my $playing    = 0;
-my $projector  = 0;
 my $lights     = 0;
 my $updateLast = 0;
 
 # Always force lights out at launch
-dim({'channel' => 0, 'value' => 0, 'time' => 0});
+dim({ 'channel' => 0, 'value' => 0, 'time' => 0 });
 
 # Loop forever
 while (1) {
 
-	# Monitor the PLAY_STATUS file for changes and state
-	{
-		my $mtime = mtime($DATA_DIR . 'PLAY_STATUS');
-		if ($mtime > $updateLast) {
-			$updateLast = $mtime;
-		}
+	# State is calculated; use newState to gather data
+	my $newState = $state;
 
-		# Grab the PLAY_STATUS value
-		$playing = 0;
-		my $fh;
-		open($fh, $DATA_DIR . 'PLAY_STATUS')
-		  or die("Unable to open PLAY_STATUS\n");
-		my $text = <$fh>;
-		close($fh);
-		if ($text =~ /1/) {
-			$playing = 1;
-		}
+	# Wait for state updates
+	my @ready_clients = $select->can_read($DELAY);
+	foreach my $fh (@ready_clients) {
+
+		# Grab the inbound text
+		my $cmdState = undef();
+		$fh->recv($cmdState, $MAX_CMD_LEN);
+		$cmdState =~ s/^\s+//;
+		$cmdState =~ s/\s+$//;
 		if ($DEBUG) {
-			print STDERR 'Playing: ' . $playing . "\n";
-		}
-	}
-
-	# Monitor the PROJECTOR file for changes and state
-	{
-		my $mtime = mtime($DATA_DIR . 'PROJECTOR');
-		if ($mtime > $updateLast) {
-			$updateLast = $mtime;
+			print STDERR 'Got state: ' . $cmdState . "\n";
 		}
 
-		# Grab the PROJECTOR value
-		$projector = 0;
-		my $fh;
-		open($fh, $DATA_DIR . 'PROJECTOR')
-		  or die("Unable to open PROJECTOR\n");
-		my $text = <$fh>;
-		close($fh);
-		if ($text =~ /1/) {
-			$projector = 1;
+		# Translate INIT to OFF
+		if ($cmdState eq 'INIT') {
+			$cmdState = 'OFF';
 		}
-		if ($DEBUG) {
-			print STDERR 'Projector: ' . $projector . "\n";
+
+		# Only accept valid states
+		if (!defined($DIM{$cmdState})) {
+			print STDERR 'Invalid state: ' . $cmdState . "\n";
+			next;
 		}
+
+		# Propogate the most recent command state
+		$newState = $cmdState;
 	}
 
 	# Monitor the LIGHTS file for presence
@@ -180,60 +188,26 @@ while (1) {
 			print STDERR 'Lights: ' . $lights . "\n";
 		}
 
-		# Clear the override when the projector is off
-		if ($lights && !$projector) {
+		# Clear the override when the main state is "OFF"
+		if ($lights && $newState eq 'OFF') {
 			unlink($DATA_DIR . 'LIGHTS');
-		}
-	}
-
-	# Monitor the GUI, PLAYING, and MOTION files for changes only
-	{
-		my $mtime = mtime($DATA_DIR . 'PLAYING');
-		if ($mtime > $updateLast) {
-			$updateLast = $mtime;
-		}
-		$mtime = mtime($DATA_DIR . 'GUI');
-		if ($mtime > $updateLast) {
-			$updateLast = $mtime;
-		}
-		$mtime = mtime($DATA_DIR . 'MOTION');
-		if ($mtime > $updateLast) {
-			$updateLast = $mtime;
 		}
 	}
 
 	# Calculate the new state
 	$stateLast = $state;
-	if ($projector) {
-
-		# We are always either playing or paused if the projector is on
-		if ($playing) {
-
-			# Allow an override to higher brightness during playback
-			if ($lights) {
-				$state = 'PLAY_HIGH';
-			} else {
-				$state = 'PLAY';
-			}
-		} else {
-			$state = 'PAUSE';
+	if ($lights) {
+		if ($newState eq 'PLAY') {
+			$newState = 'PLAY_HIGH';
 		}
-
 	} else {
-
-		# If the projector is off, check the timeouts
-		my $timeSinceUpdate = time() - $updateLast;
-		if ($timeSinceUpdate > $TIMEOUT) {
-			$state = 'OFF';
-		} elsif ($timeSinceUpdate < $TIMEOUT) {
-			$state = 'MOTION';
+		if ($newState eq 'PLAY_HIGH') {
+			$newState = 'PLAY';
 		}
 	}
-	if ($state eq 'INIT') {
-		$state = 'OFF';
-	}
+	$state = $newState;
 
-	# Update the lighting state
+	# Update the lighting
 	if ($stateLast ne $state) {
 		if ($DEBUG) {
 			print STDERR 'State: ' . $stateLast . ' => ' . $state . "\n";
@@ -255,9 +229,6 @@ while (1) {
 		close($fh);
 		rename($tmp, $DATA_DIR . 'ROPE');
 	}
-
-	# Wait and loop
-	usleep($DELAY);
 }
 
 sub mtime($) {
@@ -272,14 +243,14 @@ sub mtime($) {
 # Send the command
 sub dim($) {
 	my ($args) = @_;
-	if (! defined($args->{'delay'})) {
+	if (!defined($args->{'delay'})) {
 		$args->{'delay'} = 0;
 	}
-	if (! defined($args->{'channel'}) || ! defined($args->{'time'}) || ! defined($args->{'value'})) {
+	if (!defined($args->{'channel'}) || !defined($args->{'time'}) || !defined($args->{'value'})) {
 		die('Invalid command for socket: ' . join(', ', keys(%{$args})) . ': ' . join(', ', values(%{$args})) . "\n");
 	}
 
 	my $cmd = join(':', $args->{'channel'}, $args->{'time'}, $args->{'value'}, $args->{'delay'});
-	$sock->send($cmd)
-	  or die('Unable to write command to socket: ' . $CMD_FILE . ': ' . $cmd . ": ${!}\n");
+	$dmx_fh->send($cmd)
+	  or die('Unable to write command to socket: ' . $DMX_SOCK . ': ' . $cmd . ": ${!}\n");
 }

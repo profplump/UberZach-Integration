@@ -18,6 +18,7 @@ chomp($TEMP_DIR);
 my $DATA_DIR    = $TEMP_DIR . 'plexMonitor/';
 my $CMD_FILE    = $DATA_DIR . 'STATE.socket';
 my $MAX_CMD_LEN = 4096;
+my $RESET_CMD = $ENV{'HOME'} . '/bin/video/dmx/reset.sh';
 
 # Debug
 my $DEBUG = 0;
@@ -50,6 +51,9 @@ if (!-S $CMD_FILE) {
 my $select = IO::Select->new($sock)
   or die('Unable to select socket: ' . $CMD_FILE . ": ${!}\n");
 
+# Reset all dependents at starts
+system($RESET_CMD);
+
 # Subscribers
 my @subscribers = ();
 
@@ -62,6 +66,9 @@ my $updateLast = 0;
 
 # Loop forever
 while (1) {
+
+	# Provide a method to force updates even when the state does not change
+	my $forceUpdate = 0;
 
 	# Check for queued commands
 	my @ready_clients = $select->can_read($DELAY);
@@ -99,6 +106,9 @@ while (1) {
 			'socket' => $sub,
 		);
 		push(@subscribers, \%tmp);
+
+		# Force an update
+		$forceUpdate = 1;
 	}
 
 	# Monitor the PLAY_STATUS file for changes and state
@@ -187,7 +197,7 @@ while (1) {
 	}
 
 	# Update the state
-	if ($stateLast ne $state) {
+	if ($forceUpdate || $stateLast ne $state) {
 		if ($DEBUG) {
 			print STDERR 'State: ' . $stateLast . ' => ' . $state . "\n";
 		}
@@ -196,8 +206,7 @@ while (1) {
 		foreach my $sub (@subscribers) {
 
 			# Drop subscribers that are not available
-			if (!$sub->{'socket'}->send($state)) {
-				print STDERR 'Unable to write state to socket: ' . $sub->{'path'} . ': ' . $state . ": ${!}\n";
+			if (!eval{$sub->{'socket'}->send($state)}) {
 				print STDERR 'Dropping bad socket from subscriber list: ' . $sub->{'path'} . "\n";
 
 				my @new_subscribers = ();
