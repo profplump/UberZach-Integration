@@ -13,10 +13,11 @@ sub clearBuffer($);
 sub collectUntil($$);
 
 # Device parameters
-my ($DEV, $PORT, $CRLF, $DELIMITER, %CMDS, $STATUS_ON);
+my ($DEV, $PORT, $BLUETOOTH, $CRLF, $DELIMITER, %CMDS, $STATUS_ON);
 if (basename($0) =~ /PROJECTOR/i) {
 	$DEV       = 'Projector';
-	$PORT      = '/dev/tty.' . $DEV . '-DevB';
+	$PORT      = '/dev/tty.usbserial-A5006xbj';
+	$BLUETOOTH = 0;
 	$CRLF      = "\r\n";
 	$DELIMITER = ':';
 	%CMDS      = (
@@ -28,7 +29,8 @@ if (basename($0) =~ /PROJECTOR/i) {
 	$STATUS_ON = 'PWR=01';
 } elsif (basename($0) =~ /AMPLIFIER/i) {
 	$DEV       = 'Amplifier';
-	$PORT      = '/dev/tty.' . $DEV . '-DevB';
+	$PORT      = '/dev/tty.usbserial-A5006x9u';
+	$BLUETOOTH = 0;
 	$CRLF      = "\r";
 	$DELIMITER = "\r";
 	%CMDS      = (
@@ -52,6 +54,7 @@ if (basename($0) =~ /PROJECTOR/i) {
 } elsif (basename($0) =~ /TV/i) {
 	$DEV       = 'TV';
 	$PORT      = '/dev/tty.' . $DEV . '-DevB';
+	$BLUETOOTH = 1;
 	$CRLF      = "\r";
 	$DELIMITER = "\r";
 	%CMDS      = (
@@ -108,10 +111,12 @@ if (!-r $PORT || !-d $DATA_DIR) {
 }
 
 # Wait for the serial port to become available
-system($BT_CHECK, $DEV);
-if ($? != 0) {
-	sleep($DELAY_STATUS);
-	die('Bluetooth device "' . $DEV . "\" not available\n");
+if ($BLUETOOTH) {
+	system($BT_CHECK, $DEV);
+	if ($? != 0) {
+		sleep($DELAY_STATUS);
+		die('Bluetooth device "' . $DEV . "\" not available\n");
+	}
 }
 
 # Socket init
