@@ -12,55 +12,27 @@ sub dim($);
 # User config
 my %DIM = (
 	'OFF'    => [
-		{ 'channel' => 0,  'value' => 0,   'time' => 60000 }
+		# Handled by rope.pl
 	],
 	'PLAY'      => [
-		{ 'channel' => 1,  'value' => 64,  'time' => 500   },
-		{ 'channel' => 2,  'value' => 32,  'time' => 500   },
-		{ 'channel' => 3,  'value' => 80,  'time' => 2500  },
-		{ 'channel' => 4,  'value' => 32,  'time' => 500   },
-		{ 'channel' => 5,  'value' => 64,  'time' => 500   },
-		{ 'channel' => 6,  'value' => 36,  'time' => 500   },
-		{ 'channel' => 7,  'value' => 32,  'time' => 500   },
-		{ 'channel' => 8,  'value' => 16,  'time' => 500   },
-		{ 'channel' => 9,  'value' => 16,  'time' => 500   },
-		{ 'channel' => 12, 'value' => 255, 'time' => 0     },
+		{ 'channel' => 13, 'value' => 128,  'time' => 1000 },
+		{ 'channel' => 14, 'value' => 128,  'time' => 2000 },
+		{ 'channel' => 15, 'value' => 128,  'time' => 3000 },
 	],
 	'PLAY_HIGH' => [
-		{ 'channel' => 1,  'value' => 255, 'time' => 500   },
-		{ 'channel' => 2,  'value' => 128, 'time' => 500   },
-		{ 'channel' => 3,  'value' => 192, 'time' => 1500  },
-		{ 'channel' => 4,  'value' => 48,  'time' => 500   },
-		{ 'channel' => 5,  'value' => 128, 'time' => 500   },
-		{ 'channel' => 6,  'value' => 36,  'time' => 500   },
-		{ 'channel' => 7,  'value' => 128, 'time' => 500   },
-		{ 'channel' => 8,  'value' => 16,  'time' => 500   },
-		{ 'channel' => 9,  'value' => 96,  'time' => 500   },
-		{ 'channel' => 12, 'value' => 255, 'time' => 0     },
+		{ 'channel' => 13, 'value' => 128, 'time' => 1000  },
+		{ 'channel' => 14, 'value' => 128, 'time' => 2000  },
+		{ 'channel' => 15, 'value' => 128, 'time' => 3000  },
 	],
 	'PAUSE'     => [
-		{ 'channel' => 1,  'value' => 255, 'time' => 1000  },
-		{ 'channel' => 2,  'value' => 192, 'time' => 10000 },
-		{ 'channel' => 3,  'value' => 192, 'time' => 5000  },
-		{ 'channel' => 4,  'value' => 96,  'time' => 6000, 'delay' => 9000 },
-		{ 'channel' => 5,  'value' => 255, 'time' => 1000  },
-		{ 'channel' => 6,  'value' => 104, 'time' => 6000, 'delay' => 3000 },
-		{ 'channel' => 7,  'value' => 192, 'time' => 10000 },
-		{ 'channel' => 8,  'value' => 96,  'time' => 6000, 'delay' => 6000 },
-		{ 'channel' => 9,  'value' => 96,  'time' => 6000, 'delay' => 3000 },
-		{ 'channel' => 12, 'value' => 255, 'time' => 0     },
+		{ 'channel' => 13, 'value' => 128, 'time' => 1000, 'delay' => 3000  },
+		{ 'channel' => 14, 'value' => 128, 'time' => 1000, 'delay' => 6000 },
+		{ 'channel' => 15, 'value' => 128, 'time' => 1000, 'delay' => 9000 },
 	],
 	'MOTION'    => [
-		{ 'channel' => 1,  'value' => 255, 'time' => 1000  },
-		{ 'channel' => 2,  'value' => 192, 'time' => 1000  },
-		{ 'channel' => 3,  'value' => 192, 'time' => 1000  },
-		{ 'channel' => 4,  'value' => 128, 'time' => 2500  },
-		{ 'channel' => 5,  'value' => 192, 'time' => 1000  },
-		{ 'channel' => 6,  'value' => 104, 'time' => 1000  },
-		{ 'channel' => 7,  'value' => 192, 'time' => 1000  },
-		{ 'channel' => 8,  'value' => 96,  'time' => 2000  },
-		{ 'channel' => 9,  'value' => 96,  'time' => 1500  },
-		{ 'channel' => 12, 'value' => 0,   'time' => 0     },
+		{ 'channel' => 13, 'value' => 128, 'time' => 1000  },
+		{ 'channel' => 14, 'value' => 128, 'time' => 2000  },
+		{ 'channel' => 15, 'value' => 128, 'time' => 3000  },
 	],
 );
 
@@ -71,7 +43,7 @@ chomp($TEMP_DIR);
 my $DATA_DIR    = $TEMP_DIR . 'plexMonitor/';
 my $DMX_SOCK    = $DATA_DIR . 'DMX.socket';
 my $SUB_SOCK    = $DATA_DIR . 'STATE.socket';
-my $STATE_SOCK  = $DATA_DIR . 'ROPE.socket';
+my $STATE_SOCK  = $DATA_DIR . 'LED.socket';
 my $MAX_CMD_LEN = 1024;
 
 # Debug
@@ -127,7 +99,9 @@ my $lights     = 0;
 my $updateLast = 0;
 
 # Always force lights out at launch
-dim({ 'channel' => 0, 'value' => 0, 'time' => 0 });
+foreach my $chan (keys(%CHANNELS)) {
+	dim({ 'channel' => $chan, 'value' => 0, 'time' => 0 });
+}
 
 # Loop forever
 while (1) {
@@ -209,10 +183,10 @@ while (1) {
 		}
 
 		# Save the state and value to disk
-		my ($fh, $tmp) = tempfile($DATA_DIR . 'ROPE.XXXXXXXX', 'UNLINK' => 0);
+		my ($fh, $tmp) = tempfile($DATA_DIR . 'LED.XXXXXXXX', 'UNLINK' => 0);
 		print $fh 'State: ' . $state . "\n" . join("\n", @values) . "\n";
 		close($fh);
-		rename($tmp, $DATA_DIR . 'ROPE');
+		rename($tmp, $DATA_DIR . 'LED');
 	}
 }
 

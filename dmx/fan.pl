@@ -8,21 +8,6 @@ use File::Temp qw( tempfile );
 # Prototypes
 sub dim($);
 
-# Channels:
-#	0  => All channels
-#	1  => Couch-side hidden
-#	2  => Couch-side exposed
-#	3  => Stairs
-#	4  => <Unused>
-#	5  => Bar-side hidden
-#	6  => Bar-side bar-shelves
-#	7  => Bar-side exposed
-#	8  => Bar-side ceiling
-#	9  => <Unused>
-#	10 => <Unused>
-#	11 => Fan
-#	12 => Bias Light
-
 # User config
 my %DIM = (
 	'OFF'    => [
