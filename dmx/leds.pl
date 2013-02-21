@@ -98,6 +98,11 @@ my $stateLast  = $state;
 my $lights     = 0;
 my $updateLast = 0;
 
+# Always force lights out at launch
+dim({'channel' => 13, 'value' => 0, 'time' => 0});
+dim({'channel' => 14, 'value' => 0, 'time' => 0});
+dim({'channel' => 15, 'value' => 0, 'time' => 0});
+
 # Loop forever
 while (1) {
 
