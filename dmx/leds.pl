@@ -98,11 +98,6 @@ my $stateLast  = $state;
 my $lights     = 0;
 my $updateLast = 0;
 
-# Always force lights out at launch
-foreach my $chan (keys(%CHANNELS)) {
-	dim({ 'channel' => $chan, 'value' => 0, 'time' => 0 });
-}
-
 # Loop forever
 while (1) {
 
