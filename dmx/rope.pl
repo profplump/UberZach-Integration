@@ -68,11 +68,13 @@ my %DIM = (
 my $SOCK_TIMEOUT = 5;
 my $TEMP_DIR     = `getconf DARWIN_USER_TEMP_DIR`;
 chomp($TEMP_DIR);
-my $DATA_DIR    = $TEMP_DIR . 'plexMonitor/';
-my $DMX_SOCK    = $DATA_DIR . 'DMX.socket';
-my $SUB_SOCK    = $DATA_DIR . 'STATE.socket';
-my $STATE_SOCK  = $DATA_DIR . 'ROPE.socket';
-my $MAX_CMD_LEN = 1024;
+my $DATA_DIR     = $TEMP_DIR . 'plexMonitor/';
+my $DMX_SOCK     = $DATA_DIR . 'DMX.socket';
+my $SUB_SOCK     = $DATA_DIR . 'STATE.socket';
+my $STATE_SOCK   = $DATA_DIR . 'ROPE.socket';
+my $MAX_CMD_LEN  = 1024;
+my $PUSH_TIMEOUT = 20;
+my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
 
 # Debug
 my $DEBUG = 0;
@@ -125,12 +127,17 @@ my $state      = 'INIT';
 my $stateLast  = $state;
 my $lights     = 0;
 my $updateLast = 0;
+my $pushLast   = 0;
+my $pullLast   = 0;
 
 # Always force lights out at launch
 dim({ 'channel' => 0, 'value' => 0, 'time' => 0 });
 
 # Loop forever
 while (1) {
+	
+	# Set anywhere to force an update this cycle
+	my $forceUpdate = 0;
 
 	# State is calculated; use newState to gather data
 	my $newState = $state;
@@ -161,6 +168,7 @@ while (1) {
 
 		# Propogate the most recent command state
 		$newState = $cmdState;
+		$pullLast = time();
 	}
 
 	# Monitor the LIGHTS file for presence
@@ -192,8 +200,16 @@ while (1) {
 	}
 	$state = $newState;
 
+	# Force updates on a periodic basis
+	if (time() - $pushLast > $PUSH_TIMEOUT) {
+		$forceUpdate = 1;
+	}
+	if (time() - $pullLast > $PULL_TIMEOUT) {
+		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
+	}
+
 	# Update the lighting
-	if ($stateLast ne $state) {
+	if ($forceUpdate || $stateLast ne $state) {
 		if ($DEBUG) {
 			print STDERR 'State: ' . $stateLast . ' => ' . $state . "\n";
 			foreach my $data (@{ $DIM{$state} }) {
@@ -213,6 +229,9 @@ while (1) {
 		print $fh 'State: ' . $state . "\n" . join("\n", @values) . "\n";
 		close($fh);
 		rename($tmp, $DATA_DIR . 'ROPE');
+		
+		# Update the push time
+		$pushLast = time();
 	}
 }
 

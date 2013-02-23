@@ -17,14 +17,14 @@ my %DIM = (
 		{ 'channel' => 11, 'value' => 255, 'time' => 0 }
 	],
 );
-my $TIMEOUT = 180;
 
 # App config
 my $SOCK_TIMEOUT = 5;
 my $TEMP_DIR     = `getconf DARWIN_USER_TEMP_DIR`;
 chomp($TEMP_DIR);
-my $DATA_DIR = $TEMP_DIR . 'plexMonitor/';
-my $CMD_FILE = $DATA_DIR . 'DMX.socket';
+my $DATA_DIR     = $TEMP_DIR . 'plexMonitor/';
+my $CMD_FILE     = $DATA_DIR . 'DMX.socket';
+my $PUSH_TIMEOUT = 20;
 
 # Debug
 my $DEBUG = 0;
@@ -52,16 +52,20 @@ my $sock = IO::Socket::UNIX->new(
 ) or die('Unable to open socket: ' . $CMD_FILE . ": ${@}\n");
 
 # State
-my $state      = 'INIT';
-my $stateLast  = $state;
-my $fan        = 0;
-my $projector  = 0;
+my $state     = 'INIT';
+my $stateLast = $state;
+my $fan       = 0;
+my $projector = 0;
+my $pushLast  = 0;
 
 # Always force lights out at launch
-dim({'channel' => 11, 'value' => 0, 'time' => 0});
+dim({ 'channel' => 11, 'value' => 0, 'time' => 0 });
 
 # Loop forever
 while (1) {
+
+	# Set anywhere to force an update this cycle
+	my $forceUpdate = 0;
 
 	# Monitor the PROJECTOR file for state
 	{
@@ -81,6 +85,7 @@ while (1) {
 
 	# Monitor the FAN_CMD file for presence
 	{
+
 		# Clear the flag when the projector is off
 		if ($fan && !$projector) {
 			unlink($DATA_DIR . 'FAN_CMD');
@@ -110,8 +115,13 @@ while (1) {
 		$state = 'OFF';
 	}
 
+	# Force updates on a periodic basis
+	if (time() - $pushLast > $PUSH_TIMEOUT) {
+		$forceUpdate = 1;
+	}
+
 	# Update the fan state
-	if ($stateLast ne $state) {
+	if ($forceUpdate || $stateLast ne $state) {
 		if ($DEBUG) {
 			print STDERR 'State: ' . $stateLast . ' => ' . $state . "\n";
 			foreach my $data (@{ $DIM{$state} }) {
@@ -131,6 +141,9 @@ while (1) {
 		print $fh 'State: ' . $state . "\n" . join("\n", @values) . "\n";
 		close($fh);
 		rename($tmp, $DATA_DIR . 'FAN');
+		
+		# Update the push time
+		$pushLast = time();
 	}
 
 	# Wait and loop
@@ -138,12 +151,12 @@ while (1) {
 }
 
 # Send the command
-sub dim(%) {
+sub dim($) {
 	my ($args) = @_;
-	if (! defined($args->{'delay'})) {
+	if (!defined($args->{'delay'})) {
 		$args->{'delay'} = 0;
 	}
-	if (! defined($args->{'channel'}) || ! defined($args->{'time'}) || ! defined($args->{'value'})) {
+	if (!defined($args->{'channel'}) || !defined($args->{'time'}) || !defined($args->{'value'})) {
 		die('Invalid command for socket: ' . join(', ', keys(%{$args})) . ': ' . join(', ', values(%{$args})) . "\n");
 	}
 

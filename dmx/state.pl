@@ -15,10 +15,11 @@ my $STATE_TIMEOUT = 180;
 my $SOCK_TIMEOUT = 5;
 my $TEMP_DIR     = `getconf DARWIN_USER_TEMP_DIR`;
 chomp($TEMP_DIR);
-my $DATA_DIR    = $TEMP_DIR . 'plexMonitor/';
-my $CMD_FILE    = $DATA_DIR . 'STATE.socket';
-my $MAX_CMD_LEN = 4096;
-my $RESET_CMD   = $ENV{'HOME'} . '/bin/video/dmx/reset.sh';
+my $DATA_DIR     = $TEMP_DIR . 'plexMonitor/';
+my $CMD_FILE     = $DATA_DIR . 'STATE.socket';
+my $MAX_CMD_LEN  = 4096;
+my $RESET_CMD    = $ENV{'HOME'} . '/bin/video/dmx/reset.sh';
+my $PUSH_TIMEOUT = 20;
 
 # Debug
 my $DEBUG = 0;
@@ -63,6 +64,7 @@ my $stateLast  = $state;
 my $playing    = 0;
 my $projector  = 0;
 my $updateLast = 0;
+my $pushLast   = 0;
 
 # Loop forever
 while (1) {
@@ -196,11 +198,19 @@ while (1) {
 		$state = 'OFF';
 	}
 
+	# Force updates on a periodic basis
+	if (time() - $pushLast > $PUSH_TIMEOUT) {
+		$forceUpdate = 1;
+	}
+
 	# Update the state
 	if ($forceUpdate || $stateLast ne $state) {
 		if ($DEBUG) {
 			print STDERR 'State: ' . $stateLast . ' => ' . $state . "\n";
 		}
+
+		# Note the push
+		$pushLast = time();
 
 		# Send notifications to all subscribers
 		foreach my $sub (@subscribers) {
