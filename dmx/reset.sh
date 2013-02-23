@@ -1,6 +1,10 @@
 #!/bin/bash
 
 ROPE="`ps -A -o pid=,command= | grep -v grep | grep rope.pl | awk '{print $1}'`"
-if [ -n "${ROPE}" ]; then
-	kill $ROPE
-fi
+LEDS="`ps -A -o pid=,command= | grep -v grep | grep leds.pl | awk '{print $1}'`"
+
+for i in $ROPE $LEDS; do
+	if [ -n "${i}" ]; then
+		kill $i
+	fi
+done
