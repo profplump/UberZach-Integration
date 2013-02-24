@@ -100,7 +100,7 @@ my $stateLast  = $state;
 my $lights     = 0;
 my $updateLast = 0;
 my $pushLast   = 0;
-my $pullLast   = 0;
+my $pullLast   = time();
 
 # Always force lights out at launch
 dim({ 'channel' => 13, 'value' => 0, 'time' => 0 });
