@@ -20,7 +20,7 @@ my $CMD_FILE     = $DATA_DIR . 'STATE.socket';
 my $MAX_CMD_LEN  = 4096;
 my $RESET_CMD    = $ENV{'HOME'} . '/bin/video/dmx/reset.sh';
 my $PUSH_TIMEOUT = 20;
-my %MON_FILES    = (
+my %MON_FILES = (
 	'PLAYING'     => 'MTIME',
 	'GUI'         => 'MTIME',
 	'MOTION'      => 'MTIME',
@@ -29,6 +29,7 @@ my %MON_FILES    = (
 	'LIGHTS'      => 'EXISTS',
 	'FAN_CMD'     => 'EXISTS',
 );
+
 
 # Debug
 my $DEBUG = 0;

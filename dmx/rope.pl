@@ -122,18 +122,18 @@ shutdown($sub_fh, 2);
 undef($sub_fh);
 
 # State
-my $state      = 'INIT';
-my $stateLast  = $state;
-my %exists     = ();
-my $pushLast   = 0;
-my $pullLast   = time();
+my $state     = 'INIT';
+my $stateLast = $state;
+my %exists    = ();
+my $pushLast  = 0;
+my $pullLast  = time();
 
 # Always force lights out at launch
 dim({ 'channel' => 0, 'value' => 0, 'time' => 0 });
 
 # Loop forever
 while (1) {
-	
+
 	# Set anywhere to force an update this cycle
 	my $forceUpdate = 0;
 
@@ -231,7 +231,7 @@ while (1) {
 		print $fh 'State: ' . $state . "\n" . join("\n", @values) . "\n";
 		close($fh);
 		rename($tmp, $DATA_DIR . 'ROPE');
-		
+
 		# Update the push time
 		$pushLast = time();
 	}

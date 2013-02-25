@@ -176,7 +176,7 @@ while (1) {
 		print $fh 'State: ' . $state . "\n" . join("\n", @values) . "\n";
 		close($fh);
 		rename($tmp, $DATA_DIR . 'FAN');
-		
+
 		# Update the push time
 		$pushLast = time();
 	}

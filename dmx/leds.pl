@@ -94,11 +94,11 @@ shutdown($sub_fh, 2);
 undef($sub_fh);
 
 # State
-my $state      = 'INIT';
-my $stateLast  = $state;
-my %exists     = ();
-my $pushLast   = 0;
-my $pullLast   = time();
+my $state     = 'INIT';
+my $stateLast = $state;
+my %exists    = ();
+my $pushLast  = 0;
+my $pullLast  = time();
 
 # Always force lights out at launch
 dim({ 'channel' => 13, 'value' => 0, 'time' => 0 });
@@ -107,7 +107,7 @@ dim({ 'channel' => 15, 'value' => 0, 'time' => 0 });
 
 # Loop forever
 while (1) {
-	
+
 	# Set anywhere to force an update this cycle
 	my $forceUpdate = 0;
 
@@ -122,12 +122,12 @@ while (1) {
 		my $text = undef();
 		$fh->recv($text, $MAX_CMD_LEN);
 
-		# Parse the string   
+		# Parse the string
 		%exists = ();
 		my ($cmdState, $exists_text) = $text =~ /^(\w+)\s+\(([^\)]+)\)/;
 		if (!defined($cmdState) || !defined($exists_text)) {
 			print STDERR 'State parse error: ' . $text . "\n";
-			next;    
+			next;
 		}
 		foreach my $exists (split(/\s*,\s*/, $exists_text)) {
 			my ($name, $value) = $exists =~ /(\w+)\:(0|1)/;
@@ -173,7 +173,7 @@ while (1) {
 		}
 	}
 	$state = $newState;
-	
+
 	# Force updates on a periodic basis
 	if (time() - $pullLast > $PUSH_TIMEOUT) {
 		$forceUpdate = 1;
@@ -205,7 +205,7 @@ while (1) {
 		print $fh 'State: ' . $state . "\n" . join("\n", @values) . "\n";
 		close($fh);
 		rename($tmp, $DATA_DIR . 'LED');
-		
+
 		# Update the push time
 		$pushLast = time();
 	}
