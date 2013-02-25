@@ -20,6 +20,15 @@ my $CMD_FILE     = $DATA_DIR . 'STATE.socket';
 my $MAX_CMD_LEN  = 4096;
 my $RESET_CMD    = $ENV{'HOME'} . '/bin/video/dmx/reset.sh';
 my $PUSH_TIMEOUT = 20;
+my %MON_FILES    = (
+	'PLAYING'     => 'MTIME',
+	'GUI'         => 'MTIME',
+	'MOTION'      => 'MTIME',
+	'PROJECTOR'   => 'STATUS',
+	'PLAY_STATUS' => 'STATUS',
+	'LIGHTS'      => 'EXISTS',
+	'FAN_CMD'     => 'EXISTS',
+);
 
 # Debug
 my $DEBUG = 0;
@@ -62,9 +71,22 @@ my @subscribers = ();
 my $state      = 'INIT';
 my $stateLast  = $state;
 my $playing    = 0;
-my $projector  = 0;
 my $updateLast = 0;
 my $pushLast   = 0;
+
+# Init the file tracking structure
+my %files = ();
+foreach my $file (keys(%MON_FILES)) {
+	my %tmp = (
+		'name'   => $file,
+		'type'   => $MON_FILES{$file},
+		'path'   => $DATA_DIR . $file,
+		'update' => 0,
+		'status' => 0,
+		'last'   => 0,
+	);
+	$files{$file} = \%tmp;
+}
 
 # Loop forever
 while (1) {
@@ -113,72 +135,59 @@ while (1) {
 		$forceUpdate = 1;
 	}
 
-	# Monitor the PLAY_STATUS file for changes and state
-	{
-		my $mtime = mtime($DATA_DIR . 'PLAY_STATUS');
-		if ($mtime > $updateLast) {
-			$updateLast = $mtime;
+	# Monitor files of all types
+	foreach my $file (values(%files)) {
+		# Always record the previous status and clear the new one
+		$file->{'last'} = $file->{'status'};
+		$file->{'status'} = 0;
+
+		# Record the last update
+		if ($file->{'type'} eq 'STATUS' || $file->{'type'} eq 'MTIME') {
+			$file->{'update'} = mtime($file->{'path'});
+			if ($DEBUG) {
+				print STDERR 'Last change: ' . $file->{'name'} . ': ' . localtime($file->{'update'}) . "\n";
+			}
 		}
 
-		# Grab the PLAY_STATUS value
-		$playing = 0;
-		my $fh;
-		open($fh, $DATA_DIR . 'PLAY_STATUS')
-		  or die("Unable to open PLAY_STATUS\n");
-		my $text = <$fh>;
-		close($fh);
-		if ($text =~ /1/) {
-			$playing = 1;
+		# Grab the new status and save the old one
+		if ($file->{'type'} eq 'STATUS') {
+			my $fh;
+			open($fh, $file->{'path'})
+			  or die('Unable to open ' . $file->{'path'} . "\n");
+			my $text = <$fh>;
+			close($fh);
+			if ($text =~ /1/) {
+				$file->{'status'} = 1;
+			}
+			if ($DEBUG) {
+				print STDERR 'Status: ' . $file->{'name'} . ': ' . $file->{'status'} . "\n";
+			}
 		}
-		if ($DEBUG) {
-			print STDERR 'Playing: ' . $playing . "\n";
+
+		# Check for the presence of a file
+		if ($file->{'type'} eq 'EXISTS') {
+			if (-e $file->{'path'}) {
+				$file->{'status'} = 1;
+			}
+			if ($DEBUG) {
+				print STDERR 'Exists: ' . $file->{'name'} . ': ' . $file->{'status'} . "\n";
+			}
 		}
 	}
 
-	# Monitor the PROJECTOR file for changes and state
-	{
-		my $mtime = mtime($DATA_DIR . 'PROJECTOR');
-		if ($mtime > $updateLast) {
-			$updateLast = $mtime;
-		}
-
-		# Grab the PROJECTOR value
-		$projector = 0;
-		my $fh;
-		open($fh, $DATA_DIR . 'PROJECTOR')
-		  or die("Unable to open PROJECTOR\n");
-		my $text = <$fh>;
-		close($fh);
-		if ($text =~ /1/) {
-			$projector = 1;
-		}
-		if ($DEBUG) {
-			print STDERR 'Projector: ' . $projector . "\n";
-		}
-	}
-
-	# Monitor the GUI, PLAYING, and MOTION files for changes only
-	{
-		my $mtime = mtime($DATA_DIR . 'PLAYING');
-		if ($mtime > $updateLast) {
-			$updateLast = $mtime;
-		}
-		$mtime = mtime($DATA_DIR . 'GUI');
-		if ($mtime > $updateLast) {
-			$updateLast = $mtime;
-		}
-		$mtime = mtime($DATA_DIR . 'MOTION');
-		if ($mtime > $updateLast) {
-			$updateLast = $mtime;
+	# Set the global update timestamp
+	foreach my $file (values(%files)) {
+		if ($file->{'update'} > $updateLast) {
+			$updateLast = $file->{'update'};
 		}
 	}
 
 	# Calculate the new state
 	$stateLast = $state;
-	if ($projector) {
+	if ($files{'PROJECTOR'}->{'status'}) {
 
 		# We are always either playing or paused if the projector is on
-		if ($playing) {
+		if ($files{'PLAY_STATUS'}->{'status'}) {
 			$state = 'PLAY';
 		} else {
 			$state = 'PAUSE';
@@ -198,13 +207,43 @@ while (1) {
 		$state = 'OFF';
 	}
 
+	# Clear exists files when the main state is "OFF"
+	foreach my $file (values(%files)) {
+		if ($file->{'type'} eq 'EXISTS' && $file->{'status'} && $state eq 'OFF') {
+			unlink($file->{'path'});
+			$file->{'stauts'} = 0;
+			if ($DEBUG) {
+				print STDERR 'Clearing exists flag for: ' . $file->{'name'} . "\n";
+			}
+		}
+	}
+
+	# Append the status of all "exists" files
+	{
+		my @exists = ();
+		foreach my $file (values(%files)) {
+			if ($file->{'type'} eq 'EXISTS') {
+				push(@exists, $file->{'name'} . ':' . $file->{'status'});
+			}
+		}
+		$state .= ' (' . join(', ', @exists) . ')';
+	}
+
 	# Force updates on a periodic basis
 	if (time() - $pushLast > $PUSH_TIMEOUT) {
 		$forceUpdate = 1;
 	}
 
+	# Update on any status change
+	foreach my $file (values(%files)) {
+		if ($file->{'status'} != $file->{'last'}) {
+			$forceUpdate = 1;
+			last;
+		}
+	}
+
 	# Update the state
-	if ($forceUpdate || $stateLast ne $state) {
+	if ($forceUpdate || $state ne $stateLast) {
 		if ($DEBUG) {
 			print STDERR 'State: ' . $stateLast . ' => ' . $state . "\n";
 		}

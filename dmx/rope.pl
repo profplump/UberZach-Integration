@@ -6,7 +6,6 @@ use IO::Socket::UNIX;
 use File::Temp qw( tempfile );
 
 # Prototypes
-sub mtime($);
 sub dim($);
 
 # User config
@@ -85,7 +84,7 @@ if ($ENV{'DEBUG'}) {
 # Command-line arguments
 my ($DELAY) = @ARGV;
 if (!$DELAY) {
-	$DELAY = 0.5;
+	$DELAY = $PULL_TIMEOUT / 2;
 }
 
 # Sanity check
@@ -125,8 +124,7 @@ undef($sub_fh);
 # State
 my $state      = 'INIT';
 my $stateLast  = $state;
-my $lights     = 0;
-my $updateLast = 0;
+my %exists     = ();
 my $pushLast   = 0;
 my $pullLast   = time();
 
@@ -147,12 +145,30 @@ while (1) {
 	foreach my $fh (@ready_clients) {
 
 		# Grab the inbound text
-		my $cmdState = undef();
-		$fh->recv($cmdState, $MAX_CMD_LEN);
-		$cmdState =~ s/^\s+//;
-		$cmdState =~ s/\s+$//;
+		my $text = undef();
+		$fh->recv($text, $MAX_CMD_LEN);
+
+		# Parse the string
+		%exists = ();
+		my ($cmdState, $exists_text) = $text =~ /^(\w+)\s+\(([^\)]+)\)/;
+		if (!defined($cmdState) || !defined($exists_text)) {
+			print STDERR 'State parse error: ' . $text . "\n";
+			next;
+		}
+		foreach my $exists (split(/\s*,\s*/, $exists_text)) {
+			my ($name, $value) = $exists =~ /(\w+)\:(0|1)/;
+			if (!defined($name) || !defined($value)) {
+				print STDERR 'State parse error (exists): ' . $text . "\n";
+				next;
+			}
+			$exists{$name} = $value;
+		}
 		if ($DEBUG) {
-			print STDERR 'Got state: ' . $cmdState . "\n";
+			my @exists_tmp = ();
+			foreach my $key (keys(%exists)) {
+				push(@exists_tmp, $key . ':' . $exists{$key});
+			}
+			print STDERR 'Got state: ' . $cmdState . ' (' . join(', ', @exists_tmp) . ")\n";
 		}
 
 		# Translate INIT to OFF
@@ -171,25 +187,9 @@ while (1) {
 		$pullLast = time();
 	}
 
-	# Monitor the LIGHTS file for presence
-	{
-		$lights = 0;
-		if (-e $DATA_DIR . 'LIGHTS') {
-			$lights = 1;
-		}
-		if ($DEBUG) {
-			print STDERR 'Lights: ' . $lights . "\n";
-		}
-
-		# Clear the override when the main state is "OFF"
-		if ($lights && $newState eq 'OFF') {
-			unlink($DATA_DIR . 'LIGHTS');
-		}
-	}
-
 	# Calculate the new state
 	$stateLast = $state;
-	if ($lights) {
+	if ($exists{'LIGHTS'}) {
 		if ($newState eq 'PLAY') {
 			$newState = 'PLAY_HIGH';
 		}
@@ -204,6 +204,8 @@ while (1) {
 	if (time() - $pushLast > $PUSH_TIMEOUT) {
 		$forceUpdate = 1;
 	}
+
+	# Die if we don't see regular updates
 	if (time() - $pullLast > $PULL_TIMEOUT) {
 		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
 	}
@@ -233,15 +235,6 @@ while (1) {
 		# Update the push time
 		$pushLast = time();
 	}
-}
-
-sub mtime($) {
-	my ($file) = @_;
-	my $mtime = 0;
-	if (-r $file) {
-		(undef(), undef(), undef(), undef(), undef(), undef(), undef(), undef(), undef(), $mtime, undef(), undef(), undef()) = stat($file);
-	}
-	return $mtime;
 }
 
 # Send the command
