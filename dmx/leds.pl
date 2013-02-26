@@ -7,6 +7,14 @@ use File::Temp qw( tempfile );
 
 # Prototypes
 sub dim($);
+sub red_alert();
+sub red_flash();
+
+# Effects states
+my %EFFECTS = (
+	'RED_ALERT' => \&red_alert,
+	'RED_FLASH' => \&red_flash,
+);
 
 # User config
 my %DIM = (
@@ -94,11 +102,12 @@ shutdown($sub_fh, 2);
 undef($sub_fh);
 
 # State
-my $state     = 'INIT';
-my $stateLast = $state;
-my %exists    = ();
-my $pushLast  = 0;
-my $pullLast  = time();
+my $state      = 'INIT';
+my $stateLast  = $state;
+my %exists     = ();
+my %existsLast = %exists;
+my $pushLast   = 0;
+my $pullLast   = time();
 
 # Always force lights out at launch
 dim({ 'channel' => 13, 'value' => 0, 'time' => 0 });
@@ -107,6 +116,10 @@ dim({ 'channel' => 15, 'value' => 0, 'time' => 0 });
 
 # Loop forever
 while (1) {
+
+	# Record the last state/exists data for diffs/resets
+	$stateLast  = $state;
+	%existsLast = %exists;
 
 	# Set anywhere to force an update this cycle
 	my $forceUpdate = 0;
@@ -151,7 +164,7 @@ while (1) {
 		}
 
 		# Only accept valid states
-		if (!defined($DIM{$cmdState})) {
+		if (!defined($DIM{$cmdState}) && !defined($EFFECTS{$cmdState})) {
 			print STDERR 'Invalid state: ' . $cmdState . "\n";
 			next;
 		}
@@ -161,8 +174,19 @@ while (1) {
 		$pullLast = time();
 	}
 
+	# Special handling for effects states
+	if (defined($EFFECTS{$newState})) {
+
+		# Dispatch the handler
+		$EFFECTS{$newState}->();
+
+		# Force an update back to the original state
+		$newState    = $stateLast;
+		%exists      = %existsLast;
+		$forceUpdate = 1;
+	}
+
 	# Calculate the new state
-	$stateLast = $state;
 	if ($exists{'LIGHTS'}) {
 		if ($newState eq 'PLAY') {
 			$newState = 'PLAY_HIGH';
@@ -224,4 +248,16 @@ sub dim($) {
 	my $cmd = join(':', $args->{'channel'}, $args->{'time'}, $args->{'value'}, $args->{'delay'});
 	$dmx_fh->send($cmd)
 	  or die('Unable to write command to socket: ' . $DMX_SOCK . ': ' . $cmd . ": ${!}\n");
+}
+
+# ======================================
+# Effects routines
+# These are blocking, so be careful
+# ======================================
+sub red_alert() {
+
+}
+
+sub red_flash() {
+
 }
