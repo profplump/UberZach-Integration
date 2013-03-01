@@ -22,9 +22,9 @@ my %DIM = (
 		# Handled by rope.pl
 	],
 	'PLAY'      => [
-		{ 'channel' => 13, 'value' => 8,    'time' => 500  },
-		{ 'channel' => 14, 'value' => 10,   'time' => 500  },
-		{ 'channel' => 15, 'value' => 10,   'time' => 500  },
+		{ 'channel' => 13, 'value' => 10,   'time' => 500  },
+		{ 'channel' => 14, 'value' => 12,   'time' => 500  },
+		{ 'channel' => 15, 'value' => 8,    'time' => 500  },
 	],
 	'PLAY_HIGH' => [
 		{ 'channel' => 13, 'value' => 64,  'time' => 1000, 'delay' => 3000 },
