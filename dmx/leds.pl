@@ -14,24 +14,24 @@ my %DIM = (
 		# Handled by rope.pl
 	],
 	'PLAY'      => [
-		{ 'channel' => 13, 'value' => 4,    'time' => 250  },
-		{ 'channel' => 14, 'value' => 4,    'time' => 250  },
-		{ 'channel' => 15, 'value' => 4,    'time' => 250  },
+		{ 'channel' => 13, 'value' => 8,    'time' => 500  },
+		{ 'channel' => 14, 'value' => 10,   'time' => 500  },
+		{ 'channel' => 15, 'value' => 10,   'time' => 500  },
 	],
 	'PLAY_HIGH' => [
-		{ 'channel' => 13, 'value' => 8,   'time' => 500,  'delay' => 0    },
-		{ 'channel' => 14, 'value' => 8,   'time' => 500,  'delay' => 250  },
-		{ 'channel' => 15, 'value' => 8,   'time' => 500,  'delay' => 500  },
+		{ 'channel' => 13, 'value' => 64,  'time' => 1000, 'delay' => 3000 },
+		{ 'channel' => 14, 'value' => 73,  'time' => 1000, 'delay' => 1500 },
+		{ 'channel' => 15, 'value' => 76,  'time' => 1000, 'delay' => 0    },
 	],
 	'PAUSE'     => [
-		{ 'channel' => 13, 'value' => 12,  'time' => 1000, 'delay' => 3000 },
-		{ 'channel' => 14, 'value' => 12,  'time' => 1000, 'delay' => 6000 },
-		{ 'channel' => 15, 'value' => 12,  'time' => 1000, 'delay' => 9000 },
+		{ 'channel' => 13, 'value' => 96,  'time' => 3000, 'delay' => 3000 },
+		{ 'channel' => 14, 'value' => 109, 'time' => 3000, 'delay' => 0    },
+		{ 'channel' => 15, 'value' => 114, 'time' => 3000, 'delay' => 7000 },
 	],
 	'MOTION'    => [
-		{ 'channel' => 13, 'value' => 32,  'time' => 1000  },
-		{ 'channel' => 14, 'value' => 32,  'time' => 1000  },
-		{ 'channel' => 15, 'value' => 32,  'time' => 1000  },
+		{ 'channel' => 13, 'value' => 144, 'time' => 1000  },
+		{ 'channel' => 14, 'value' => 164, 'time' => 1000  },
+		{ 'channel' => 15, 'value' => 172, 'time' => 1000  },
 	],
 );
 
