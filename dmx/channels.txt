@@ -12,6 +12,6 @@
 #       10 => <Unused>
 #       11 => Fan
 #       12 => Bias Light
-#	13 => Red
-#	14 => Blue
-#	15 => Green
+#	13 => Blue
+#	14 => Red (+14%)
+#	15 => Green (+19%)
