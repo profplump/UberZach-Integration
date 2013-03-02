@@ -17,29 +17,31 @@ my %EFFECTS = (
 );
 
 # User config
-my %DIM = (
+my $COLOR_TIMEOUT = 60;
+my $COLOR_MIN     = $COLOR_TIMEOUT / 4;
+my %DIM           = (
 	'OFF'    => [
 		# Handled by rope.pl
 	],
 	'PLAY'      => [
-		{ 'channel' => 13, 'value' => 4,    'time' => 250  },
-		{ 'channel' => 14, 'value' => 4,    'time' => 250  },
-		{ 'channel' => 15, 'value' => 4,    'time' => 250  },
+		{ 'channel' => 13, 'value' => 10,   'time' => 500  },
+		{ 'channel' => 14, 'value' => 12,   'time' => 500  },
+		{ 'channel' => 15, 'value' => 8,    'time' => 500  },
 	],
 	'PLAY_HIGH' => [
-		{ 'channel' => 13, 'value' => 8,   'time' => 500,  'delay' => 0    },
-		{ 'channel' => 14, 'value' => 8,   'time' => 500,  'delay' => 250  },
-		{ 'channel' => 15, 'value' => 8,   'time' => 500,  'delay' => 500  },
+		{ 'channel' => 13, 'value' => 64,  'time' => 1000, 'delay' => 3000 },
+		{ 'channel' => 14, 'value' => 73,  'time' => 1000, 'delay' => 1500 },
+		{ 'channel' => 15, 'value' => 76,  'time' => 1000, 'delay' => 0    },
 	],
 	'PAUSE'     => [
-		{ 'channel' => 13, 'value' => 12,  'time' => 1000, 'delay' => 3000 },
-		{ 'channel' => 14, 'value' => 12,  'time' => 1000, 'delay' => 6000 },
-		{ 'channel' => 15, 'value' => 12,  'time' => 1000, 'delay' => 9000 },
+		{ 'channel' => 13, 'value' => 96,  'time' => 3000, 'delay' => 3000 },
+		{ 'channel' => 14, 'value' => 109, 'time' => 3000, 'delay' => 0    },
+		{ 'channel' => 15, 'value' => 114, 'time' => 3000, 'delay' => 7000 },
 	],
 	'MOTION'    => [
-		{ 'channel' => 13, 'value' => 32,  'time' => 1000  },
-		{ 'channel' => 14, 'value' => 32,  'time' => 1000  },
-		{ 'channel' => 15, 'value' => 32,  'time' => 1000  },
+		{ 'channel' => 13, 'value' => 144, 'time' => 1000  },
+		{ 'channel' => 14, 'value' => 164, 'time' => 1000  },
+		{ 'channel' => 15, 'value' => 172, 'time' => 1000  },
 	],
 );
 
@@ -47,13 +49,13 @@ my %DIM = (
 my $SOCK_TIMEOUT = 5;
 my $TEMP_DIR     = `getconf DARWIN_USER_TEMP_DIR`;
 chomp($TEMP_DIR);
-my $DATA_DIR     = $TEMP_DIR . 'plexMonitor/';
-my $DMX_SOCK     = $DATA_DIR . 'DMX.socket';
-my $SUB_SOCK     = $DATA_DIR . 'STATE.socket';
-my $STATE_SOCK   = $DATA_DIR . 'LED.socket';
-my $MAX_CMD_LEN  = 1024;
-my $PUSH_TIMEOUT = 20;
-my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
+my $DATA_DIR      = $TEMP_DIR . 'plexMonitor/';
+my $DMX_SOCK      = $DATA_DIR . 'DMX.socket';
+my $SUB_SOCK      = $DATA_DIR . 'STATE.socket';
+my $STATE_SOCK    = $DATA_DIR . 'LED.socket';
+my $MAX_CMD_LEN   = 1024;
+my $PUSH_TIMEOUT  = 20;
+my $PULL_TIMEOUT  = $PUSH_TIMEOUT * 3;
 
 # Debug
 my $DEBUG = 0;
@@ -102,12 +104,13 @@ shutdown($sub_fh, 2);
 undef($sub_fh);
 
 # State
-my $state      = 'INIT';
-my $stateLast  = $state;
-my %exists     = ();
-my %existsLast = %exists;
-my $pushLast   = 0;
-my $pullLast   = time();
+my $state       = 'INIT';
+my $stateLast   = $state;
+my %exists      = ();
+my %existsLast  = %exists;
+my $pushLast    = 0;
+my $pullLast    = time();
+my $colorChange = time();
 
 # Always force lights out at launch
 dim({ 'channel' => 13, 'value' => 0, 'time' => 0 });
@@ -198,8 +201,30 @@ while (1) {
 	}
 	$state = $newState;
 
+	# Color changes
+	my @COLOR = ();
+	if (time() - $colorChange > $COLOR_TIMEOUT && $state ne 'PLAY' && $state ne 'OFF') {
+		my $totalLums = 0;
+		foreach my $data (@{ $DIM{$state} }) {
+			$totalLums += $data->{'value'};
+		}
+
+		my $red   = int(rand($totalLums / 3));
+		my $blue  = int(rand($totalLums / 3));
+		my $green = $totalLums - ($red + $blue);
+		my $time  = int(rand($COLOR_TIMEOUT - $COLOR_MIN)) + $COLOR_MIN;
+
+		if ($DEBUG) {
+			print STDERR 'New color: ' . join(':', $red, $green, $blue) . ' @ ' . $time . "\n";
+		}
+
+		@COLOR       = [ { 'channel' => 13, 'value' => $red, 'time' => $time }, { 'channel' => 14, 'value' => $blue, 'time' => $time }, { 'channel' => 15, 'value' => $green, 'time' => $time }, ];
+		$forceUpdate = 1;
+		$colorChange = time();
+	}
+
 	# Force updates on a periodic basis
-	if (time() - $pullLast > $PUSH_TIMEOUT) {
+	if (time() - $pushLast > $PUSH_TIMEOUT) {
 		$forceUpdate = 1;
 	}
 
@@ -208,8 +233,16 @@ while (1) {
 		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
 	}
 
+	# Force updates on any state change
+	if ($stateLast ne $state) {
+		$forceUpdate = 1;
+
+		# Also reset the color change timer, so we always spend 1 cycle at white
+		$colorChange = time() + $COLOR_TIMEOUT;
+	}
+
 	# Update the lighting
-	if ($forceUpdate || $stateLast ne $state) {
+	if ($forceUpdate) {
 		if ($DEBUG) {
 			print STDERR 'State: ' . $stateLast . ' => ' . $state . "\n";
 			foreach my $data (@{ $DIM{$state} }) {
@@ -217,9 +250,17 @@ while (1) {
 			}
 		}
 
+		# Select a data set (color or standard)
+		my @data_set = ();
+		if (scalar(@COLOR)) {
+			@data_set = @COLOR;
+		} else {
+			@data_set = @{ $DIM{$state} };
+		}
+
 		# Send the dim command
 		my @values = ();
-		foreach my $data (@{ $DIM{$state} }) {
+		foreach my $data (@data_set) {
 			dim($data);
 			push(@values, $data->{'channel'} . ' => ' . $data->{'value'} . ' @ ' . $data->{'time'});
 		}
