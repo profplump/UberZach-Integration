@@ -2,6 +2,7 @@
 use strict;
 use warnings;
 use IO::Select;
+use Math::Random;
 use IO::Socket::UNIX;
 use File::Temp qw( tempfile );
 
@@ -17,9 +18,13 @@ my %EFFECTS = (
 );
 
 # User config
-my $COLOR_TIMEOUT  = 60;
-my $COLOR_TIME_MIN = int($COLOR_TIMEOUT / 4);
-my $COLOR_MIN      = 0.75;
+my $COLOR_TIMEOUT  = 30;
+my $COLOR_TIME_MIN = int($COLOR_TIMEOUT / 2);
+my %COLOR_VAR      = (
+	'PLAY'      => 0.50,
+	'PLAY_HIGH' => 0.50,
+	'PAUSE'     => 0.65,
+);
 my %DIM            = (
 	'OFF'    => [
 		# Handled by rope.pl
@@ -56,7 +61,11 @@ my $SUB_SOCK     = $DATA_DIR . 'STATE.socket';
 my $STATE_SOCK   = $DATA_DIR . 'LED.socket';
 my $MAX_CMD_LEN  = 1024;
 my $PUSH_TIMEOUT = 20;
-my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
+my $PULL_TIMEOUT = 60;
+# Reset the push timeout if the color timeout is longer
+if ($PUSH_TIMEOUT < $COLOR_TIMEOUT) {
+	$PUSH_TIMEOUT = $COLOR_TIMEOUT;
+}
 
 # Debug
 my $DEBUG = 0;
@@ -68,8 +77,8 @@ if ($ENV{'DEBUG'}) {
 my ($DELAY) = @ARGV;
 if (!$DELAY) {
 	$DELAY = $PULL_TIMEOUT / 2;
-	if ($DELAY > $COLOR_TIMEOUT) {
-		$DELAY = $COLOR_TIMEOUT + 1;
+	if ($DELAY > $COLOR_TIMEOUT / 2) {
+		$DELAY = $COLOR_TIMEOUT / 2;
 	}
 }
 
@@ -114,6 +123,7 @@ my %exists      = ();
 my %existsLast  = %exists;
 my $pushLast    = 0;
 my $pullLast    = time();
+my @COLOR       = ();
 my $colorChange = time();
 
 # Always force lights out at launch
@@ -209,16 +219,13 @@ while (1) {
 	}
 
 	# Color changes
-	my @COLOR = ();
-	if (time() - $colorChange > $COLOR_TIMEOUT && $state ne 'PLAY' && $state ne 'OFF') {
+	if ($COLOR_VAR{$state} && time() - $colorChange > $COLOR_TIMEOUT) {
+		@COLOR = ();
 
 		# Grab the default (white) data
 		my $lums = 0;
 		foreach my $data (@{ $DIM{$state} }) {
 			$lums += $data->{'value'};
-		}
-		if ($lums == 0) {
-			goto OUT;
 		}
 		my $numChans = scalar(@{ $DIM{$state} });
 		my $max      = $lums / $numChans;
@@ -227,18 +234,15 @@ while (1) {
 		my $time = int((rand($COLOR_TIMEOUT - $COLOR_TIME_MIN) + $COLOR_TIME_MIN) * 1000);
 
 		# Assign each channel
-		my $first = 0;
 		foreach my $data (@{ $DIM{$state} }) {
-			if (!$first) {
-				$first = $data->{'channel'};
-				next;
+			my $color = int(random_normal(1, $max, $max * $COLOR_VAR{$state}));
+			if ($color < 0) {
+				$color = 0;
+			} elsif ($color > 255) {
+				$color = 255;
 			}
-			my $min   = $data->{'value'} * $COLOR_MIN;
-			my $color = int(rand($max - $min) + $min);
 			push(@COLOR, { 'channel' => $data->{'channel'}, 'value' => $color, 'time' => $time });
-			$lums -= $color;
 		}
-		push(@COLOR, { 'channel' => $first, 'value' => $lums, 'time' => $time });
 
 		# Update
 		$forceUpdate = 1;
@@ -246,9 +250,6 @@ while (1) {
 		if ($DEBUG) {
 			print STDERR "New color\n";
 		}
-
-		OUT:
-		# Nothing
 	}
 
 	# Force updates on a periodic basis
@@ -265,8 +266,9 @@ while (1) {
 	if ($stateLast ne $state) {
 		$forceUpdate = 1;
 
-		# Also reset the color change timer, so we always spend 1 cycle at white
-		$colorChange = time() + $COLOR_TIMEOUT;
+		# Reset the color change sequence, so we always spend 1 cycle at white
+		@COLOR       = ();
+		#$colorChange = time() + $COLOR_TIME_MIN;
 	}
 
 	# Update the lighting
@@ -282,10 +284,13 @@ while (1) {
 
 		# Debug
 		if ($DEBUG) {
-			print STDERR 'State: ' . $stateLast . ' => ' . $state . ' (Color:' . scalar(@COLOR) . ")\n";
+			my $sum = 0;
+			print STDERR 'State: ' . $stateLast . ' => ' . $state . ' (Color: ' . scalar(@COLOR) . ")\n";
 			foreach my $data (@data_set) {
+				$sum += $data->{'value'};
 				print STDERR "\t" . $data->{'channel'} . ' => ' . $data->{'value'} . ' @ ' . $data->{'time'} . "\n";
 			}
+			print STDERR "\tTotal: " . $sum . "\n";
 		}
 
 		# Send the dim command
@@ -316,7 +321,7 @@ sub dim($) {
 		die('Invalid command for socket: ' . join(', ', keys(%{$args})) . ': ' . join(', ', values(%{$args})) . "\n");
 	}
 
-	my $cmd = join(':', $args->{'channel'}, $args->{'time'}, $args->{'value'}, $args->{'delay'});
+	my $cmd = join(':', $args->{'channel'}, int($args->{'time'}), int($args->{'value'}), int($args->{'delay'}));
 	$dmx_fh->send($cmd)
 	  or die('Unable to write command to socket: ' . $DMX_SOCK . ': ' . $cmd . ": ${!}\n");
 }
