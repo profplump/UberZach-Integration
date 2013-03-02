@@ -17,9 +17,10 @@ my %EFFECTS = (
 );
 
 # User config
-my $COLOR_TIMEOUT = 60;
-my $COLOR_MIN     = $COLOR_TIMEOUT / 4;
-my %DIM           = (
+my $COLOR_TIMEOUT  = 60;
+my $COLOR_TIME_MIN = int($COLOR_TIMEOUT / 4);
+my $COLOR_MIN      = 0.75;
+my %DIM            = (
 	'OFF'    => [
 		# Handled by rope.pl
 	],
@@ -49,13 +50,13 @@ my %DIM           = (
 my $SOCK_TIMEOUT = 5;
 my $TEMP_DIR     = `getconf DARWIN_USER_TEMP_DIR`;
 chomp($TEMP_DIR);
-my $DATA_DIR      = $TEMP_DIR . 'plexMonitor/';
-my $DMX_SOCK      = $DATA_DIR . 'DMX.socket';
-my $SUB_SOCK      = $DATA_DIR . 'STATE.socket';
-my $STATE_SOCK    = $DATA_DIR . 'LED.socket';
-my $MAX_CMD_LEN   = 1024;
-my $PUSH_TIMEOUT  = 20;
-my $PULL_TIMEOUT  = $PUSH_TIMEOUT * 3;
+my $DATA_DIR     = $TEMP_DIR . 'plexMonitor/';
+my $DMX_SOCK     = $DATA_DIR . 'DMX.socket';
+my $SUB_SOCK     = $DATA_DIR . 'STATE.socket';
+my $STATE_SOCK   = $DATA_DIR . 'LED.socket';
+my $MAX_CMD_LEN  = 1024;
+my $PUSH_TIMEOUT = 20;
+my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
 
 # Debug
 my $DEBUG = 0;
@@ -67,6 +68,9 @@ if ($ENV{'DEBUG'}) {
 my ($DELAY) = @ARGV;
 if (!$DELAY) {
 	$DELAY = $PULL_TIMEOUT / 2;
+	if ($DELAY > $COLOR_TIMEOUT) {
+		$DELAY = $COLOR_TIMEOUT + 1;
+	}
 }
 
 # Sanity check
@@ -200,27 +204,51 @@ while (1) {
 		}
 	}
 	$state = $newState;
+	if ($DEBUG) {
+		print STDERR 'State: ' . $state . "\n";
+	}
 
 	# Color changes
 	my @COLOR = ();
 	if (time() - $colorChange > $COLOR_TIMEOUT && $state ne 'PLAY' && $state ne 'OFF') {
-		my $totalLums = 0;
+
+		# Grab the default (white) data
+		my $lums = 0;
 		foreach my $data (@{ $DIM{$state} }) {
-			$totalLums += $data->{'value'};
+			$lums += $data->{'value'};
 		}
-
-		my $red   = int(rand($totalLums / 3));
-		my $blue  = int(rand($totalLums / 3));
-		my $green = $totalLums - ($red + $blue);
-		my $time  = int(rand($COLOR_TIMEOUT - $COLOR_MIN)) + $COLOR_MIN;
-
-		if ($DEBUG) {
-			print STDERR 'New color: ' . join(':', $red, $green, $blue) . ' @ ' . $time . "\n";
+		if ($lums == 0) {
+			goto OUT;
 		}
+		my $numChans = scalar(@{ $DIM{$state} });
+		my $max      = $lums / $numChans;
 
-		@COLOR       = [ { 'channel' => 13, 'value' => $red, 'time' => $time }, { 'channel' => 14, 'value' => $blue, 'time' => $time }, { 'channel' => 15, 'value' => $green, 'time' => $time }, ];
+		# Pick the change interval
+		my $time = int((rand($COLOR_TIMEOUT - $COLOR_TIME_MIN) + $COLOR_TIME_MIN) * 1000);
+
+		# Assign each channel
+		my $first = 0;
+		foreach my $data (@{ $DIM{$state} }) {
+			if (!$first) {
+				$first = $data->{'channel'};
+				next;
+			}
+			my $min   = $data->{'value'} * $COLOR_MIN;
+			my $color = int(rand($max - $min) + $min);
+			push(@COLOR, { 'channel' => $data->{'channel'}, 'value' => $color, 'time' => $time });
+			$lums -= $color;
+		}
+		push(@COLOR, { 'channel' => $first, 'value' => $lums, 'time' => $time });
+
+		# Update
 		$forceUpdate = 1;
 		$colorChange = time();
+		if ($DEBUG) {
+			print STDERR "New color\n";
+		}
+
+		OUT:
+		# Nothing
 	}
 
 	# Force updates on a periodic basis
@@ -243,12 +271,6 @@ while (1) {
 
 	# Update the lighting
 	if ($forceUpdate) {
-		if ($DEBUG) {
-			print STDERR 'State: ' . $stateLast . ' => ' . $state . "\n";
-			foreach my $data (@{ $DIM{$state} }) {
-				print STDERR "\t" . $data->{'channel'} . ' => ' . $data->{'value'} . ' @ ' . $data->{'time'} . "\n";
-			}
-		}
 
 		# Select a data set (color or standard)
 		my @data_set = ();
@@ -256,6 +278,14 @@ while (1) {
 			@data_set = @COLOR;
 		} else {
 			@data_set = @{ $DIM{$state} };
+		}
+
+		# Debug
+		if ($DEBUG) {
+			print STDERR 'State: ' . $stateLast . ' => ' . $state . ' (Color:' . scalar(@COLOR) . ")\n";
+			foreach my $data (@data_set) {
+				print STDERR "\t" . $data->{'channel'} . ' => ' . $data->{'value'} . ' @ ' . $data->{'time'} . "\n";
+			}
 		}
 
 		# Send the dim command
