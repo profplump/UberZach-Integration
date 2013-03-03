@@ -14,13 +14,13 @@ my %DIM = (
 		# Handled by rope.pl
 	],
 	'PLAY'   => [
-		{ 'channel' => 12, 'value' => 255, 'time' => 0    }
+		{ 'channel' => 12, 'value' => 255, 'time' => 0 }
 	],
 	'PAUSE'   => [
-		{ 'channel' => 12, 'value' => 0,  'time' => 15000 }
+		{ 'channel' => 12, 'value' => 0,  'time' => 0, 'delay' => 8000 }
 	],
 	'MOTION'  => [
-		{ 'channel' => 12, 'value' => 0,  'time' => 0    }
+		{ 'channel' => 12, 'value' => 0,  'time' => 0 }
 	],
 );
 
@@ -165,9 +165,12 @@ while (1) {
 	# Update the fan state
 	if ($forceUpdate || $stateLast ne $state) {
 		if ($DEBUG) {
-			print STDERR 'State: ' . $stateLast . ' => ' . $state . "\n";
 			foreach my $data (@{ $DIM{$state} }) {
-				print STDERR "\t" . $data->{'channel'} . ' => ' . $data->{'value'} . ' @ ' . $data->{'time'} . "\n";
+				my $delay = '';
+				if ($data->{'delay'}) {
+					$delay = ' (Delay: ' . $data->{'delay'} . ')';
+				}
+				print STDERR "\t" . $data->{'channel'} . ' => ' . $data->{'value'} . ' @ ' . $data->{'time'} . $delay . "\n";
 			}
 		}
 

@@ -289,9 +289,13 @@ while (1) {
 		if ($DEBUG) {
 			my $sum = 0;
 			print STDERR 'State: ' . $stateLast . ' => ' . $state . ' (Color: ' . scalar(@COLOR) . ")\n";
-			foreach my $data (@data_set) {
+			foreach my $data (@{ $DIM{$state} }) {
 				$sum += $data->{'value'};
-				print STDERR "\t" . $data->{'channel'} . ' => ' . $data->{'value'} . ' @ ' . $data->{'time'} . "\n";
+				my $delay = '';
+				if ($data->{'delay'}) {
+					$delay = ' (Delay: ' . $data->{'delay'} . ')';
+				}
+				print STDERR "\t" . $data->{'channel'} . ' => ' . $data->{'value'} . ' @ ' . $data->{'time'} . $delay . "\n";
 			}
 			print STDERR "\tTotal: " . $sum . "\n";
 		}

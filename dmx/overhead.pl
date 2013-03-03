@@ -93,7 +93,7 @@ my $pushLast  = 0;
 my $pullLast  = time();
 
 # Always force lights out at launch
-dim({ 'channel' => 9, 'value' => 0, 'time' => 0 });
+dim({ 'channel' => 4, 'value' => 0, 'time' => 0 });
 
 # Loop forever
 while (1) {
@@ -177,9 +177,12 @@ while (1) {
 	# Update the fan state
 	if ($forceUpdate || $stateLast ne $state) {
 		if ($DEBUG) {
-			print STDERR 'State: ' . $stateLast . ' => ' . $state . "\n";
 			foreach my $data (@{ $DIM{$state} }) {
-				print STDERR "\t" . $data->{'channel'} . ' => ' . $data->{'value'} . ' @ ' . $data->{'time'} . "\n";
+				my $delay = '';
+				if ($data->{'delay'}) {
+					$delay = ' (Delay: ' . $data->{'delay'} . ')';
+				}
+				print STDERR "\t" . $data->{'channel'} . ' => ' . $data->{'value'} . ' @ ' . $data->{'time'} . $delay . "\n";
 			}
 		}
 

@@ -207,7 +207,11 @@ while (1) {
 		if ($DEBUG) {
 			print STDERR 'State: ' . $stateLast . ' => ' . $state . "\n";
 			foreach my $data (@{ $DIM{$state} }) {
-				print STDERR "\t" . $data->{'channel'} . ' => ' . $data->{'value'} . ' @ ' . $data->{'time'} . "\n";
+				my $delay = '';
+				if ($data->{'delay'}) {
+					$delay = ' (Delay: ' . $data->{'delay'} . ')';
+				}
+				print STDERR "\t" . $data->{'channel'} . ' => ' . $data->{'value'} . ' @ ' . $data->{'time'} . $delay . "\n";
 			}
 		}
 
