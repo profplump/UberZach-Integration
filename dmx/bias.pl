@@ -150,7 +150,7 @@ while (1) {
 
 	# Accept the new state directly
 	$stateLast = $state;
-	$state = $newState;
+	$state     = $newState;
 
 	# Force updates on a periodic basis
 	if (time() - $pushLast > $PUSH_TIMEOUT) {

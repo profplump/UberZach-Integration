@@ -64,6 +64,7 @@ my $STATE_SOCK   = $DATA_DIR . 'LED.socket';
 my $MAX_CMD_LEN  = 1024;
 my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = 60;
+
 # Reset the push timeout if the color timeout is longer
 if ($PUSH_TIMEOUT < $COLOR_TIMEOUT) {
 	$PUSH_TIMEOUT = $COLOR_TIMEOUT;
@@ -354,8 +355,8 @@ sub red_alert() {
 		dim($data);
 	}
 
-	my %high  = ('channel' => 14, 'value' => 255, 'time' => $ramp);
-	my %low   = %high;
+	my %high = ('channel' => 14, 'value' => 255, 'time' => $ramp);
+	my %low = %high;
 	$low{'value'} = 64;
 
 	dim(\%high);
