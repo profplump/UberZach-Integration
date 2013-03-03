@@ -5,6 +5,7 @@ use IO::Select;
 use Math::Random;
 use IO::Socket::UNIX;
 use File::Temp qw( tempfile );
+use Time::HiRes qw( usleep );
 
 # Prototypes
 sub dim($);
@@ -155,18 +156,20 @@ while (1) {
 
 		# Parse the string
 		%exists = ();
-		my ($cmdState, $exists_text) = $text =~ /^(\w+)\s+\(([^\)]+)\)/;
-		if (!defined($cmdState) || !defined($exists_text)) {
+		my ($cmdState, $exists_text) = $text =~ /^(\w+)(?:\s+\(([^\)]+)\))?/;
+		if (!defined($cmdState)) {
 			print STDERR 'State parse error: ' . $text . "\n";
 			next;
 		}
-		foreach my $exists (split(/\s*,\s*/, $exists_text)) {
-			my ($name, $value) = $exists =~ /(\w+)\:(0|1)/;
-			if (!defined($name) || !defined($value)) {
-				print STDERR 'State parse error (exists): ' . $text . "\n";
-				next;
+		if (defined($exists_text)) {
+			foreach my $exists (split(/\s*,\s*/, $exists_text)) {
+				my ($name, $value) = $exists =~ /(\w+)\:(0|1)/;
+				if (!defined($name) || !defined($value)) {
+					print STDERR 'State parse error (exists): ' . $text . "\n";
+					next;
+				}
+				$exists{$name} = $value;
 			}
-			$exists{$name} = $value;
 		}
 		if ($DEBUG) {
 			my @exists_tmp = ();
@@ -201,6 +204,8 @@ while (1) {
 		# Force an update back to the original state
 		$newState    = $stateLast;
 		%exists      = %existsLast;
+		@COLOR       = ();
+		$colorChange = time() + $COLOR_TIME_MIN;
 		$forceUpdate = 1;
 	}
 
@@ -271,7 +276,7 @@ while (1) {
 
 		# Reset the color change sequence, so we always spend 1 cycle at white
 		@COLOR       = ();
-		#$colorChange = time() + $COLOR_TIME_MIN;
+		$colorChange = time() + $COLOR_TIME_MIN;
 	}
 
 	# Update the lighting
@@ -338,7 +343,35 @@ sub dim($) {
 # These are blocking, so be careful
 # ======================================
 sub red_alert() {
+	my $ramp  = 500;
+	my @sound = ('afplay', '/mnt/media/Sounds/DMX/Red Alert.mp3');
+	my $sleep = $ramp;
 
+	my @other = ();
+	push(@other, { 'channel' => 13, 'value' => 0, 'time' => 0 });
+	push(@other, { 'channel' => 15, 'value' => 0, 'time' => 0 });
+	foreach my $data (@other) {
+		dim($data);
+	}
+
+	my %high  = ('channel' => 14, 'value' => 255, 'time' => $ramp);
+	my %low   = %high;
+	$low{'value'} = 64;
+
+	dim(\%high);
+	system(@sound);
+	dim(\%low);
+	usleep($sleep * 1000);
+
+	dim(\%high);
+	system(@sound);
+	dim(\%low);
+	usleep($sleep * 1000);
+
+	dim(\%high);
+	system(@sound);
+	dim(\%low);
+	usleep($sleep * 1000);
 }
 
 sub red_flash() {
