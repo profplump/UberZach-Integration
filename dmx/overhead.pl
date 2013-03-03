@@ -10,48 +10,20 @@ sub dim($);
 
 # User config
 my %DIM = (
-	'OFF'    => [
-		{ 'channel' => 0,  'value' => 0,   'time' => 60000 }
+	'OFF'      => [
+		# Handled by rope.pl
 	],
-	'PLAY'      => [
-		{ 'channel' => 1,  'value' => 64,  'time' => 500   },
-		{ 'channel' => 2,  'value' => 32,  'time' => 500   },
-		{ 'channel' => 3,  'value' => 80,  'time' => 2500  },
-		{ 'channel' => 5,  'value' => 64,  'time' => 500   },
-		{ 'channel' => 6,  'value' => 36,  'time' => 500   },
-		{ 'channel' => 7,  'value' => 32,  'time' => 500   },
-		{ 'channel' => 8,  'value' => 16,  'time' => 500   },
-		{ 'channel' => 9,  'value' => 16,  'time' => 500   },
+	'PLAY'     => [
+		{ 'channel' => 4,  'value' => 32,  'time' => 500   },
 	],
 	'PLAY_HIGH' => [
-		{ 'channel' => 1,  'value' => 255, 'time' => 500   },
-		{ 'channel' => 2,  'value' => 128, 'time' => 500   },
-		{ 'channel' => 3,  'value' => 192, 'time' => 1500  },
-		{ 'channel' => 5,  'value' => 128, 'time' => 500   },
-		{ 'channel' => 6,  'value' => 36,  'time' => 500   },
-		{ 'channel' => 7,  'value' => 128, 'time' => 500   },
-		{ 'channel' => 8,  'value' => 16,  'time' => 500   },
-		{ 'channel' => 9,  'value' => 96,  'time' => 500   },
+		{ 'channel' => 4,  'value' => 48,  'time' => 500   },
 	],
 	'PAUSE'     => [
-		{ 'channel' => 1,  'value' => 255, 'time' => 1000  },
-		{ 'channel' => 2,  'value' => 192, 'time' => 10000 },
-		{ 'channel' => 3,  'value' => 192, 'time' => 5000  },
-		{ 'channel' => 5,  'value' => 255, 'time' => 1000  },
-		{ 'channel' => 6,  'value' => 104, 'time' => 6000, 'delay' => 3000 },
-		{ 'channel' => 7,  'value' => 192, 'time' => 10000 },
-		{ 'channel' => 8,  'value' => 96,  'time' => 6000, 'delay' => 6000 },
-		{ 'channel' => 9,  'value' => 96,  'time' => 6000, 'delay' => 3000 },
+		{ 'channel' => 4,  'value' => 96,  'time' => 6000, 'delay' => 9000 },
 	],
 	'MOTION'    => [
-		{ 'channel' => 1,  'value' => 255, 'time' => 1000  },
-		{ 'channel' => 2,  'value' => 192, 'time' => 1000  },
-		{ 'channel' => 3,  'value' => 192, 'time' => 1000  },
-		{ 'channel' => 5,  'value' => 192, 'time' => 1000  },
-		{ 'channel' => 6,  'value' => 104, 'time' => 1000  },
-		{ 'channel' => 7,  'value' => 192, 'time' => 1000  },
-		{ 'channel' => 8,  'value' => 96,  'time' => 2000  },
-		{ 'channel' => 9,  'value' => 96,  'time' => 1500  },
+		{ 'channel' => 4,  'value' => 128, 'time' => 2500  },
 	],
 );
 
@@ -121,7 +93,7 @@ my $pushLast  = 0;
 my $pullLast  = time();
 
 # Always force lights out at launch
-dim({ 'channel' => 0, 'value' => 0, 'time' => 0 });
+dim({ 'channel' => 9, 'value' => 0, 'time' => 0 });
 
 # Loop forever
 while (1) {
@@ -202,7 +174,7 @@ while (1) {
 		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
 	}
 
-	# Update the lighting
+	# Update the fan state
 	if ($forceUpdate || $stateLast ne $state) {
 		if ($DEBUG) {
 			print STDERR 'State: ' . $stateLast . ' => ' . $state . "\n";
@@ -219,10 +191,10 @@ while (1) {
 		}
 
 		# Save the state and value to disk
-		my ($fh, $tmp) = tempfile($DATA_DIR . 'ROPE.XXXXXXXX', 'UNLINK' => 0);
+		my ($fh, $tmp) = tempfile($DATA_DIR . 'BIAS.XXXXXXXX', 'UNLINK' => 0);
 		print $fh 'State: ' . $state . "\n" . join("\n", @values) . "\n";
 		close($fh);
-		rename($tmp, $DATA_DIR . 'ROPE');
+		rename($tmp, $DATA_DIR . 'BIAS');
 
 		# Update the push time
 		$pushLast = time();

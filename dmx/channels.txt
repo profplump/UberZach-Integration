@@ -3,12 +3,12 @@
 #       1  => Couch-side hidden
 #       2  => Couch-side exposed
 #       3  => Stairs
-#       4  => <Unused>
+#       4  => Overhead
 #       5  => Bar-side hidden
 #       6  => Bar-side bar-shelves
 #       7  => Bar-side exposed
 #       8  => Bar-side ceiling
-#       9  => <Unused>
+#       9  => Behind screen
 #       10 => <Unused>
 #       11 => Fan
 #       12 => Bias Light
