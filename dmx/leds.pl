@@ -24,6 +24,7 @@ my %COLOR_VAR      = (
 	'PLAY'      => 0.50,
 	'PLAY_HIGH' => 0.50,
 	'PAUSE'     => 0.65,
+	'MOTION'    => 0.25,
 );
 my %DIM            = (
 	'OFF'    => [
@@ -234,8 +235,10 @@ while (1) {
 		my $time = int((rand($COLOR_TIMEOUT - $COLOR_TIME_MIN) + $COLOR_TIME_MIN) * 1000);
 
 		# Assign each channel
+		my @vals = random_normal($numChans, $max, $max * $COLOR_VAR{$state});
 		foreach my $data (@{ $DIM{$state} }) {
-			my $color = int(random_normal(1, $max, $max * $COLOR_VAR{$state}));
+			my $color = pop(@vals);
+			$color = int($color);
 			if ($color < 0) {
 				$color = 0;
 			} elsif ($color > 255) {
