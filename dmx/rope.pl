@@ -47,7 +47,7 @@ my %DIM = (
 		{ 'channel' => 7,  'value' => 192, 'time' => 10000 },
 		{ 'channel' => 8,  'value' => 96,  'time' => 6000, 'delay' => 6000 },
 		{ 'channel' => 9,  'value' => 96,  'time' => 6000, 'delay' => 3000 },
-		{ 'channel' => 12, 'value' => 0,   'time' => 2000  },
+		{ 'channel' => 12, 'value' => 0,   'time' => 10000 },
 	],
 	'MOTION'    => [
 		{ 'channel' => 1,  'value' => 255, 'time' => 1000  },
