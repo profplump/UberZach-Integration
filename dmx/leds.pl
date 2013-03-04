@@ -243,17 +243,8 @@ while (1) {
 
 		# Debug
 		if ($DEBUG) {
-			my $sum = 0;
 			print STDERR 'State: ' . $stateLast . ' => ' . $state . ' (Color: ' . scalar(@COLOR) . ")\n";
-			foreach my $data (@{ $DIM{$state} }) {
-				$sum += $data->{'value'};
-				my $delay = '';
-				if ($data->{'delay'}) {
-					$delay = ' (Delay: ' . $data->{'delay'} . ')';
-				}
-				print STDERR "\t" . $data->{'channel'} . ' => ' . $data->{'value'} . ' @ ' . $data->{'time'} . $delay . "\n";
-			}
-			print STDERR "\tTotal: " . $sum . "\n";
+			DMX::printDataset(\@data_set);
 		}
 
 		# Send the dim command

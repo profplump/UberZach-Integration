@@ -139,5 +139,20 @@ sub dim($) {
 	  or die('Unable to write command to DMX socket: ' . $cmd . ": ${!}\n");
 }
 
+sub printDataset($) {
+	my ($data_set) = @_;
+
+	my $sum = 0;
+	foreach my $data (@{ $data_set }) {
+		$sum += $data->{'value'};
+		my $delay = '';
+		if ($data->{'delay'}) {
+			$delay = ' (Delay: ' . $data->{'delay'} . ')';
+		}
+		print STDERR "\t" . $data->{'channel'} . ' => ' . int($data->{'value'}) . ' @ ' . $data->{'time'} . $delay . "\n";
+	}
+	print STDERR "\tTotal: " . $sum . "\n";
+}
+
 # Always return true
 1;

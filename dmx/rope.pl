@@ -151,13 +151,7 @@ while (1) {
 	if ($forceUpdate || $stateLast ne $state) {
 		if ($DEBUG) {
 			print STDERR 'State: ' . $stateLast . ' => ' . $state . "\n";
-			foreach my $data (@{ $DIM{$state} }) {
-				my $delay = '';
-				if ($data->{'delay'}) {
-					$delay = ' (Delay: ' . $data->{'delay'} . ')';
-				}
-				print STDERR "\t" . $data->{'channel'} . ' => ' . $data->{'value'} . ' @ ' . $data->{'time'} . $delay . "\n";
-			}
+			DMX::printDataset($DIM{$state});
 		}
 
 		# Send the dim command
