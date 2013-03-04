@@ -3,9 +3,14 @@ use strict;
 use warnings;
 use IO::Select;
 use Math::Random;
-use IO::Socket::UNIX;
 use File::Temp qw( tempfile );
 use Time::HiRes qw( usleep );
+
+# Local modules
+use Cwd qw(abs_path);
+use File::Basename qw(dirname);
+use lib dirname(abs_path($0));
+use DMX;
 
 # Prototypes
 sub dim($);
@@ -54,14 +59,10 @@ my %DIM            = (
 );
 
 # App config
-my $SOCK_TIMEOUT = 5;
 my $TEMP_DIR     = `getconf DARWIN_USER_TEMP_DIR`;
 chomp($TEMP_DIR);
 my $DATA_DIR     = $TEMP_DIR . 'plexMonitor/';
-my $DMX_SOCK     = $DATA_DIR . 'DMX.socket';
-my $SUB_SOCK     = $DATA_DIR . 'STATE.socket';
 my $STATE_SOCK   = $DATA_DIR . 'LED.socket';
-my $MAX_CMD_LEN  = 1024;
 my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = 60;
 my %CHANNEL_ADJ  = (
@@ -91,38 +92,14 @@ if (!$DELAY) {
 }
 
 # Sanity check
-if (!-d $DATA_DIR || !-S $DMX_SOCK || !-S $SUB_SOCK) {
+if (!-d $DATA_DIR) {
 	die("Bad config\n");
 }
 
-# State socket init
-if (-e $STATE_SOCK) {
-	unlink($STATE_SOCK);
-}
-my $state_fh = IO::Socket::UNIX->new(
-	'Local' => $STATE_SOCK,
-	'Type'  => SOCK_DGRAM
-) or die('Unable to open socket: ' . $STATE_SOCK . ": ${@}\n");
-my $select = IO::Select->new($state_fh)
-  or die('Unable to select socket: ' . $STATE_SOCK . ": ${!}\n");
-
-# DMX socket init
-my $dmx_fh = IO::Socket::UNIX->new(
-	'Peer'    => $DMX_SOCK,
-	'Type'    => SOCK_DGRAM,
-	'Timeout' => $SOCK_TIMEOUT
-) or die('Unable to open socket: ' . $DMX_SOCK . ": ${@}\n");
-
-# Subscribe to state updates
-my $sub_fh = IO::Socket::UNIX->new(
-	'Peer'    => $SUB_SOCK,
-	'Type'    => SOCK_DGRAM,
-	'Timeout' => $SOCK_TIMEOUT
-) or die('Unable to open socket: ' . $SUB_SOCK . ": ${@}\n");
-$sub_fh->send($STATE_SOCK)
-  or die('Unable to subscribe: ' . $! . "\n");
-shutdown($sub_fh, 2);
-undef($sub_fh);
+# Sockets
+my $select = DMX::stateSocket($STATE_SOCK);
+DMX::stateSubscribe($STATE_SOCK);
+my $dmx_fh = DMX::dmxSock();
 
 # State
 my $state       = 'INIT';
@@ -156,39 +133,8 @@ while (1) {
 	my @ready_clients = $select->can_read($DELAY);
 	foreach my $fh (@ready_clients) {
 
-		# Grab the inbound text
-		my $text = undef();
-		$fh->recv($text, $MAX_CMD_LEN);
-
-		# Parse the string
-		%exists = ();
-		my ($cmdState, $exists_text) = $text =~ /^(\w+)(?:\s+\(([^\)]+)\))?/;
-		if (!defined($cmdState)) {
-			print STDERR 'State parse error: ' . $text . "\n";
-			next;
-		}
-		if (defined($exists_text)) {
-			foreach my $exists (split(/\s*,\s*/, $exists_text)) {
-				my ($name, $value) = $exists =~ /(\w+)\:(0|1)/;
-				if (!defined($name) || !defined($value)) {
-					print STDERR 'State parse error (exists): ' . $text . "\n";
-					next;
-				}
-				$exists{$name} = $value;
-			}
-		}
-		if ($DEBUG) {
-			my @exists_tmp = ();
-			foreach my $key (keys(%exists)) {
-				push(@exists_tmp, $key . ':' . $exists{$key});
-			}
-			print STDERR 'Got state: ' . $cmdState . ' (' . join(', ', @exists_tmp) . ")\n";
-		}
-
-		# Translate INIT to OFF
-		if ($cmdState eq 'INIT') {
-			$cmdState = 'OFF';
-		}
+		# Read the global state
+		my $cmdState = DMX::parseState($fh, \%exists);
 
 		# Only accept valid states
 		if (!defined($DIM{$cmdState}) && !defined($EFFECTS{$cmdState})) {
@@ -353,9 +299,10 @@ sub dim($) {
 		$value = 0;
 	}
 
+	# Send the command
 	my $cmd = join(':', $args->{'channel'}, int($args->{'time'}), $value, int($args->{'delay'}));
 	$dmx_fh->send($cmd)
-	  or die('Unable to write command to socket: ' . $DMX_SOCK . ': ' . $cmd . ": ${!}\n");
+	  or die('Unable to write command to DMX socket: ' . $cmd . ": ${!}\n");
 }
 
 # ======================================
