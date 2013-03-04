@@ -129,6 +129,11 @@ sub dim($) {
 		die('Invalid command for socket: ' . join(', ', keys(%{$args})) . ': ' . join(', ', values(%{$args})) . "\n");
 	}
 
+	# Silently skip invalid channels
+	if ($args->{'channel'} < 0) {
+		return;
+	}
+
 	# Adjust for the color curve (for channels where we have such data)
 	my $value = $args->{'value'};
 	if ($CHANNEL_ADJ{$args->{'channel'}}) {
