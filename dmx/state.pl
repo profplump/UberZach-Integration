@@ -28,6 +28,7 @@ my %MON_FILES = (
 	'PLAY_STATUS' => 'STATUS',
 	'LIGHTS'      => 'EXISTS',
 	'FAN_CMD'     => 'EXISTS',
+	'RAVE'        => 'EXISTS_OFF',
 );
 
 
@@ -166,7 +167,7 @@ while (1) {
 		}
 
 		# Check for the presence of a file
-		if ($file->{'type'} eq 'EXISTS') {
+		if ($file->{'type'} =~ /^EXISTS/) {
 			if (-e $file->{'path'}) {
 				$file->{'status'} = 1;
 			}
@@ -223,7 +224,7 @@ while (1) {
 	{
 		my @exists = ();
 		foreach my $file (values(%files)) {
-			if ($file->{'type'} eq 'EXISTS') {
+			if ($file->{'type'} =~ /^EXISTS/) {
 				push(@exists, $file->{'name'} . ':' . $file->{'status'});
 			}
 		}
