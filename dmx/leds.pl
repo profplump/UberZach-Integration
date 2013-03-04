@@ -170,13 +170,18 @@ while (1) {
 				print STDERR 'Reaped child: ' . $PID . "\n";
 			}
 
+			# Forget our local bypass state
 			$PID    = undef();
 			$EFFECT = undef();
 
+			# Clear the RAVE flag for other daemons
 			if (-e $RAVE_FILE) {
 				unlink($RAVE_FILE);
 			}
 
+			# Reset to standard
+			@COLOR       = ();
+			$colorChange = time() + $COLOR_TIME_MIN;
 			$update = 1;
 		}
 	}
@@ -367,7 +372,7 @@ sub rave_loop() {
 		print STDERR "rave_loop()\n";
 	}
 
-	my $max_dur  = 500;
+	my $max_dur  = 350;
 	my $max_val  = 255;
 	my %channels = (
 		1  => 1,
