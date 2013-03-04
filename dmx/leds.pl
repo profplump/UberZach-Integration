@@ -33,23 +33,23 @@ my %DIM            = (
 	],
 	'PLAY'      => [
 		{ 'channel' => 13, 'value' => 10,   'time' => 500  },
-		{ 'channel' => 14, 'value' => 12,   'time' => 500  },
+		{ 'channel' => 14, 'value' => 10,   'time' => 500  },
 		{ 'channel' => 15, 'value' => 8,    'time' => 500  },
 	],
 	'PLAY_HIGH' => [
 		{ 'channel' => 13, 'value' => 64,  'time' => 1000, 'delay' => 3000 },
-		{ 'channel' => 14, 'value' => 73,  'time' => 1000, 'delay' => 1500 },
-		{ 'channel' => 15, 'value' => 76,  'time' => 1000, 'delay' => 0    },
+		{ 'channel' => 14, 'value' => 64,  'time' => 1000, 'delay' => 1500 },
+		{ 'channel' => 15, 'value' => 64,  'time' => 1000, 'delay' => 0    },
 	],
 	'PAUSE'     => [
 		{ 'channel' => 13, 'value' => 96,  'time' => 3000, 'delay' => 3000 },
-		{ 'channel' => 14, 'value' => 109, 'time' => 3000, 'delay' => 0    },
-		{ 'channel' => 15, 'value' => 114, 'time' => 3000, 'delay' => 7000 },
+		{ 'channel' => 14, 'value' => 96,  'time' => 3000, 'delay' => 0    },
+		{ 'channel' => 15, 'value' => 96,  'time' => 3000, 'delay' => 7000 },
 	],
 	'MOTION'    => [
 		{ 'channel' => 13, 'value' => 144, 'time' => 1000  },
-		{ 'channel' => 14, 'value' => 164, 'time' => 1000  },
-		{ 'channel' => 15, 'value' => 172, 'time' => 1000  },
+		{ 'channel' => 14, 'value' => 144, 'time' => 1000  },
+		{ 'channel' => 15, 'value' => 144, 'time' => 1000  },
 	],
 );
 
@@ -64,6 +64,11 @@ my $STATE_SOCK   = $DATA_DIR . 'LED.socket';
 my $MAX_CMD_LEN  = 1024;
 my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = 60;
+my %CHANNEL_ADJ  = (
+	'13' => 1.00,
+	'14' => 1.14,
+	'15' => 1.19,
+);
 
 # Reset the push timeout if the color timeout is longer
 if ($PUSH_TIMEOUT < $COLOR_TIMEOUT) {
@@ -334,7 +339,21 @@ sub dim($) {
 		die('Invalid command for socket: ' . join(', ', keys(%{$args})) . ': ' . join(', ', values(%{$args})) . "\n");
 	}
 
-	my $cmd = join(':', $args->{'channel'}, int($args->{'time'}), int($args->{'value'}), int($args->{'delay'}));
+	# Adjust the gamma curve (for channels where we have such data)
+	my $value = $args->{'value'};
+	if ($CHANNEL_ADJ{$args->{'channel'}}) {
+		$value *= $CHANNEL_ADJ{$args->{'channel'}};
+	}
+
+	# Keep us in-range
+	$value = int($value);
+	if ($value > 255) {
+		$value = 255;
+	} elsif ($value < 0) {
+		$value = 0;
+	}
+
+	my $cmd = join(':', $args->{'channel'}, int($args->{'time'}), $value, int($args->{'delay'}));
 	$dmx_fh->send($cmd)
 	  or die('Unable to write command to socket: ' . $DMX_SOCK . ': ' . $cmd . ": ${!}\n");
 }
