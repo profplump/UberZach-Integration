@@ -59,19 +59,13 @@ my %DIM            = (
 );
 
 # App config
-my $TEMP_DIR     = `getconf DARWIN_USER_TEMP_DIR`;
-chomp($TEMP_DIR);
-my $DATA_DIR     = $TEMP_DIR . 'plexMonitor/';
+my $DATA_DIR     = DMX::dataDir();
 my $OUTPUT_FILE  = $DATA_DIR . 'LED';
 my $STATE_SOCK   = $OUTPUT_FILE . '.socket';
 my $RAVE_FILE    = $DATA_DIR . 'RAVE';
 my $PUSH_TIMEOUT = 20;
-my $PULL_TIMEOUT = 60;
-
-# Reset the push timeout if the color timeout is longer
-if ($PUSH_TIMEOUT < $COLOR_TIMEOUT) {
-	$PUSH_TIMEOUT = $COLOR_TIMEOUT;
-}
+my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
+my $DELAY        = $PULL_TIMEOUT / 2;
 
 # Debug
 my $DEBUG = 0;
@@ -79,18 +73,12 @@ if ($ENV{'DEBUG'}) {
 	$DEBUG = 1;
 }
 
-# Command-line arguments
-my ($DELAY) = @ARGV;
-if (!$DELAY) {
-	$DELAY = $PULL_TIMEOUT / 2;
-	if ($DELAY > $COLOR_TIMEOUT / 2) {
-		$DELAY = $COLOR_TIMEOUT / 2;
-	}
+# Reset the timeouts if the color delay demands it
+if ($PUSH_TIMEOUT < $COLOR_TIMEOUT) {
+	$PUSH_TIMEOUT = $COLOR_TIMEOUT / 2;
 }
-
-# Sanity check
-if (!-d $DATA_DIR) {
-	die("Bad config\n");
+if ($DELAY > $COLOR_TIMEOUT / 2) {
+	$DELAY = $COLOR_TIMEOUT / 2;
 }
 
 # Construct a list of valid states
@@ -119,6 +107,7 @@ my @COLOR       = ();
 my $colorChange = time();
 my $PID         = undef();
 my $EFFECT      = undef();
+my $PID_START   = 0;
 
 # Always force lights out at launch
 DMX::dim({ 'channel' => 13, 'value' => 0, 'time' => 0 });
@@ -171,8 +160,9 @@ while (1) {
 			}
 
 			# Forget our local bypass state
-			$PID    = undef();
-			$EFFECT = undef();
+			$PID       = undef();
+			$EFFECT    = undef();
+			$PID_START = 0;
 
 			# Clear the RAVE flag for other daemons
 			if (-e $RAVE_FILE) {
@@ -362,6 +352,9 @@ sub rave() {
 
 	# Setup our loop handler
 	$EFFECT = \&rave_loop;
+
+	# Record our start time
+	$PID_START = time();
 
 	# Initiate the RAVE state
 	touch($RAVE_FILE);
