@@ -5,21 +5,17 @@ use IO::Select;
 use IO::Socket::UNIX;
 use File::Temp qw( tempfile );
 
+# Local modules
+use Cwd qw(abs_path);
+use File::Basename qw(dirname);
+use lib dirname(abs_path($0));
+use DMX;
+
 # Prototypes
 sub mtime($);
 
 # User config
 my $STATE_TIMEOUT = 180;
-
-# App config
-my $SOCK_TIMEOUT = 5;
-my $TEMP_DIR     = `getconf DARWIN_USER_TEMP_DIR`;
-chomp($TEMP_DIR);
-my $DATA_DIR     = $TEMP_DIR . 'plexMonitor/';
-my $CMD_FILE     = $DATA_DIR . 'STATE.socket';
-my $MAX_CMD_LEN  = 4096;
-my $RESET_CMD    = $ENV{'HOME'} . '/bin/video/dmx/reset.sh';
-my $PUSH_TIMEOUT = 20;
 my %MON_FILES = (
 	'PLAYING'     => 'MTIME',
 	'GUI'         => 'MTIME',
@@ -31,6 +27,13 @@ my %MON_FILES = (
 	'RAVE'        => 'EXISTS_OFF',
 );
 
+# App config
+my $SOCK_TIMEOUT = 5;
+my $DATA_DIR     = DMX::dataDir();
+my $CMD_FILE     = $DATA_DIR . 'STATE.socket';
+my $MAX_CMD_LEN  = 4096;
+my $RESET_CMD    = $ENV{'HOME'} . '/bin/video/dmx/reset.sh';
+my $PUSH_TIMEOUT = 20;
 
 # Debug
 my $DEBUG = 0;
@@ -44,24 +47,8 @@ if (!$DELAY) {
 	$DELAY = 0.5;
 }
 
-# Sanity check
-if (!-d $DATA_DIR) {
-	die("Bad config\n");
-}
-
 # Socket init
-if (-e $CMD_FILE) {
-	unlink($CMD_FILE);
-}
-my $sock = IO::Socket::UNIX->new(
-	'Local' => $CMD_FILE,
-	'Type'  => SOCK_DGRAM
-) or die('Unable to open socket: ' . $CMD_FILE . ": ${@}\n");
-if (!-S $CMD_FILE) {
-	die('Failed to create socket: ' . $CMD_FILE . "\n");
-}
-my $select = IO::Select->new($sock)
-  or die('Unable to select socket: ' . $CMD_FILE . ": ${!}\n");
+my $select = DMX::stateSocket($CMD_FILE);
 
 # Reset all dependents at starts
 system($RESET_CMD);
@@ -94,7 +81,7 @@ foreach my $file (keys(%MON_FILES)) {
 while (1) {
 
 	# Provide a method to force updates even when the state does not change
-	my $forceUpdate = 0;
+	my $update = 0;
 
 	# Check for queued commands
 	my @ready_clients = $select->can_read($DELAY);
@@ -134,7 +121,7 @@ while (1) {
 		push(@subscribers, \%tmp);
 
 		# Force an update
-		$forceUpdate = 1;
+		$update = 1;
 	}
 
 	# Monitor files of all types
@@ -233,22 +220,27 @@ while (1) {
 
 	# Force updates on a periodic basis
 	if (time() - $pushLast > $PUSH_TIMEOUT) {
-		$forceUpdate = 1;
+		$update = 1;
 	}
 
 	# Update on any status change
 	foreach my $file (values(%files)) {
 		if ($file->{'status'} != $file->{'last'}) {
-			$forceUpdate = 1;
+			$update = 1;
 			last;
 		}
 	}
 
-	# Update the state
-	if ($forceUpdate || $state ne $stateLast) {
+	# Force updates on any state change
+	if ($stateLast ne $state) {
 		if ($DEBUG) {
-			print STDERR 'State: ' . $stateLast . ' => ' . $state . "\n";
+			print STDERR 'State change: ' . $stateLast . ' => ' . $state . "\n";
 		}
+		$update = 1;
+	}
+
+	# Push the update
+	if ($update) {
 
 		# Note the push
 		$pushLast = time();
