@@ -341,6 +341,9 @@ sub red_alert() {
 	system(@sound);
 	DMX::dim(\%low);
 	usleep($sleep * 1000);
+
+	# Follow through on the loop
+	return 0;
 }
 
 sub rave() {
