@@ -151,7 +151,7 @@ sub printDataset($) {
 		}
 		print STDERR "\t" . $data->{'channel'} . ' => ' . int($data->{'value'}) . ' @ ' . $data->{'time'} . $delay . "\n";
 	}
-	print STDERR "\tTotal: " . $sum . "\n";
+	print STDERR "\tTotal: " . int($sum) . "\n";
 }
 
 # Always return true
