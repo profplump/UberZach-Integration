@@ -107,7 +107,7 @@ my @COLOR       = ();
 my $colorChange = time();
 my $PID         = undef();
 my $EFFECT      = undef();
-my $PID_START   = 0;
+my $PID_DATA    = undef();
 
 # Always force lights out at launch
 DMX::dim({ 'channel' => 13, 'value' => 0, 'time' => 0 });
@@ -160,9 +160,9 @@ while (1) {
 			}
 
 			# Forget our local bypass state
-			$PID       = undef();
-			$EFFECT    = undef();
-			$PID_START = 0;
+			$PID      = undef();
+			$EFFECT   = undef();
+			$PID_DATA = undef();
 
 			# Clear the RAVE flag for other daemons
 			if (-e $RAVE_FILE) {
@@ -353,8 +353,30 @@ sub rave() {
 	# Setup our loop handler
 	$EFFECT = \&rave_loop;
 
+	# Save data for future runs
+	my %data  = ();
+	$PID_DATA = \%data;
+
 	# Record our start time
-	$PID_START = time();
+	$data{'start'} = Time::HiRes::time();
+
+	# Initialize the channels hash
+	my %channels = (
+		1  => 0,
+		2  => 0,
+		4  => 0,
+		5  => 0,
+		6  => 0,
+		7  => 0,
+		8  => 0,
+		9  => 0,
+		13 => 0,
+		14 => 0,
+		15 => 0,
+	);
+	$data{'channels'}      = \%channels;
+	$data{'num_channels'}  = scalar(keys(%channels));
+	$data{'live_channels'} = 0;
 
 	# Initiate the RAVE state
 	touch($RAVE_FILE);
@@ -368,27 +390,49 @@ sub rave_loop() {
 		print STDERR "rave_loop()\n";
 	}
 
+	# Config
+	my $reserve  = 0.80;
+	my $ramp_dur = 10.25;
 	my $max_dur  = 350;
 	my $max_val  = 255;
-	my %channels = (
-		1  => 1,
-		2  => 1,
-		4  => 1,
-		5  => 1,
-		6  => 1,
-		7  => 1,
-		8  => 1,
-		9  => 1,
-		13 => 1,
-		14 => 1,
-		15 => 1,
-	);
+
+	# How long have we been playing
+	my $elapsed  = Time::HiRes::time() - $PID_DATA->{'start'};
+	if ($DEBUG) {
+		print STDERR 'Elapsed: ' . $elapsed . "\n";
+	}
+
+	# Ramp up the number of channels in our effect
+	if ($elapsed < $ramp_dur) {
+		my $ratio = $PID_DATA->{'live_channels'} / ($PID_DATA->{'num_channels'} * (1 - $reserve));
+		if ($PID_DATA->{'live_channels'} < 1 || $ratio < $elapsed / $ramp_dur) {
+			my @keys  = keys(%{ $PID_DATA->{'channels'} });
+			my $index = int(rand($PID_DATA->{'num_channels'}));
+			while ($PID_DATA->{'channels'}->{$keys[$index]} > 0) {
+				$index = int(rand($PID_DATA->{'num_channels'}));
+			}
+			$PID_DATA->{'channels'}->{$keys[$index]} = 1;
+			$PID_DATA->{'live_channels'}++;
+		}
+	} else {
+		if ($PID_DATA->{'live_channels'} < $PID_DATA->{'num_channels'}) {
+			foreach my $chan (keys(%{ $PID_DATA->{'channels'} })) {
+				$PID_DATA->{'channels'}->{$chan} = 1;
+			}
+			$PID_DATA->{'live_channels'} = $PID_DATA->{'num_channels'};
+		}
+	}
 
 	# Random data for each channel
 	my @data_set = ();
-	foreach my $chan (keys(%channels)) {
+	foreach my $chan (keys(%{ $PID_DATA->{'channels'} })) {
 		my $val = int(rand($max_val));
 		my $dur = int(rand($max_dur));
+
+		if ($PID_DATA->{'channels'}->{$chan} < 1) {
+			$val = 0;
+		}
+
 		push(@data_set, { 'channel' => $chan, 'value' => $val, 'time' => $dur });
 	}
 
