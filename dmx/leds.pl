@@ -29,7 +29,7 @@ my %COLOR_VAR      = (
 	'PLAY'      => 0.50,
 	'PLAY_HIGH' => 0.50,
 	'PAUSE'     => 0.65,
-	'MOTION'    => 0.25,
+	'MOTION'    => 0.15,
 );
 my %DIM            = (
 	'OFF'    => [
@@ -249,15 +249,21 @@ while (1) {
 
 		# Send the dim command
 		my @values = ();
-		foreach my $data (@data_set) {
+		foreach my $orig (@data_set) {
 
-			# Adjust the gamma curve (for channels where we have such data)
-			if ($CHANNEL_ADJ{$data->{'channel'}}) {
-				$data->{'value'} *= $CHANNEL_ADJ{$data->{'channel'}};
+			# Copy the dataset for local manipulation
+			my %data = ();
+			foreach my $key (keys(%{ $orig })) {
+				$data{$key} = $orig->{$key};
 			}
 
-			DMX::dim($data);
-			push(@values, $data->{'channel'} . ' => ' . $data->{'value'} . ' @ ' . $data->{'time'});
+			# Adjust the gamma curve (for channels where we have such data)
+			if ($CHANNEL_ADJ{$data{'channel'}}) {
+				$data{'value'} *= $CHANNEL_ADJ{$data{'channel'}};
+			}
+
+			DMX::dim(\%data);
+			push(@values, $data{'channel'} . ' => ' . $data{'value'} . ' @ ' . $data{'time'});
 		}
 
 		# Save the state and value to disk
