@@ -45,39 +45,37 @@ def SendDMXFrame():
   wrapper.AddEvent(interval, SendDMXFrame)
   
   # Check for new commands
-  cmd = ""
-  while (cmd is not None):
+  while (True):
     try:
       cmd = sock.recvfrom(max_mesg_len)[0]
     except socket.error:
-      cmd = None
-    if (cmd is not None):
-      channel, duration, intensity, delay = string.split(cmd, ':')
-      try:
-        channel = int(channel)
-        duration = int(duration)
-        intensity = int(intensity)
-      except ValueError:
-        print 'Invalid command:', cmd
-        channel = -1
-      try:
-        delay = int(delay)
-      except ValueError:
-        delay = 0
+      break
+    channel, duration, intensity, delay = string.split(cmd, ':')
+    try:
+      channel = int(channel)
+      duration = int(duration)
+      intensity = int(intensity)
+    except ValueError:
+      print 'Invalid command:', cmd
+      channel = -1
+    try:
+      delay = int(delay)
+    except ValueError:
+      delay = 0
     
-      # Save valid commands
-      if (channel >= 0 and channel <= 512 and intensity >= 0 and intensity <= 255 and duration >= 0 and duration <= 300000 and delay >= 0 and delay < 300000):
-        if (channel > 0):
-          cmds['value'][channel - 1] = intensity
-          cmds['ticks'][channel - 1] = duration / interval
-          cmds['delay'][channel - 1] = delay / interval
-        else:
-          for i in range(len(state)):
-            cmds['value'][i] = intensity
-            cmds['ticks'][i] = duration / interval
-            cmds['delay'][i] = delay / interval
+    # Save valid commands
+    if (channel >= 0 and channel <= 512 and intensity >= 0 and intensity <= 255 and duration >= 0 and duration <= 300000 and delay >= 0 and delay < 300000):
+      if (channel > 0):
+        cmds['value'][channel - 1] = intensity
+        cmds['ticks'][channel - 1] = duration / interval
+        cmds['delay'][channel - 1] = delay / interval
       else:
-        print 'Invalid command parameters:', channel, duration, intensity, delay
+        for i in range(len(state)):
+          cmds['value'][i] = intensity
+          cmds['ticks'][i] = duration / interval
+          cmds['delay'][i] = delay / interval
+    else:
+      print 'Invalid command parameters:', channel, duration, intensity, delay
   
   # Update values for each channel
   for i in range(len(cmds['value'])):
