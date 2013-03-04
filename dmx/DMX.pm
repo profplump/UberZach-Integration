@@ -2,6 +2,7 @@
 use strict;
 use warnings;
 use File::Temp;
+use IO::Select;
 use IO::Socket::UNIX;
 
 # Package name
@@ -29,6 +30,7 @@ my %CHANNEL_ADJ  = (
 
 # State
 my $DMX_FH = undef();
+my $SELECT = undef();
 
 # DMX socket init
 sub dmxSock() {
@@ -69,9 +71,9 @@ sub stateSocket($) {
 		'Type'  => IO::Socket::UNIX::SOCK_DGRAM
 	) or die('Unable to open state client socket: ' . $STATE_SOCK . ": ${@}\n");
 
-	my $select = IO::Select->new($state_fh)
+	$SELECT = IO::Select->new($state_fh)
 	  or die('Unable to select state client socket: ' . $STATE_SOCK . ": ${!}\n");
-	return $select;
+	return $SELECT;
 }
 
 # Parse the state->client comm string
@@ -197,6 +199,29 @@ sub applyDataset($$$) {
 		close($fh);
 		rename($tmp, $file);
 	}
+}
+
+sub readState($$$) {
+	my ($delay, $exists, $valid) = @_;
+	my $cmdState = undef();
+
+	# Wait for state updates
+	my @ready_clients = $SELECT->can_read($delay);
+	foreach my $fh (@ready_clients) {
+
+		# Read the global state
+		$cmdState = parseState($fh, $exists);
+
+		# Only accept valid states
+		if (defined($valid)) {
+			if (!defined($valid->{$cmdState})) {
+				print STDERR 'Invalid state: ' . $cmdState . "\n";
+				next;
+			}
+		}
+	}
+
+	return $cmdState;
 }
 
 # Always return true

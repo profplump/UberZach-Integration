@@ -1,7 +1,6 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-use IO::Select;
 use Math::Random;
 use Time::HiRes qw( usleep );
 
@@ -90,10 +89,18 @@ if (!-d $DATA_DIR) {
 	die("Bad config\n");
 }
 
+# Construct a list of valid states
+my %VALID = ();
+foreach my $key (keys(%DIM)) {
+	$VALID{$key} = 1;
+}
+foreach my $key (keys(%EFFECTS)) {
+	$VALID{$key} = 1;
+}
+
 # Sockets
-my $select = DMX::stateSocket($STATE_SOCK);
+DMX::stateSocket($STATE_SOCK);
 DMX::stateSubscribe($STATE_SOCK);
-my $dmx_fh = DMX::dmxSock();
 
 # State
 my $state       = 'OFF';
@@ -124,19 +131,8 @@ while (1) {
 	my $newState = $state;
 
 	# Wait for state updates
-	my @ready_clients = $select->can_read($DELAY);
-	foreach my $fh (@ready_clients) {
-
-		# Read the global state
-		my $cmdState = DMX::parseState($fh, \%exists);
-
-		# Only accept valid states
-		if (!defined($DIM{$cmdState}) && !defined($EFFECTS{$cmdState})) {
-			print STDERR 'Invalid state: ' . $cmdState . "\n";
-			next;
-		}
-
-		# Propogate the most recent command state
+	my $cmdState = DMX::readState($DELAY, \%exists, \%VALID);
+	if (defined($cmdState)) {
 		$newState = $cmdState;
 		$pullLast = time();
 	}
