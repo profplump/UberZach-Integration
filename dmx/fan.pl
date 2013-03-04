@@ -19,29 +19,17 @@ my %DIM = (
 );
 
 # App config
-my $TEMP_DIR     = `getconf DARWIN_USER_TEMP_DIR`;
-chomp($TEMP_DIR);
-my $DATA_DIR     = $TEMP_DIR . 'plexMonitor/';
+my $DATA_DIR     = DMX::dataDir();
 my $OUTPUT_FILE  = $DATA_DIR . 'FAN';
 my $STATE_SOCK   = $OUTPUT_FILE . '.socket';
 my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
+my $DELAY        = $PULL_TIMEOUT / 2;
 
 # Debug
 my $DEBUG = 0;
 if ($ENV{'DEBUG'}) {
 	$DEBUG = 1;
-}
-
-# Command-line arguments
-my ($DELAY) = @ARGV;
-if (!$DELAY) {
-	$DELAY = $PULL_TIMEOUT / 2;
-}
-
-# Sanity check
-if (!-d $DATA_DIR) {
-	die("Bad config\n");
 }
 
 # Sockets
@@ -61,9 +49,6 @@ DMX::dim({ 'channel' => 11, 'value' => 0, 'time' => 0 });
 
 # Loop forever
 while (1) {
-
-	# Set anywhere to force an update this cycle
-	my $update = 0;
 
 	# State is calculated; use newState to gather data
 	my $newState = $state;

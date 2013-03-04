@@ -28,9 +28,19 @@ my %CHANNEL_ADJ  = (
 	'15' => 1.19,
 );
 
+# Sanity check
+if (! -d $DATA_DIR) {
+	die('Data directory not available: ' . $DATA_DIR . "\n");
+}
+
 # State
 my $DMX_FH = undef();
 my $SELECT = undef();
+
+# Data directory
+sub dataDir() {
+	return $DATA_DIR;
+}
 
 # DMX socket init
 sub dmxSock() {
