@@ -101,7 +101,7 @@ DMX::stateSubscribe($STATE_SOCK);
 my $dmx_fh = DMX::dmxSock();
 
 # State
-my $state       = 'INIT';
+my $state       = 'OFF';
 my $stateLast   = $state;
 my %exists      = ();
 my %existsLast  = %exists;
