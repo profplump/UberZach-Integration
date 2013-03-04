@@ -2,7 +2,6 @@
 use strict;
 use warnings;
 use IO::Select;
-use File::Temp qw( tempfile );
 
 # Local modules
 use Cwd qw(abs_path);
@@ -61,7 +60,8 @@ my %DIM = (
 my $TEMP_DIR     = `getconf DARWIN_USER_TEMP_DIR`;
 chomp($TEMP_DIR);
 my $DATA_DIR     = $TEMP_DIR . 'plexMonitor/';
-my $STATE_SOCK   = $DATA_DIR . 'ROPE.socket';
+my $OUTPUT_FILE  = $DATA_DIR . 'ROPE';
+my $STATE_SOCK   = $OUTPUT_FILE . '.socket';
 my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
 
@@ -147,25 +147,18 @@ while (1) {
 		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
 	}
 
-	# Update the lighting
-	if ($forceUpdate || $stateLast ne $state) {
+	# Force updates on any state change
+	if ($stateLast ne $state) {
 		if ($DEBUG) {
-			print STDERR 'State: ' . $stateLast . ' => ' . $state . "\n";
-			DMX::printDataset($DIM{$state});
+			print STDERR 'State change: ' . $stateLast . ' => ' . $state . "\n";
 		}
+		$forceUpdate = 1;
+	}
 
-		# Send the dim command
-		my @values = ();
-		foreach my $data (@{ $DIM{$state} }) {
-			DMX::dim($data);
-			push(@values, $data->{'channel'} . ' => ' . $data->{'value'} . ' @ ' . $data->{'time'});
-		}
-
-		# Save the state and value to disk
-		my ($fh, $tmp) = tempfile($DATA_DIR . 'ROPE.XXXXXXXX', 'UNLINK' => 0);
-		print $fh 'State: ' . $state . "\n" . join("\n", @values) . "\n";
-		close($fh);
-		rename($tmp, $DATA_DIR . 'ROPE');
+	# Update the lighting
+	if ($forceUpdate) {
+		# Update
+		DMX::applyDataset($DIM{$state}, $state, $OUTPUT_FILE);
 
 		# Update the push time
 		$pushLast = time();

@@ -3,7 +3,6 @@ use strict;
 use warnings;
 use IO::Select;
 use Math::Random;
-use File::Temp qw( tempfile );
 use Time::HiRes qw( usleep );
 
 # Local modules
@@ -61,14 +60,10 @@ my %DIM            = (
 my $TEMP_DIR     = `getconf DARWIN_USER_TEMP_DIR`;
 chomp($TEMP_DIR);
 my $DATA_DIR     = $TEMP_DIR . 'plexMonitor/';
-my $STATE_SOCK   = $DATA_DIR . 'LED.socket';
+my $OUTPUT_FILE  = $DATA_DIR . 'LED';
+my $STATE_SOCK   = $OUTPUT_FILE . '.socket';
 my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = 60;
-my %CHANNEL_ADJ  = (
-	'13' => 1.00,
-	'14' => 1.14,
-	'15' => 1.19,
-);
 
 # Reset the push timeout if the color timeout is longer
 if ($PUSH_TIMEOUT < $COLOR_TIMEOUT) {
@@ -171,9 +166,6 @@ while (1) {
 		}
 	}
 	$state = $newState;
-	if ($DEBUG) {
-		print STDERR 'State: ' . $state . "\n";
-	}
 
 	# Color changes
 	if ($COLOR_VAR{$state} && time() - $colorChange > $COLOR_TIMEOUT) {
@@ -228,49 +220,28 @@ while (1) {
 		# Reset the color change sequence, so we always spend 1 cycle at white
 		@COLOR       = ();
 		$colorChange = time() + $COLOR_TIME_MIN;
+
+		# Debug
+		if ($DEBUG) {
+			print STDERR 'State change: ' . $stateLast . ' => ' . $state . "\n";
+		}
 	}
 
 	# Update the lighting
 	if ($forceUpdate) {
 
 		# Select a data set (color or standard)
-		my @data_set = ();
+		my @data_set    = ();
+		my $local_state = $state;
 		if (scalar(@COLOR)) {
 			@data_set = @COLOR;
+			$local_state .= ' (Color)';
 		} else {
 			@data_set = @{ $DIM{$state} };
 		}
 
-		# Debug
-		if ($DEBUG) {
-			print STDERR 'State: ' . $stateLast . ' => ' . $state . ' (Color: ' . scalar(@COLOR) . ")\n";
-			DMX::printDataset(\@data_set);
-		}
-
-		# Send the dim command
-		my @values = ();
-		foreach my $orig (@data_set) {
-
-			# Copy the dataset for local manipulation
-			my %data = ();
-			foreach my $key (keys(%{ $orig })) {
-				$data{$key} = $orig->{$key};
-			}
-
-			# Adjust the gamma curve (for channels where we have such data)
-			if ($CHANNEL_ADJ{$data{'channel'}}) {
-				$data{'value'} *= $CHANNEL_ADJ{$data{'channel'}};
-			}
-
-			DMX::dim(\%data);
-			push(@values, $data{'channel'} . ' => ' . $data{'value'} . ' @ ' . $data{'time'});
-		}
-
-		# Save the state and value to disk
-		my ($fh, $tmp) = tempfile($DATA_DIR . 'LED.XXXXXXXX', 'UNLINK' => 0);
-		print $fh 'State: ' . $state . "\n" . join("\n", @values) . "\n";
-		close($fh);
-		rename($tmp, $DATA_DIR . 'LED');
+		# Update
+		DMX::applyDataset(\@data_set, $local_state, $OUTPUT_FILE);
 
 		# Update the push time
 		$pushLast = time();

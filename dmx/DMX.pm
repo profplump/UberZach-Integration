@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
+use File::Temp;
 use IO::Socket::UNIX;
 
 # Package name
@@ -20,6 +21,11 @@ chomp($TEMP_DIR);
 my $DATA_DIR     = $TEMP_DIR . 'plexMonitor/';
 my $DMX_SOCK     = $DATA_DIR . 'DMX.socket';
 my $SUB_SOCK     = $DATA_DIR . 'STATE.socket';
+my %CHANNEL_ADJ  = (
+	'13' => 1.00,
+	'14' => 1.14,
+	'15' => 1.19,
+);
 
 # State
 my $DMX_FH = undef();
@@ -121,14 +127,21 @@ sub dim($) {
 		die('Invalid command for socket: ' . join(', ', keys(%{$args})) . ': ' . join(', ', values(%{$args})) . "\n");
 	}
 
-	# Keep us in-range
-	my $value = int($args->{'value'});
+	# Adjust for the color curve (for channels where we have such data)
+	my $value = $args->{'value'};
+	if ($CHANNEL_ADJ{$args->{'channel'}}) {
+		$value *= $CHANNEL_ADJ{$args->{'channel'}};
+	}
+
+	# 8-bit values
+	$value = int($value);
 	if ($value > 255) {
 		$value = 255;
 	} elsif ($value < 0) {
 		$value = 0;
 	}
 
+	# We only deal in ints
 	my $time  = int($args->{'time'});
 	my $delay = int($args->{'delay'});
 
@@ -145,13 +158,45 @@ sub printDataset($) {
 	my $sum = 0;
 	foreach my $data (@{ $data_set }) {
 		$sum += $data->{'value'};
-		my $delay = '';
+		my $str = $data->{'channel'} . ' => ' . int($data->{'value'}) . ' @ ' . $data->{'time'};
 		if ($data->{'delay'}) {
-			$delay = ' (Delay: ' . $data->{'delay'} . ')';
+			$str .= ' (Delay: ' . $data->{'delay'} . ')';
 		}
-		print STDERR "\t" . $data->{'channel'} . ' => ' . int($data->{'value'}) . ' @ ' . $data->{'time'} . $delay . "\n";
+		print STDERR "\t" . $str . "\n";
 	}
 	print STDERR "\tTotal: " . int($sum) . "\n";
+}
+
+sub applyDataset($$$) {
+	my ($data_set, $state, $file) = @_;
+	if (!defined($state)) {
+		$state = 'NULL';
+	}
+
+	# Debug
+	if ($DEBUG) {
+		print STDERR 'State: ' . $state . "\n";
+		printDataset($data_set);
+	}
+
+	# Send the dim command
+	my @values = ();
+	foreach my $data (@{ $data_set }) {
+		dim($data);
+		my $str = $data->{'channel'} . ' => ' . $data->{'value'} . ' @ ' . $data->{'time'};
+		if ($data->{'delay'}) {
+			$str .= ' (Delay: ' . $data->{'delay'} . ')';
+		}
+		push(@values, $str);
+	}
+
+	# Save the state and value to disk
+	if (length($file)) {
+		my ($fh, $tmp) = File::Temp::tempfile($file . '.XXXXXXXX', 'UNLINK' => 0);
+		print $fh 'State: ' . $state . "\n" . join("\n", @values) . "\n";
+		close($fh);
+		rename($tmp, $file);
+	}
 }
 
 # Always return true
