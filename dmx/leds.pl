@@ -1,6 +1,8 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
+use POSIX;
+use File::Touch;
 use Math::Random;
 use Time::HiRes qw( usleep );
 
@@ -12,12 +14,13 @@ use DMX;
 
 # Prototypes
 sub red_alert();
-sub red_flash();
+sub rave();
+sub rave_loop();
 
 # Effects states
 my %EFFECTS = (
 	'RED_ALERT' => \&red_alert,
-	'RED_FLASH' => \&red_flash,
+	'RAVE'      => \&rave,
 );
 
 # User config
@@ -61,6 +64,7 @@ chomp($TEMP_DIR);
 my $DATA_DIR     = $TEMP_DIR . 'plexMonitor/';
 my $OUTPUT_FILE  = $DATA_DIR . 'LED';
 my $STATE_SOCK   = $OUTPUT_FILE . '.socket';
+my $RAVE_FILE    = $DATA_DIR . 'RAVE';
 my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = 60;
 
@@ -97,6 +101,7 @@ foreach my $key (keys(%DIM)) {
 foreach my $key (keys(%EFFECTS)) {
 	$VALID{$key} = 1;
 }
+$VALID{'STOP'} = 1;
 
 # Sockets
 DMX::stateSocket($STATE_SOCK);
@@ -109,8 +114,11 @@ my %exists      = ();
 my %existsLast  = %exists;
 my $pushLast    = 0;
 my $pullLast    = time();
+my $update      = 0;
 my @COLOR       = ();
 my $colorChange = time();
+my $PID         = undef();
+my $EFFECT      = undef();
 
 # Always force lights out at launch
 DMX::dim({ 'channel' => 13, 'value' => 0, 'time' => 0 });
@@ -124,31 +132,76 @@ while (1) {
 	$stateLast  = $state;
 	%existsLast = %exists;
 
-	# Set anywhere to force an update this cycle
-	my $forceUpdate = 0;
-
 	# State is calculated; use newState to gather data
 	my $newState = $state;
 
+	# Reduce the select delay when we're processing background effects
+	# We don't want to hang waiting for event updates
+	my $delay = $DELAY;
+	if (defined($PID)) {
+		$delay = 0.01;
+	}
+
 	# Wait for state updates
-	my $cmdState = DMX::readState($DELAY, \%exists, \%VALID);
+	my $cmdState = DMX::readState($delay, \%exists, \%VALID);
 	if (defined($cmdState)) {
 		$newState = $cmdState;
 		$pullLast = time();
+	}
+
+	# Handle "STOP" commands
+	if ($newState eq 'STOP') {
+		if (defined($PID)) {
+			if ($DEBUG) {
+				print STDERR "Ending background processing\n";
+			}
+			kill(SIGTERM, $PID);
+		}
+
+		$newState    = $state;
+		$update = 1;
+	}
+
+	# Reap zombie children
+	if (defined($PID)) {
+		my $kid = waitpid($PID, WNOHANG);
+		if ($kid > 0) {
+			if ($DEBUG) {
+				print STDERR 'Reaped child: ' . $PID . "\n";
+			}
+
+			$PID    = undef();
+			$EFFECT = undef();
+
+			if (-e $RAVE_FILE) {
+				unlink($RAVE_FILE);
+			}
+
+			$update = 1;
+		}
+	}
+
+	# Continue special processing
+	if (defined($EFFECT)) {
+		$EFFECT->();
+		next;
 	}
 
 	# Special handling for effects states
 	if (defined($EFFECTS{$newState})) {
 
 		# Dispatch the handler
-		$EFFECTS{$newState}->();
+		# Optionally skip the rest of this loop
+		if($EFFECTS{$newState}->()) {
+			next;
+		}
 
 		# Force an update back to the original state
 		$newState    = $stateLast;
 		%exists      = %existsLast;
 		@COLOR       = ();
 		$colorChange = time() + $COLOR_TIME_MIN;
-		$forceUpdate = 1;
+		$update = 1;
 	}
 
 	# Calculate the new state
@@ -182,17 +235,11 @@ while (1) {
 		my @vals = random_normal($numChans, $max, $max * $COLOR_VAR{$state});
 		foreach my $data (@{ $DIM{$state} }) {
 			my $color = pop(@vals);
-			$color = int($color);
-			if ($color < 0) {
-				$color = 0;
-			} elsif ($color > 255) {
-				$color = 255;
-			}
 			push(@COLOR, { 'channel' => $data->{'channel'}, 'value' => $color, 'time' => $time });
 		}
 
 		# Update
-		$forceUpdate = 1;
+		$update = 1;
 		$colorChange = time();
 		if ($DEBUG) {
 			print STDERR "New color\n";
@@ -201,7 +248,7 @@ while (1) {
 
 	# Force updates on a periodic basis
 	if (time() - $pushLast > $PUSH_TIMEOUT) {
-		$forceUpdate = 1;
+		$update = 1;
 	}
 
 	# Die if we don't see regular updates
@@ -211,20 +258,18 @@ while (1) {
 
 	# Force updates on any state change
 	if ($stateLast ne $state) {
-		$forceUpdate = 1;
+		if ($DEBUG) {
+			print STDERR 'State change: ' . $stateLast . ' => ' . $state . "\n";
+		}
+		$update = 1;
 
 		# Reset the color change sequence, so we always spend 1 cycle at white
 		@COLOR       = ();
 		$colorChange = time() + $COLOR_TIME_MIN;
-
-		# Debug
-		if ($DEBUG) {
-			print STDERR 'State change: ' . $stateLast . ' => ' . $state . "\n";
-		}
 	}
 
 	# Update the lighting
-	if ($forceUpdate) {
+	if ($update) {
 
 		# Select a data set (color or standard)
 		my @data_set    = ();
@@ -241,6 +286,15 @@ while (1) {
 
 		# Update the push time
 		$pushLast = time();
+
+		# Clear the update flag
+		$update = 0;
+
+		# Clear the RAVE file, just in case
+		if (-e $RAVE_FILE) {
+			unlink($RAVE_FILE);
+			die("Cleared orphan RAVE file\n");
+		}
 	}
 }
 
@@ -249,7 +303,11 @@ while (1) {
 # These are blocking, so be careful
 # ======================================
 sub red_alert() {
-	my $ramp  = 500;
+	if ($DEBUG) {
+		print STDERR "red_alert()\n";
+	}
+
+	my $ramp  = 450;
 	my @sound = ('afplay', '/mnt/media/Sounds/DMX/Red Alert.mp3');
 	my $sleep = $ramp;
 
@@ -280,6 +338,63 @@ sub red_alert() {
 	usleep($sleep * 1000);
 }
 
-sub red_flash() {
+sub rave() {
+	if ($DEBUG) {
+		print STDERR "rave()\n";
+	}
 
+	my @sound = ('afplay', '/mnt/media/Sounds/DMX/Rave.mp3');
+
+	# Play the sound in a child (i.e. in the background)
+	$PID = fork();
+	if (defined($PID) && $PID == 0) {
+	    exec(@sound)
+		or die('Unable to play sound: ' . join(' ', @sound) . "\n");
+	}
+
+	# Setup our loop handler
+	$EFFECT = \&rave_loop;
+
+	# Initiate the RAVE state
+	touch($RAVE_FILE);
+
+	# Do not pass GO, do not collect $200
+	return 1;
+}
+
+sub rave_loop() {
+	if ($DEBUG) {
+		print STDERR "rave_loop()\n";
+	}
+
+	my $max_dur  = 500;
+	my $max_val  = 255;
+	my %channels = (
+		1  => 1,
+		2  => 1,
+		4  => 1,
+		5  => 1,
+		6  => 1,
+		7  => 1,
+		8  => 1,
+		9  => 1,
+		13 => 1,
+		14 => 1,
+		15 => 1,
+	);
+
+	# Random data for each channel
+	my @data_set = ();
+	foreach my $chan (keys(%channels)) {
+		my $val = int(rand($max_val));
+		my $dur = int(rand($max_dur));
+		push(@data_set, { 'channel' => $chan, 'value' => $val, 'time' => $dur });
+	}
+
+	# Push the data set
+	DMX::applyDataset(\@data_set, 'RAVE', $OUTPUT_FILE);
+	$pushLast = time();
+
+	# Wait just a bit, to prevent seizures
+	usleep($max_dur * 1000);
 }
