@@ -54,6 +54,7 @@ my $stateLast = $state;
 my %exists    = ();
 my $pushLast  = 0;
 my $pullLast  = time();
+my $update    = 0;
 
 # Always force lights out at launch
 DMX::dim({ 'channel' => 11, 'value' => 0, 'time' => 0 });
@@ -62,7 +63,7 @@ DMX::dim({ 'channel' => 11, 'value' => 0, 'time' => 0 });
 while (1) {
 
 	# Set anywhere to force an update this cycle
-	my $forceUpdate = 0;
+	my $update = 0;
 
 	# State is calculated; use newState to gather data
 	my $newState = $state;
@@ -84,7 +85,7 @@ while (1) {
 
 	# Force updates on a periodic basis
 	if (time() - $pushLast > $PUSH_TIMEOUT) {
-		$forceUpdate = 1;
+		$update = 1;
 	}
 
 	# Die if we don't see regular updates
@@ -97,15 +98,18 @@ while (1) {
 		if ($DEBUG) {
 			print STDERR 'State change: ' . $stateLast . ' => ' . $state . "\n";
 		}
-		$forceUpdate = 1;
+		$update = 1;
 	}
 
 	# Update the fan
-	if ($forceUpdate) {
+	if ($update) {
 		# Update
 		DMX::applyDataset($DIM{$state}, $state, $OUTPUT_FILE);
 
 		# Update the push time
 		$pushLast = time();
+
+		# Clear the update flag
+		$update = 0;
 	}
 }
