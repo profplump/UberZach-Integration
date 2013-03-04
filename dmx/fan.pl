@@ -44,12 +44,6 @@ if (!-d $DATA_DIR) {
 	die("Bad config\n");
 }
 
-# Construct a list of valid states
-my %VALID = ();
-foreach my $key (keys(%DIM)) {
-        $VALID{$key} = 1;
-}
-
 # Sockets
 DMX::stateSocket($STATE_SOCK);
 DMX::stateSubscribe($STATE_SOCK);
@@ -74,7 +68,7 @@ while (1) {
 	my $newState = $state;
 
 	# Wait for state updates
-	my $cmdState = DMX::readState($DELAY, \%exists, \%VALID);
+	my $cmdState = DMX::readState($DELAY, \%exists, undef());
 	if (defined($cmdState)) {
 		$newState = $cmdState;
 		$pullLast = time();
