@@ -21,14 +21,19 @@ my $DATA_DIR     = $TEMP_DIR . 'plexMonitor/';
 my $DMX_SOCK     = $DATA_DIR . 'DMX.socket';
 my $SUB_SOCK     = $DATA_DIR . 'STATE.socket';
 
+# State
+my $DMX_FH = undef();
+
 # DMX socket init
 sub dmxSock() {
-	my $dmx_fh = IO::Socket::UNIX->new(
-	        'Peer'    => $DMX_SOCK,
-	        'Type'    => IO::Socket::UNIX::SOCK_DGRAM,
-	        'Timeout' => $SOCK_TIMEOUT
-	) or die('Unable to open socket: ' . $DMX_SOCK . ": ${@}\n");
-	return $dmx_fh;
+	if (!defined($DMX_FH)) {
+		$DMX_FH = IO::Socket::UNIX->new(
+			'Peer'    => $DMX_SOCK,
+			'Type'    => IO::Socket::UNIX::SOCK_DGRAM,
+			'Timeout' => $SOCK_TIMEOUT
+		) or die('Unable to open DMX socket: ' . $DMX_SOCK . ": ${@}\n");
+	}
+	return $DMX_FH;
 }
 
 # Subscribe to state updates
@@ -36,9 +41,9 @@ sub stateSubscribe($) {
 	my ($STATE_SOCK) = @_;
 
 	my $sub_fh = IO::Socket::UNIX->new(
-	        'Peer'    => $SUB_SOCK,
-	        'Type'    => IO::Socket::UNIX::SOCK_DGRAM,
-	        'Timeout' => $SOCK_TIMEOUT
+		'Peer'    => $SUB_SOCK,
+		'Type'    => IO::Socket::UNIX::SOCK_DGRAM,
+		'Timeout' => $SOCK_TIMEOUT
 	) or die('Unable to open state subscription socket: ' . $SUB_SOCK . ": ${@}\n");
 	$sub_fh->send($STATE_SOCK)
 	  or die('Unable to subscribe: ' . $! . "\n");
@@ -51,11 +56,11 @@ sub stateSocket($) {
 	my ($STATE_SOCK) = @_;
 
 	if (-e $STATE_SOCK) {
-	        unlink($STATE_SOCK);
+		unlink($STATE_SOCK);
 	}
 	my $state_fh = IO::Socket::UNIX->new(
-	        'Local' => $STATE_SOCK,
-	        'Type'  => IO::Socket::UNIX::SOCK_DGRAM
+		'Local' => $STATE_SOCK,
+		'Type'  => IO::Socket::UNIX::SOCK_DGRAM
 	) or die('Unable to open state client socket: ' . $STATE_SOCK . ": ${@}\n");
 
 	my $select = IO::Select->new($state_fh)
@@ -105,6 +110,33 @@ sub parseState($$) {
 
 	# Return the state
 	return $cmdState;
+}
+
+sub dim($) {
+	my ($args) = @_;
+	if (!defined($args->{'delay'})) {
+		$args->{'delay'} = 0;
+	}
+	if (!defined($args->{'channel'}) || !defined($args->{'time'}) || !defined($args->{'value'})) {
+		die('Invalid command for socket: ' . join(', ', keys(%{$args})) . ': ' . join(', ', values(%{$args})) . "\n");
+	}
+
+	# Keep us in-range
+	my $value = int($args->{'value'});
+	if ($value > 255) {
+		$value = 255;
+	} elsif ($value < 0) {
+		$value = 0;
+	}
+
+	my $time  = int($args->{'time'});
+	my $delay = int($args->{'delay'});
+
+	my $cmd = join(':', $args->{'channel'}, $time, $value, $delay);
+
+	dmxSock();
+	$DMX_FH->send($cmd)
+	  or die('Unable to write command to DMX socket: ' . $cmd . ": ${!}\n");
 }
 
 # Always return true

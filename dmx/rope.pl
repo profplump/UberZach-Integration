@@ -10,9 +10,6 @@ use File::Basename qw(dirname);
 use lib dirname(abs_path($0));
 use DMX;
 
-# Prototypes
-sub dim($);
-
 # User config
 my %DIM = (
 	'OFF'    => [
@@ -98,7 +95,7 @@ my $pushLast  = 0;
 my $pullLast  = time();
 
 # Always force lights out at launch
-dim({ 'channel' => 0, 'value' => 0, 'time' => 0 });
+DMX::dim({ 'channel' => 0, 'value' => 0, 'time' => 0 });
 
 # Loop forever
 while (1) {
@@ -166,7 +163,7 @@ while (1) {
 		# Send the dim command
 		my @values = ();
 		foreach my $data (@{ $DIM{$state} }) {
-			dim($data);
+			DMX::dim($data);
 			push(@values, $data->{'channel'} . ' => ' . $data->{'value'} . ' @ ' . $data->{'time'});
 		}
 
@@ -179,19 +176,4 @@ while (1) {
 		# Update the push time
 		$pushLast = time();
 	}
-}
-
-# Send the command
-sub dim($) {
-	my ($args) = @_;
-	if (!defined($args->{'delay'})) {
-		$args->{'delay'} = 0;
-	}
-	if (!defined($args->{'channel'}) || !defined($args->{'time'}) || !defined($args->{'value'})) {
-		die('Invalid command for socket: ' . join(', ', keys(%{$args})) . ': ' . join(', ', values(%{$args})) . "\n");
-	}
-
-	my $cmd = join(':', $args->{'channel'}, $args->{'time'}, $args->{'value'}, $args->{'delay'});
-	$dmx_fh->send($cmd)
-	  or die('Unable to write command to DMX socket: ' . $cmd . ": ${!}\n");
 }

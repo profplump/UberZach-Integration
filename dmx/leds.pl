@@ -13,7 +13,6 @@ use lib dirname(abs_path($0));
 use DMX;
 
 # Prototypes
-sub dim($);
 sub red_alert();
 sub red_flash();
 
@@ -112,9 +111,9 @@ my @COLOR       = ();
 my $colorChange = time();
 
 # Always force lights out at launch
-dim({ 'channel' => 13, 'value' => 0, 'time' => 0 });
-dim({ 'channel' => 14, 'value' => 0, 'time' => 0 });
-dim({ 'channel' => 15, 'value' => 0, 'time' => 0 });
+DMX::dim({ 'channel' => 13, 'value' => 0, 'time' => 0 });
+DMX::dim({ 'channel' => 14, 'value' => 0, 'time' => 0 });
+DMX::dim({ 'channel' => 15, 'value' => 0, 'time' => 0 });
 
 # Loop forever
 while (1) {
@@ -260,7 +259,13 @@ while (1) {
 		# Send the dim command
 		my @values = ();
 		foreach my $data (@data_set) {
-			dim($data);
+
+			# Adjust the gamma curve (for channels where we have such data)
+			if ($CHANNEL_ADJ{$data->{'channel'}}) {
+				$data->{'value'} *= $CHANNEL_ADJ{$data->{'channel'}};
+			}
+
+			DMX::dim($data);
 			push(@values, $data->{'channel'} . ' => ' . $data->{'value'} . ' @ ' . $data->{'time'});
 		}
 
@@ -273,36 +278,6 @@ while (1) {
 		# Update the push time
 		$pushLast = time();
 	}
-}
-
-# Send the command
-sub dim($) {
-	my ($args) = @_;
-	if (!defined($args->{'delay'})) {
-		$args->{'delay'} = 0;
-	}
-	if (!defined($args->{'channel'}) || !defined($args->{'time'}) || !defined($args->{'value'})) {
-		die('Invalid command for socket: ' . join(', ', keys(%{$args})) . ': ' . join(', ', values(%{$args})) . "\n");
-	}
-
-	# Adjust the gamma curve (for channels where we have such data)
-	my $value = $args->{'value'};
-	if ($CHANNEL_ADJ{$args->{'channel'}}) {
-		$value *= $CHANNEL_ADJ{$args->{'channel'}};
-	}
-
-	# Keep us in-range
-	$value = int($value);
-	if ($value > 255) {
-		$value = 255;
-	} elsif ($value < 0) {
-		$value = 0;
-	}
-
-	# Send the command
-	my $cmd = join(':', $args->{'channel'}, int($args->{'time'}), $value, int($args->{'delay'}));
-	$dmx_fh->send($cmd)
-	  or die('Unable to write command to DMX socket: ' . $cmd . ": ${!}\n");
 }
 
 # ======================================
@@ -318,26 +293,26 @@ sub red_alert() {
 	push(@other, { 'channel' => 13, 'value' => 0, 'time' => 0 });
 	push(@other, { 'channel' => 15, 'value' => 0, 'time' => 0 });
 	foreach my $data (@other) {
-		dim($data);
+		DMX::dim($data);
 	}
 
 	my %high = ('channel' => 14, 'value' => 255, 'time' => $ramp);
 	my %low = %high;
 	$low{'value'} = 64;
 
-	dim(\%high);
+	DMX::dim(\%high);
 	system(@sound);
-	dim(\%low);
+	DMX::dim(\%low);
 	usleep($sleep * 1000);
 
-	dim(\%high);
+	DMX::dim(\%high);
 	system(@sound);
-	dim(\%low);
+	DMX::dim(\%low);
 	usleep($sleep * 1000);
 
-	dim(\%high);
+	DMX::dim(\%high);
 	system(@sound);
-	dim(\%low);
+	DMX::dim(\%low);
 	usleep($sleep * 1000);
 }
 
