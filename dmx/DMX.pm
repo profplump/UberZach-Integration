@@ -19,17 +19,17 @@ my $SOCK_TIMEOUT = 5;
 my $MAX_CMD_LEN  = 1024;
 my $TEMP_DIR     = `getconf DARWIN_USER_TEMP_DIR`;
 chomp($TEMP_DIR);
-my $DATA_DIR     = $TEMP_DIR . 'plexMonitor/';
-my $DMX_SOCK     = $DATA_DIR . 'DMX.socket';
-my $SUB_SOCK     = $DATA_DIR . 'STATE.socket';
-my %CHANNEL_ADJ  = (
+my $DATA_DIR    = $TEMP_DIR . 'plexMonitor/';
+my $DMX_SOCK    = $DATA_DIR . 'DMX.socket';
+my $SUB_SOCK    = $DATA_DIR . 'STATE.socket';
+my %CHANNEL_ADJ = (
 	'13' => 1.00,
 	'14' => 1.14,
 	'15' => 1.19,
 );
 
 # Sanity check
-if (! -d $DATA_DIR) {
+if (!-d $DATA_DIR) {
 	die('Data directory not available: ' . $DATA_DIR . "\n");
 }
 
@@ -114,12 +114,11 @@ sub parseState($$) {
 	}
 	if ($DEBUG) {
 		my @exists_tmp = ();
-		foreach my $key (keys(%{ $exists })) {
+		foreach my $key (keys(%{$exists})) {
 			push(@exists_tmp, $key . ':' . $exists->{$key});
 		}
 		print STDERR 'Got state: ' . $cmdState . ' (' . join(', ', @exists_tmp) . ")\n";
 	}
-
 
 	# Translate INIT to OFF
 	if ($cmdState eq 'INIT') {
@@ -146,8 +145,8 @@ sub dim($) {
 
 	# Adjust for the color curve (for channels where we have such data)
 	my $value = $args->{'value'};
-	if ($CHANNEL_ADJ{$args->{'channel'}}) {
-		$value *= $CHANNEL_ADJ{$args->{'channel'}};
+	if ($CHANNEL_ADJ{ $args->{'channel'} }) {
+		$value *= $CHANNEL_ADJ{ $args->{'channel'} };
 	}
 
 	# 8-bit values
@@ -173,7 +172,7 @@ sub printDataset($) {
 	my ($data_set) = @_;
 
 	my $sum = 0;
-	foreach my $data (@{ $data_set }) {
+	foreach my $data (@{$data_set}) {
 		$sum += $data->{'value'};
 		my $str = $data->{'channel'} . ' => ' . int($data->{'value'}) . ' @ ' . $data->{'time'};
 		if ($data->{'delay'}) {
@@ -198,7 +197,7 @@ sub applyDataset($$$) {
 
 	# Send the dim command
 	my @values = ();
-	foreach my $data (@{ $data_set }) {
+	foreach my $data (@{$data_set}) {
 		dim($data);
 		my $str = $data->{'channel'} . ' => ' . $data->{'value'} . ' @ ' . $data->{'time'};
 		if ($data->{'delay'}) {

@@ -16,7 +16,7 @@ sub mtime($);
 
 # User config
 my $STATE_TIMEOUT = 180;
-my %MON_FILES = (
+my %MON_FILES     = (
 	'PLAYING'     => 'MTIME',
 	'GUI'         => 'MTIME',
 	'MOTION'      => 'MTIME',
@@ -126,8 +126,9 @@ while (1) {
 
 	# Monitor files of all types
 	foreach my $file (values(%files)) {
+
 		# Always record the previous status and clear the new one
-		$file->{'last'} = $file->{'status'};
+		$file->{'last'}   = $file->{'status'};
 		$file->{'status'} = 0;
 
 		# Record the last update

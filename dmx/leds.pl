@@ -147,8 +147,8 @@ while (1) {
 			kill(SIGTERM, $PID);
 		}
 
-		$newState    = $state;
-		$update = 1;
+		$newState = $state;
+		$update   = 1;
 	}
 
 	# Reap zombie children
@@ -172,7 +172,7 @@ while (1) {
 			# Reset to standard
 			@COLOR       = ();
 			$colorChange = time() + $COLOR_TIME_MIN;
-			$update = 1;
+			$update      = 1;
 		}
 	}
 
@@ -187,7 +187,7 @@ while (1) {
 
 		# Dispatch the handler
 		# Optionally skip the rest of this loop
-		if($EFFECTS{$newState}->()) {
+		if ($EFFECTS{$newState}->()) {
 			next;
 		}
 
@@ -196,7 +196,7 @@ while (1) {
 		%exists      = %existsLast;
 		@COLOR       = ();
 		$colorChange = time() + $COLOR_TIME_MIN;
-		$update = 1;
+		$update      = 1;
 	}
 
 	# Calculate the new state
@@ -234,7 +234,7 @@ while (1) {
 		}
 
 		# Update
-		$update = 1;
+		$update      = 1;
 		$colorChange = time();
 		if ($DEBUG) {
 			print STDERR "New color\n";
@@ -346,15 +346,15 @@ sub rave() {
 	# Play the sound in a child (i.e. in the background)
 	$PID = fork();
 	if (defined($PID) && $PID == 0) {
-	    exec(@sound)
-		or die('Unable to play sound: ' . join(' ', @sound) . "\n");
+		exec(@sound)
+		  or die('Unable to play sound: ' . join(' ', @sound) . "\n");
 	}
 
 	# Setup our loop handler
 	$EFFECT = \&rave_loop;
 
 	# Save data for future runs
-	my %data  = ();
+	my %data = ();
 	$PID_DATA = \%data;
 
 	# Record our start time
@@ -397,7 +397,7 @@ sub rave_loop() {
 	my $max_val  = 255;
 
 	# How long have we been playing
-	my $elapsed  = Time::HiRes::time() - $PID_DATA->{'start'};
+	my $elapsed = Time::HiRes::time() - $PID_DATA->{'start'};
 	if ($DEBUG) {
 		print STDERR 'Elapsed: ' . $elapsed . "\n";
 	}
@@ -408,10 +408,10 @@ sub rave_loop() {
 		if ($PID_DATA->{'live_channels'} < 1 || $ratio < $elapsed / $ramp_dur) {
 			my @keys  = keys(%{ $PID_DATA->{'channels'} });
 			my $index = int(rand($PID_DATA->{'num_channels'}));
-			while ($PID_DATA->{'channels'}->{$keys[$index]} > 0) {
+			while ($PID_DATA->{'channels'}->{ $keys[$index] } > 0) {
 				$index = int(rand($PID_DATA->{'num_channels'}));
 			}
-			$PID_DATA->{'channels'}->{$keys[$index]} = 1;
+			$PID_DATA->{'channels'}->{ $keys[$index] } = 1;
 			$PID_DATA->{'live_channels'}++;
 		}
 	} else {

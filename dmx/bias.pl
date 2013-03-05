@@ -41,7 +41,7 @@ if ($ENV{'DEBUG'}) {
 # Construct a list of valid states
 my %VALID = ();
 foreach my $key (keys(%DIM)) {
-        $VALID{$key} = 1;
+	$VALID{$key} = 1;
 }
 
 # Sockets
@@ -96,6 +96,7 @@ while (1) {
 
 	# Update the lighting
 	if ($update) {
+
 		# Update
 		DMX::applyDataset($DIM{$state}, $state, $OUTPUT_FILE);
 

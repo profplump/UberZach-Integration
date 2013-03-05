@@ -88,6 +88,7 @@ while (1) {
 
 	# Update the fan
 	if ($update) {
+
 		# Update
 		DMX::applyDataset($DIM{$state}, $state, $OUTPUT_FILE);
 
