@@ -77,8 +77,8 @@ sub stateSocket($) {
 		unlink($STATE_SOCK);
 	}
 	my $state_fh = IO::Socket::UNIX->new(
-		'Local'    => $STATE_SOCK,
-		'Type'     => IO::Socket::UNIX::SOCK_DGRAM,
+		'Local' => $STATE_SOCK,
+		'Type'  => IO::Socket::UNIX::SOCK_DGRAM,
 	) or die('Unable to open state client socket: ' . $STATE_SOCK . ": ${@}\n");
 
 	$SELECT = IO::Select->new($state_fh)
@@ -89,8 +89,8 @@ sub stateSocket($) {
 # Parse the state->client comm string
 sub parseState($$) {
 	my ($text, $exists) = @_;
-	my $cmdState        = undef();
-	my $exists_text     = undef();
+	my $cmdState    = undef();
+	my $exists_text = undef();
 
 	# Parse the string
 	my %tmp = ();
@@ -215,7 +215,7 @@ sub applyDataset($$$) {
 
 sub readState($$$) {
 	my ($delay, $exists, $valid) = @_;
-	my $cmdState                 = undef();
+	my $cmdState = undef();
 
 	# Wait for state updates
 	my @ready_clients = $SELECT->can_read($delay);
