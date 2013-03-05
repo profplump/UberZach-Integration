@@ -48,7 +48,7 @@ sub dmxSock() {
 		$DMX_FH = IO::Socket::UNIX->new(
 			'Peer'    => $DMX_SOCK,
 			'Type'    => IO::Socket::UNIX::SOCK_DGRAM,
-			'Timeout' => $SOCK_TIMEOUT
+			'Timeout' => $SOCK_TIMEOUT,
 		) or die('Unable to open DMX socket: ' . $DMX_SOCK . ": ${@}\n");
 	}
 	return $DMX_FH;
@@ -77,8 +77,8 @@ sub stateSocket($) {
 		unlink($STATE_SOCK);
 	}
 	my $state_fh = IO::Socket::UNIX->new(
-		'Local' => $STATE_SOCK,
-		'Type'  => IO::Socket::UNIX::SOCK_DGRAM
+		'Local'    => $STATE_SOCK,
+		'Type'     => IO::Socket::UNIX::SOCK_DGRAM,
 	) or die('Unable to open state client socket: ' . $STATE_SOCK . ": ${@}\n");
 
 	$SELECT = IO::Select->new($state_fh)
@@ -88,16 +88,14 @@ sub stateSocket($) {
 
 # Parse the state->client comm string
 sub parseState($$) {
-	my ($fh, $exists) = @_;
-
-	# Grab the inbound text
-	my $text = undef();
-	$fh->recv($text, $MAX_CMD_LEN);
+	my ($text, $exists) = @_;
+	my $cmdState        = undef();
+	my $exists_text     = undef();
 
 	# Parse the string
 	my %tmp = ();
 	%{$exists} = ();
-	my ($cmdState, $exists_text) = $text =~ /^(\w+)(?:\s+\(([^\)]+)\))?/;
+	($cmdState, $exists_text) = $text =~ /^(\w+)(?:\s+\(([^\)]+)\))?/;
 	if (!defined($cmdState)) {
 		print STDERR 'State parse error: ' . $text . "\n";
 		next;
@@ -125,7 +123,7 @@ sub parseState($$) {
 		$cmdState = 'OFF';
 	}
 
-	# Return the state
+	# Return
 	return $cmdState;
 }
 
@@ -217,24 +215,37 @@ sub applyDataset($$$) {
 
 sub readState($$$) {
 	my ($delay, $exists, $valid) = @_;
-	my $cmdState = undef();
+	my $cmdState                 = undef();
 
 	# Wait for state updates
 	my @ready_clients = $SELECT->can_read($delay);
 	foreach my $fh (@ready_clients) {
 
-		# Read the global state
-		$cmdState = parseState($fh, $exists);
+		# Ensure we won't block on recv()
+		$fh->blocking(0);
 
-		# Only accept valid states
-		if (defined($valid)) {
-			if (!defined($valid->{$cmdState})) {
-				print STDERR 'Invalid state: ' . $cmdState . "\n";
-				next;
+		# Grab the inbound text
+		while (defined($fh->recv(my $text, $MAX_CMD_LEN))) {
+
+			# Parse the string
+			my $state = parseState($text, $exists);
+
+			# Ignore invalid states
+			if (defined($valid)) {
+				if (!defined($valid->{$state})) {
+					print STDERR 'Invalid state: ' . $state . "\n";
+					next;
+				}
+			}
+
+			# Propogate valid states
+			if ($state) {
+				$cmdState = $state;
 			}
 		}
 	}
 
+	# Return the final valid state
 	return $cmdState;
 }
 
