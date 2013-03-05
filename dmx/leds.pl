@@ -391,8 +391,8 @@ sub rave_loop() {
 	}
 
 	# Config
-	my $reserve  = 0.80;
-	my $ramp_dur = 10.25;
+	my $reserve  = 0.75;
+	my $ramp_dur = 10.15;
 	my $max_dur  = 350;
 	my $max_val  = 255;
 
