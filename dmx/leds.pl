@@ -128,7 +128,7 @@ while (1) {
 	# We don't want to hang waiting for event updates
 	my $delay = $DELAY;
 	if (defined($PID)) {
-		$delay = 0.01;
+		$delay = 0.001;
 	}
 
 	# Wait for state updates
@@ -391,10 +391,14 @@ sub rave_loop() {
 	}
 
 	# Config
-	my $reserve  = 0.75;
-	my $ramp_dur = 10.15;
 	my $max_dur  = 350;
 	my $max_val  = 255;
+	my $reserve  = 0.75;
+	my $ramp_dur = 10.15;
+	my $hit_pos  = 43.15;
+	my $hit_dur  = 100;
+	my $fade_pos = 43.65;
+	my $fade_dur = 2000;
 
 	# How long have we been playing
 	my $elapsed = Time::HiRes::time() - $PID_DATA->{'start'};
@@ -423,14 +427,27 @@ sub rave_loop() {
 		}
 	}
 
-	# Random data for each channel
+	# Prepare data for each channel
 	my @data_set = ();
+	my $wait     = $max_dur;
 	foreach my $chan (keys(%{ $PID_DATA->{'channels'} })) {
-		my $val = int(rand($max_val));
-		my $dur = int(rand($max_dur));
+		my $val = 0;
+		my $dur = 0;
 
-		if ($PID_DATA->{'channels'}->{$chan} < 1) {
-			$val = 0;
+		# Random data on enabled channels until the fade
+		if ($elapsed < $hit_pos) {
+			if ($PID_DATA->{'channels'}->{$chan} > 0) {
+				$dur = int(rand($max_dur));
+				$val = int(rand($max_val));
+			}
+		} elsif ($elapsed < $fade_pos) {
+			$val  = $max_val;
+			$dur  = $hit_dur;
+			$wait = ($fade_pos - $hit_pos) * 1000;
+		} else {
+			$val  = 0;
+			$dur  = $fade_dur;
+			$wait = $dur;
 		}
 
 		push(@data_set, { 'channel' => $chan, 'value' => $val, 'time' => $dur });
@@ -440,6 +457,6 @@ sub rave_loop() {
 	DMX::applyDataset(\@data_set, 'RAVE', $OUTPUT_FILE);
 	$pushLast = time();
 
-	# Wait just a bit, to prevent seizures
-	usleep($max_dur * 1000);
+	# Wait for the fade interval
+	usleep($wait * 1000);
 }
