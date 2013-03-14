@@ -24,7 +24,7 @@ my %DIM          = (
 my $DATA_DIR     = DMX::dataDir();
 my $OUTPUT_FILE  = $DATA_DIR . 'GARAGE';
 my $STATE_SOCK   = $OUTPUT_FILE . '.socket';
-my $DELAY        = 30;
+my $DELAY        = 60;
 
 # Debug
 my $DEBUG = 0;
@@ -77,13 +77,15 @@ while (1) {
 	if ($update) {
 
 		# Toggle on
-		DMX::applyDataset($DIM{'TOGGLE'}, 'TOGGLE', $OUTPUT_FILE);
+		$state = 'TOGGLE';
+		DMX::applyDataset($DIM{$state}, $state, $OUTPUT_FILE);
 
 		# Wait
 		usleep($RELAY_DELAY * 1000000);
 
 		# Toggle off
-		DMX::applyDataset($DIM{'OFF'}, 'OFF', $OUTPUT_FILE);
+		$state = 'OFF';
+		DMX::applyDataset($DIM{$state}, $state, $OUTPUT_FILE);
 
 		# Update the push time
 		$pushLast = time();
