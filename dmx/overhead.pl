@@ -11,7 +11,7 @@ use DMX;
 # User config
 my %DIM = (
 	'OFF'      => [
-		# Handled by rope.pl
+		{ 'channel' => 4,  'value' => 0,   'time' => 60000 },
 	],
 	'PLAY'     => [
 		{ 'channel' => 4,  'value' => 32,  'time' => 500   },

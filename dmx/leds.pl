@@ -34,7 +34,9 @@ my %COLOR_VAR      = (
 );
 my %DIM            = (
 	'OFF'    => [
-		# Handled by rope.pl
+		{ 'channel' => 13,  'value' => 0,   'time' => 60000 },
+		{ 'channel' => 14,  'value' => 0,   'time' => 60000 },
+		{ 'channel' => 15,  'value' => 0,   'time' => 60000 },
 	],
 	'PLAY'      => [
 		{ 'channel' => 13, 'value' => 10,   'time' => 500  },
