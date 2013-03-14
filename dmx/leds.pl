@@ -304,10 +304,15 @@ sub red_alert() {
 		print STDERR "red_alert()\n";
 	}
 
+	my $file  = '/mnt/media/Sounds/DMX/Red Alert.mp3';
+	my @sound = ('afplay', $file);
 	my $ramp  = 450;
-	my @sound = ('afplay', '/mnt/media/Sounds/DMX/Red Alert.mp3');
 	my $sleep = $ramp;
 
+	# Stat the file to bring the network up-to-date
+	stat($file);
+
+	# Bring the B & G channels down to 0
 	my @other = ();
 	push(@other, { 'channel' => 13, 'value' => 0, 'time' => 0 });
 	push(@other, { 'channel' => 15, 'value' => 0, 'time' => 0 });
@@ -343,7 +348,11 @@ sub rave() {
 		print STDERR "rave()\n";
 	}
 
-	my @sound = ('afplay', '/mnt/media/Sounds/DMX/Rave.mp3');
+	my $file  = '/mnt/media/Sounds/DMX/Rave.mp3';
+	my @sound = ('afplay', $file);
+
+	# Stat the file to bring the network up-to-date
+	stat($file);
 
 	# Play the sound in a child (i.e. in the background)
 	$PID = fork();
