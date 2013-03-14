@@ -24,9 +24,7 @@ my %DIM          = (
 my $DATA_DIR     = DMX::dataDir();
 my $OUTPUT_FILE  = $DATA_DIR . 'GARAGE';
 my $STATE_SOCK   = $OUTPUT_FILE . '.socket';
-my $PUSH_TIMEOUT = 20;
-my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
-my $DELAY        = $PULL_TIMEOUT / 2;
+my $DELAY        = 30;
 
 # Debug
 my $DEBUG = 0;
@@ -42,7 +40,6 @@ my $state     = 'OFF';
 my $stateLast = $state;
 my %exists    = ();
 my $pushLast  = 0;
-my $pullLast  = time();
 my $update    = 0;
 
 # Always force lights out at launch
@@ -52,13 +49,12 @@ DMX::dim({ 'channel' => 16, 'value' => 0, 'time' => 0 });
 while (1) {
 
 	# State is calculated; use newState to gather data
-	my $newState = $state;
+	my $newState = 'OFF';
 
 	# Wait for state updates
 	my $cmdState = DMX::readState($DELAY, \%exists, undef());
 	if (defined($cmdState)) {
 		$newState = $cmdState;
-		$pullLast = time();
 	}
 
 	# Calculate the new state
@@ -69,18 +65,8 @@ while (1) {
 		$state = 'OFF';
 	}
 
-	# Force updates on a periodic basis
-	if (time() - $pushLast > $PUSH_TIMEOUT) {
-		$update = 1;
-	}
-
-	# Die if we don't see regular updates
-	if (time() - $pullLast > $PULL_TIMEOUT) {
-		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
-	}
-
 	# Force updates on any state change
-	if ($state eq 'TOGGLE') {
+	if ($state ne $stateLast) {
 		if ($DEBUG) {
 			print STDERR 'State change: ' . $stateLast . ' => ' . $state . "\n";
 		}
