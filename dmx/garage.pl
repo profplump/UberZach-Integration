@@ -12,10 +12,10 @@ use DMX;
 # User config
 my $RELAY_DELAY  = 0.20;
 my %DIM          = (
-	'OFF'    => [
+	'OFF'      => [
 		{ 'channel' => 16, 'value' => 0,   'time' => 0 }
 	],
-	'TOGGLE' => [
+	'ACTIVATE' => [
 		{ 'channel' => 16, 'value' => 255, 'time' => 0 }
 	],
 );
@@ -24,7 +24,9 @@ my %DIM          = (
 my $DATA_DIR     = DMX::dataDir();
 my $OUTPUT_FILE  = $DATA_DIR . 'GARAGE';
 my $STATE_SOCK   = $OUTPUT_FILE . '.socket';
-my $DELAY        = 60;
+my $PUSH_TIMEOUT = 20;
+my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
+my $DELAY        = $PULL_TIMEOUT / 2;
 
 # Debug
 my $DEBUG = 0;
@@ -34,12 +36,14 @@ if ($ENV{'DEBUG'}) {
 
 # Sockets
 DMX::stateSocket($STATE_SOCK);
+DMX::stateSubscribe($STATE_SOCK);
 
 # State
 my $state     = 'OFF';
 my $stateLast = $state;
 my %exists    = ();
 my $pushLast  = 0;
+my $pullLast  = time();
 my $update    = 0;
 
 # Always force lights out at launch
@@ -55,35 +59,50 @@ while (1) {
 	my $cmdState = DMX::readState($DELAY, \%exists, undef());
 	if (defined($cmdState)) {
 		$newState = $cmdState;
+		$pullLast = time();
 	}
 
 	# Calculate the new state
 	$stateLast = $state;
-	if ($newState eq 'TOGGLE') {
-		$state = 'TOGGLE';
+	if ($newState eq 'ACTIVATE' || $exists{'GARAGE_CMD'}) {
+		$state = 'ACTIVATE';
 	} else {
 		$state = 'OFF';
 	}
 
+	# Force updates on a periodic basis
+	if (time() - $pushLast > $PUSH_TIMEOUT) {
+		$update = 1;
+	}
+
+	# Die if we don't see regular updates
+	if (time() - $pullLast > $PULL_TIMEOUT) {
+		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
+	}
+
 	# Force updates on any state change
-	if ($state ne $stateLast) {
+	if ($stateLast ne $state) {
 		if ($DEBUG) {
 			print STDERR 'State change: ' . $stateLast . ' => ' . $state . "\n";
 		}
 		$update = 1;
 	}
 
-	# Update the fan
+	# Special handling for toggle systems: only push if the state is "ACTIVATE"
+	if ($update && $state ne 'ACTIVATE') {
+		if ($DEBUG) {
+			print STDERR 'Skipping non-activate state: ' . $state "\n";
+		}
+		$update = 0;
+	}
+
+	# Update the relay
 	if ($update) {
 
-		# Toggle on
-		$state = 'TOGGLE';
+		# Toggle
+		$state = 'ACTIVATE';
 		DMX::applyDataset($DIM{$state}, $state, $OUTPUT_FILE);
-
-		# Wait
 		usleep($RELAY_DELAY * 1000000);
-
-		# Toggle off
 		$state = 'OFF';
 		DMX::applyDataset($DIM{$state}, $state, $OUTPUT_FILE);
 

@@ -5,8 +5,9 @@ LEDS="`ps -A -o pid=,command= | grep -v grep | grep leds.pl | awk '{print $1}'`"
 BIAS="`ps -A -o pid=,command= | grep -v grep | grep bias.pl | awk '{print $1}'`"
 FAN="`ps -A -o pid=,command= | grep -v grep | grep fan.pl | awk '{print $1}'`"
 OVERHEAD="`ps -A -o pid=,command= | grep -v grep | grep overhead.pl | awk '{print $1}'`"
+GARARGE="`ps -A -o pid=,command= | grep -v grep | grep garage.pl | awk '{print $1}'`"
 
-for i in $ROPE $LEDS $FAN $BIAS $OVERHEAD; do
+for i in $ROPE $LEDS $FAN $BIAS $OVERHEAD $GARAGE; do
 	if [ -n "${i}" ]; then
 		kill $i
 	fi
