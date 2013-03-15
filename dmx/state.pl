@@ -25,6 +25,8 @@ my %MON_FILES     = (
 	'LIGHTS'      => 'EXISTS',
 	'FAN_CMD'     => 'EXISTS',
 	'RAVE'        => 'EXISTS_OFF',
+
+	'/mnt/media/DMX/cmd/GARAGE_CMD' => 'EXISTS_CLEAR',
 );
 
 # App config
@@ -74,6 +76,12 @@ foreach my $file (keys(%MON_FILES)) {
 		'status' => 0,
 		'last'   => 0,
 	);
+
+	# Allow absolute paths to override the $DATA_DIR path
+	if ($file =~ /^\//) {
+		$tmp{$path} = $file;
+	}
+
 	$files{$file} = \%tmp;
 }
 
@@ -197,7 +205,7 @@ while (1) {
 		$state = 'OFF';
 	}
 
-	# Clear exists files when the main state is "OFF"
+	# Clear exists files when the main state is "OFF" (and before we append their status)
 	foreach my $file (values(%files)) {
 		if ($file->{'type'} eq 'EXISTS' && $file->{'status'} && $state eq 'OFF') {
 			unlink($file->{'path'});
@@ -217,6 +225,17 @@ while (1) {
 			}
 		}
 		$state .= ' (' . join(', ', @exists) . ')';
+	}
+
+	# Clear exists_clear files immediately (but after we append their status)
+	foreach my $file (values(%files)) {
+		if ($file->{'type'} eq 'EXISTS_CLEAR' && $file->{'status'}) {
+			unlink($file->{'path'});
+			$file->{'stauts'} = 0;
+			if ($DEBUG) {
+				print STDERR 'Clearing exists flag for: ' . $file->{'name'} . "\n";
+			}
+		}
 	}
 
 	# Force updates on a periodic basis
