@@ -304,7 +304,7 @@ sub red_alert() {
 		print STDERR "red_alert()\n";
 	}
 
-	my $file  = '/mnt/media/Sounds/DMX/Red Alert.mp3';
+	my $file  = '/mnt/media/DMX/Red Alert.mp3';
 	my @sound = ('afplay', $file);
 	my $ramp  = 450;
 	my $sleep = $ramp;
@@ -348,7 +348,7 @@ sub rave() {
 		print STDERR "rave()\n";
 	}
 
-	my $file  = '/mnt/media/Sounds/DMX/Rave.mp3';
+	my $file  = '/mnt/media/DMX/Rave.mp3';
 	my @sound = ('afplay', $file);
 
 	# Stat the file to bring the network up-to-date
