@@ -10,12 +10,8 @@ use DMX;
 
 # User config
 my %DIM = (
-	'OFF'    => [
-		{ 'channel' => 11, 'value' => 0,   'time' => 0 }
-	],
-	'ON'    => [
-		{ 'channel' => 11, 'value' => 255, 'time' => 0 }
-	],
+	'OFF' => [ { 'channel' => 11, 'value' => 0,   'time' => 0 } ],
+	'ON'  => [ { 'channel' => 11, 'value' => 255, 'time' => 0 } ],
 );
 
 # App config

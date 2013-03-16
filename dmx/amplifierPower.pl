@@ -80,6 +80,7 @@ while (1) {
 
 	# Force updates on a periodic basis
 	if (time() - $pushLast > $PUSH_TIMEOUT) {
+
 		# Not for the amp
 		#$update = 1;
 	}
@@ -119,6 +120,7 @@ while (1) {
 
 		# Reset to TV @ 5.1 at power on
 		if (defined($cmd) && $cmd eq 'ON') {
+
 			# Set the audio source back to the default
 			my @CMD = @AUDIO_SET;
 			push(@CMD, $DEFAULT_DEV);
@@ -136,6 +138,7 @@ while (1) {
 
 		# Rave through the main amp
 		if ($state eq 'RAVE') {
+
 			# Set the audio source to the RAVE device
 			my @CMD = @AUDIO_SET;
 			push(@CMD, $RAVE_DEV);

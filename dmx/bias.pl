@@ -10,18 +10,10 @@ use DMX;
 
 # User config
 my %DIM = (
-	'OFF'    => [
-		{ 'channel' => 12, 'value' => 0,   'time' => 60000 },
-	],
-	'PLAY'   => [
-		{ 'channel' => 12, 'value' => 255, 'time' => 0 }
-	],
-	'PAUSE'   => [
-		{ 'channel' => 12, 'value' => 0,  'time' => 0, 'delay' => 10000 }
-	],
-	'MOTION'  => [
-		{ 'channel' => 12, 'value' => 0,  'time' => 0 }
-	],
+	'OFF'    => [ { 'channel' => 12, 'value' => 0,   'time' => 60000 }, ],
+	'PLAY'   => [ { 'channel' => 12, 'value' => 255, 'time' => 0 } ],
+	'PAUSE'  => [ { 'channel' => 12, 'value' => 0,   'time' => 0, 'delay' => 10000 } ],
+	'MOTION' => [ { 'channel' => 12, 'value' => 0,   'time' => 0 } ],
 );
 
 # App config

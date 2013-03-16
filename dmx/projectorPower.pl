@@ -103,6 +103,7 @@ while (1) {
 
 	# Force updates on a periodic basis
 	if (time() - $pushLast > $PUSH_TIMEOUT) {
+
 		# Not for the projector
 		#$update = 1;
 	}
@@ -142,7 +143,6 @@ while (1) {
 		# Clear the update flag
 		$update = 0;
 	}
-
 
 	# Announce a pending shutdown every minute
 	if ($state eq 'COUNTDOWN') {

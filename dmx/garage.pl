@@ -10,14 +10,10 @@ use lib dirname(abs_path($0));
 use DMX;
 
 # User config
-my $RELAY_DELAY  = 0.20;
-my %DIM          = (
-	'OFF'      => [
-		{ 'channel' => 16, 'value' => 0,   'time' => 0 }
-	],
-	'ACTIVATE' => [
-		{ 'channel' => 16, 'value' => 255, 'time' => 0 }
-	],
+my $RELAY_DELAY = 0.20;
+my %DIM         = (
+	'OFF'      => [ { 'channel' => 16, 'value' => 0,   'time' => 0 } ],
+	'ACTIVATE' => [ { 'channel' => 16, 'value' => 255, 'time' => 0 } ],
 );
 
 # App config
