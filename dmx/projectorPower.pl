@@ -46,7 +46,6 @@ my $lastUser  = time();
 # Loop forever
 while (1) {
 
-
 	# State is calculated; use newState to gather data
 	my $newState = $state;
 
@@ -57,10 +56,25 @@ while (1) {
 		$pullLast = time();
 	}
 
-	# Record the lastUser time
-	if ($exists{'GUI'} || $exists{'PLAY_STATUS'}) {
-		$lastUser = time();
+	# Record the lastUser time -- last GUI update or last time we were playing
+	if ($lastUser < $exists{'GUI'}) {
+		$lastUser = $exists{'GUI'};
 	}
+	my $now = time();
+	if ($lastUser < $now) {
+		if ($exists{'PLAYING'}) {
+			$lastUser = $now;
+		}
+	}
+
+	# Treat a transition from "OFF" to "PAUSE" as user activity (i.e. someone fired up the projector)
+	if ($lastUser < $now) {
+		if ($newState eq 'PAUSE' && $stateLast eq 'OFF') {
+			$lastUser = $now;
+		}
+	}
+
+	# Calculate the elapsed time
 	my $elapsed = time() - $lastUser;
 	if ($DEBUG) {
 		print STDERR 'Time since last user action: ' . $elapsed . "\n";
@@ -74,9 +88,18 @@ while (1) {
 			if ($elapsed > $TIMEOUT + $COUNTDOWN) {
 				$state = 'OFF';
 			}
+		} else {
+			$state = 'ON';
 		}
 	}
 
+	# Force updates when there is a physical state mistmatch
+	# This will need an update if we ever handle "ON"
+	if ($state eq 'OFF') {
+		if ($exists{'PROJECTOR'}) {
+			$update = 1;
+		}
+	}
 
 	# Force updates on a periodic basis
 	if (time() - $pushLast > $PUSH_TIMEOUT) {
