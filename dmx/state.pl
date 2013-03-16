@@ -83,11 +83,18 @@ foreach my $file (keys(%MON_FILES)) {
 		$tmp{'path'} = $file;
 	}
 
+	# Record the directory name for folder monitoring
+	$tmp{'dir'} = dirname($tmp{'path'});
+
+	# Push a hash ref
 	$files{$file} = \%tmp;
 }
 
 # Loop forever
 while (1) {
+
+	# Reset the folder monitor state
+	my %folders = ();
 
 	# Provide a method to force updates even when the state does not change
 	my $update = 0;
@@ -165,6 +172,20 @@ while (1) {
 
 		# Check for the presence of a file
 		if ($file->{'type'} =~ /^EXISTS/) {
+
+			# Use opendir/readdir before calling -e, to ensure fresh results
+			if (!$folders{ $file->{'dir'} }) {
+				my $dh = undef();
+				if (opendir($dh, $file->{'dir'})) {
+					if ($DEBUG) {
+						print STDERR 'Refreshed folder: ' . $file->{'dir'} . "\n";
+					}
+					my @files = readdir($dh);
+					closedir($dh);
+				}
+				$folders{ $file->{'dir'} } = 1;
+			}
+
 			if (-e $file->{'path'}) {
 				$file->{'status'} = 1;
 			}
