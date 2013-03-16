@@ -55,6 +55,11 @@ while (1) {
 		$newState = $cmdState;
 		$pullLast = time();
 	}
+	
+	# Die if we don't see regular updates
+	if (time() - $pullLast > $PULL_TIMEOUT) {
+		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
+	}
 
 	# Calculate the new state
 	$stateLast = $state;
@@ -65,17 +70,15 @@ while (1) {
 	}
 
 	# Force updates on a periodic basis
-	if (time() - $pushLast > $PUSH_TIMEOUT) {
+	if (!$update && time() - $pushLast > $PUSH_TIMEOUT) {
+		if ($DEBUG) {
+			print STDERR "Forcing periodic update\n";
+		}
 		$update = 1;
 	}
 
-	# Die if we don't see regular updates
-	if (time() - $pullLast > $PULL_TIMEOUT) {
-		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
-	}
-
 	# Force updates on any state change
-	if ($stateLast ne $state) {
+	if (!$update && $stateLast ne $state) {
 		if ($DEBUG) {
 			print STDERR 'State change: ' . $stateLast . ' => ' . $state . "\n";
 		}

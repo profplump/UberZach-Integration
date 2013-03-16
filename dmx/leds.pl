@@ -139,6 +139,11 @@ while (1) {
 		$newState = $cmdState;
 		$pullLast = time();
 	}
+	
+	# Die if we don't see regular updates
+	if (time() - $pullLast > $PULL_TIMEOUT) {
+		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
+	}
 
 	# Handle "STOP" commands
 	if ($newState eq 'STOP') {
@@ -250,27 +255,25 @@ while (1) {
 	}
 
 	# Force updates on a periodic basis
-	if (time() - $pushLast > $PUSH_TIMEOUT) {
+	if (!$update && time() - $pushLast > $PUSH_TIMEOUT) {
+		if ($DEBUG) {
+			print STDERR "Forcing periodic update\n";
+		}
 		$update = 1;
 	}
 
-	# Die if we don't see regular updates
-	if (time() - $pullLast > $PULL_TIMEOUT) {
-		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
-	}
-
 	# Force updates on any state change
-	if ($stateLast ne $state) {
+	if (!$update && $stateLast ne $state) {
 		if ($DEBUG) {
 			print STDERR 'State change: ' . $stateLast . ' => ' . $state . "\n";
 		}
 		$update = 1;
-
+		
 		# Reset the color change sequence, so we always spend 1 cycle at white
 		@COLOR       = ();
 		$colorChange = time() + $COLOR_TIME_MIN;
 	}
-
+	
 	# Update the lighting
 	if ($update) {
 
