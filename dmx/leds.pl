@@ -357,12 +357,16 @@ sub rave($) {
 	}
 
 	# Config
-	my $file      = '/mnt/media/DMX/Rave.mp3';
-	my @sound     = ('afplay', $file);
-	my $AMP_DELAY = 9;
+	my $SND_APP   = 'afplay';
+	my $RAVE_MP3  = '/mnt/media/DMX/Rave.mp3';
+	my $SILENCE   = '/mnt/media/DMX/Silence.wav';
+	my $SIL_DELAY = 1.3;
+	my $AMP_SHORT = 5;
+	my $AMP_LONG  = $AMP_SHORT + 5;
 
 	# Stat the file to bring the network up-to-date
-	stat($file);
+	stat($SILENCE);
+	stat($RAVE_MP3);
 
 	# Initiate the RAVE state
 	touch($RAVE_FILE);
@@ -393,28 +397,33 @@ sub rave($) {
 	$data{'live_channels'} = 0;
 
 	# Reduce the amp delay if the amp is already on
-	my $amp_wait = $AMP_DELAY;
+	my $amp_wait = $AMP_LONG;
 	if ($exists->{'AMPLIFIER'}) {
-		$amp_wait = 0.5;
+		$amp_wait = $AMP_SHORT;
 	}
 
 	# Dim while we wait
 	my @data_set = ();
 	foreach my $chan (keys(%channels)) {
-		push(@data_set, { 'channel' => $chan, 'value' => 0, 'time' => $amp_wait * 1000 });
+		push(@data_set, { 'channel' => $chan, 'value' => 0, 'time' => $amp_wait / 2 * 1000 });
 	}
 	DMX::applyDataset(\@data_set, 'RAVE', $OUTPUT_FILE);
 	$pushLast = time();
 
-	# Wait for the amp to boot
+	# Wait for the amp to power up
 	if ($DEBUG) {
 		print STDERR 'Waiting ' . $amp_wait . " seconds for the amp to boot\n";
 	}
-	sleep($amp_wait);
+	sleep($amp_wait - $SIL_DELAY);
+
+	# Play a short burst of silence to get all the audio in-sync
+	my @sound = ($SND_APP, $SILENCE);
+	system(@sound);
 
 	# Play the sound in a child (i.e. in the background)
 	$PID = fork();
 	if (defined($PID) && $PID == 0) {
+		my @sound = ($SND_APP, $RAVE_MP3);
 		exec(@sound)
 		  or die('Unable to play sound: ' . join(' ', @sound) . "\n");
 	}

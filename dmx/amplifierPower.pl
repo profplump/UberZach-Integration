@@ -57,45 +57,49 @@ while (1) {
 		$pullLast = time();
 	}
 
-	# Calculate the new state
-	$stateLast = $state;
-	if ($newState eq 'PLAY' || $newState eq 'PAUSE') {
-		$state = 'ON';
-	} elsif ($exists{'RAVE'}) {
-		$state = 'RAVE';
-	} else {
-		$state = 'OFF';
-	}
-
-	# Force updates when there is a physical state mistmatch
-	if ($state eq 'OFF') {
-		if ($exists{'AMPLIFIER'}) {
-			$update = 1;
-		}
-	} else {
-		if (!$exists{'AMPLIFIER'}) {
-			$update = 1;
-		}
-	}
-
-	# Force updates on a periodic basis
-	if (time() - $pushLast > $PUSH_TIMEOUT) {
-
-		# Not for the amp
-		#$update = 1;
-	}
-
 	# Die if we don't see regular updates
 	if (time() - $pullLast > $PULL_TIMEOUT) {
 		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
 	}
 
+	# Calculate the new state
+	$stateLast = $state;
+	if ($newState eq 'PLAY') {
+		$state = 'ON';
+	} elsif ($exists{'RAVE'}) {
+		$state = 'RAVE';
+	} elsif ($newState eq 'PAUSE') {
+		$state = 'ON';
+	} else {
+		$state = 'OFF';
+	}
+
+	# Force updates on a periodic basis
+	if (!$update && time() - $pushLast > $PUSH_TIMEOUT) {
+
+		# Not for the amp
+		#if ($DEBUG) {
+		#	print STDERR "Forcing periodic update\n";
+		#}
+		#$update = 1;
+	}
+
 	# Force updates on any state change
-	if ($stateLast ne $state) {
+	if (!$update && $stateLast ne $state) {
 		if ($DEBUG) {
 			print STDERR 'State change: ' . $stateLast . ' => ' . $state . "\n";
 		}
 		$update = 1;
+	}
+
+	# Force updates when there is a physical state mistmatch
+	if (!$update) {
+		if (($state eq 'OFF' && $exists{'AMPLIFIER'}) || ($state eq 'ON' && !$exists{'AMPLIFIER'})) {
+			if ($DEBUG) {
+				print STDERR 'Physical state mismatch: ' . $state . ':' . $exists{'AMPLIFIER'} . "\n";
+			}
+			$update = 1;
+		}
 	}
 
 	# Update the amp
@@ -118,16 +122,28 @@ while (1) {
 			  or die('Unable to write command to amp socket: ' . $cmd . ": ${!}\n");
 		}
 
+		# Select an output device
+		if ($state eq 'RAVE') {
+			my @CMD = @AUDIO_SET;
+			push(@CMD, $RAVE_DEV);
+			system(@CMD);
+
+		} else {
+			if (defined($cmd) && $cmd eq 'ON') {
+				# Set the audio source back to the default
+				my @CMD = @AUDIO_SET;
+				push(@CMD, $DEFAULT_DEV);
+				system(@CMD);
+			}
+		}
+
 		# Reset to TV @ 5.1 at power on
 		if (defined($cmd) && $cmd eq 'ON') {
 
-			# Set the audio source back to the default
-			my @CMD = @AUDIO_SET;
-			push(@CMD, $DEFAULT_DEV);
-			system(@CMD);
-
 			# Wait for the amp to boot
-			sleep($START_DELAY);
+			if (!$exists{'AMPLIFIER'}) {
+				sleep($START_DELAY);
+			}
 
 			# Set the mode
 			$amp->send('TV')
@@ -139,12 +155,9 @@ while (1) {
 		# Rave through the main amp
 		if ($state eq 'RAVE') {
 
-			# Set the audio source to the RAVE device
-			my @CMD = @AUDIO_SET;
-			push(@CMD, $RAVE_DEV);
-			system(@CMD);
-
 			# Set the mode
+			$amp->send('TV')
+			  or die('Unable to write command to amp socket: TV' . ": ${!}\n");
 			$amp->send('STEREO')
 			  or die('Unable to write command to amp socket: STEREO' . ": ${!}\n");
 		}
