@@ -75,18 +75,6 @@ do {
 		rename($tmp, $DATA_DIR . '/' . $MODE);
 	}
 
-	# Special handling for PLAYING mode -- it's a bit of a hack, but it saves a lot of code other places
-	if ($changed && $MODE eq 'PLAYING') {
-		my $playing = 0;
-		if ($data =~ /PlayStatus\:Playing/) {
-			$playing = 1;
-		}
-		my ($fh, $tmp) = tempfile($DATA_DIR . '/PLAY_STATUS.XXXXXXXX', 'UNLINK' => 0);
-		print $fh $playing . "\n";
-		close($fh);
-		rename($tmp, $DATA_DIR . '/PLAY_STATUS');
-	}
-
 	# Delay and loop
 	usleep($DELAY);
 } until ($DELAY == 0);

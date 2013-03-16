@@ -18,12 +18,11 @@ sub mtime($);
 # User config
 my $STATE_TIMEOUT = 180;
 my %MON_FILES     = (
-	'PLAYING'     => 'MTIME',
 	'GUI'         => 'MTIME',
 	'MOTION'      => 'MTIME',
 	'PROJECTOR'   => 'STATUS',
 	'AMPLIFIER'   => 'STATUS_NOMTIME',
-	'PLAY_STATUS' => 'STATUS',
+	'PLAYING'     => 'PLAYING',
 	'LIGHTS'      => 'EXISTS',
 	'FAN_CMD'     => 'EXISTS',
 	'RAVE'        => 'EXISTS_OFF',
@@ -63,7 +62,6 @@ my @subscribers = ();
 # State
 my $state      = 'INIT';
 my $stateLast  = $state;
-my $playing    = 0;
 my $updateLast = 0;
 my $pushLast   = 0;
 
@@ -151,20 +149,34 @@ while (1) {
 		# Record the last update
 		if ($file->{'type'} eq 'STATUS' || $file->{'type'} =~ /^MTIME/) {
 			$file->{'update'} = mtime($file->{'path'});
+			if ($file->{'type'} =~ /^MTIME/) {
+				$file->{'status'} = $file->{'update'};
+			}
 			if ($DEBUG) {
 				print STDERR 'Last change: ' . $file->{'name'} . ': ' . localtime($file->{'update'}) . "\n";
 			}
 		}
 
-		# Grab the new status and save the old one
-		if ($file->{'type'} =~ /^STATUS/) {
-			my $fh;
-			open($fh, $file->{'path'})
-			  or die('Unable to open ' . $file->{'path'} . "\n");
-			my $text = <$fh>;
-			close($fh);
-			if ($text =~ /1/) {
-				$file->{'status'} = 1;
+		# Grab the new status
+		if ($file->{'type'} =~ /^STATUS/ || $file->{'type'} eq 'PLAYING') {
+			my $text = undef();
+			{
+				my $fh;
+				open($fh, $file->{'path'})
+				  or die('Unable to open ' . $file->{'path'} . "\n");
+				local $/;
+				$text = <$fh>;
+				close($fh);
+			}
+
+			if ($file->{'type'} =~ /^STATUS/) {
+				if ($text =~ /1/) {
+					$file->{'status'} = 1;
+				}
+			} else {
+				if ($text =~ /PlayStatus\:Playing/) {
+					$file->{'status'} = 1;
+				}
 			}
 			if ($DEBUG) {
 				print STDERR 'Status: ' . $file->{'name'} . ': ' . $file->{'status'} . "\n";
@@ -208,7 +220,7 @@ while (1) {
 	if ($files{'PROJECTOR'}->{'status'}) {
 
 		# We are always either playing or paused if the projector is on
-		if ($files{'PLAY_STATUS'}->{'status'}) {
+		if ($files{'PLAYING'}->{'status'}) {
 			$state = 'PLAY';
 		} else {
 			$state = 'PAUSE';
