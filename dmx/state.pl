@@ -3,6 +3,7 @@ use strict;
 use warnings;
 use IO::Select;
 use IO::Socket::UNIX;
+use File::Basename;
 use File::Temp qw( tempfile );
 
 # Local modules
@@ -69,7 +70,7 @@ my $pushLast   = 0;
 my %files = ();
 foreach my $file (keys(%MON_FILES)) {
 	my %tmp = (
-		'name'   => $file,
+		'name'   => basename($file),
 		'type'   => $MON_FILES{$file},
 		'path'   => $DATA_DIR . $file,
 		'update' => 0,
