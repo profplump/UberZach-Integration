@@ -56,6 +56,11 @@ while (1) {
 		$pullLast = time();
 	}
 
+	# Die if we don't see regular updates
+	if (time() - $pullLast > $PULL_TIMEOUT) {
+		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
+	}
+
 	# Record the lastUser time -- last GUI update or last time we were playing
 	if ($lastUser < $exists{'GUI'}) {
 		$lastUser = $exists{'GUI'};
@@ -93,32 +98,32 @@ while (1) {
 		}
 	}
 
-	# Force updates when there is a physical state mistmatch
-	# This will need an update if we ever handle "ON"
-	if ($state eq 'OFF') {
-		if ($exists{'PROJECTOR'}) {
-			$update = 1;
-		}
-	}
-
 	# Force updates on a periodic basis
-	if (time() - $pushLast > $PUSH_TIMEOUT) {
+	if (!$update && time() - $pushLast > $PUSH_TIMEOUT) {
 
 		# Not for the projector
+		#if ($DEBUG) {
+		#	print STDERR "Forcing periodic update\n";
+		#}
 		#$update = 1;
 	}
 
-	# Die if we don't see regular updates
-	if (time() - $pullLast > $PULL_TIMEOUT) {
-		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
-	}
-
 	# Force updates on any state change
-	if ($stateLast ne $state) {
+	if (!$update && $stateLast ne $state) {
 		if ($DEBUG) {
 			print STDERR 'State change: ' . $stateLast . ' => ' . $state . "\n";
 		}
 		$update = 1;
+	}
+
+	# Force updates when there is a physical state mistmatch
+	if (!$update) {
+		if ($state eq 'OFF' && $exists{'PROJECTOR'}) {
+			if ($DEBUG) {
+				print STDERR 'Physical state mismatch: ' . $state . ':' . $exists{'PROJECTOR'} . "\n";
+			}
+			$update = 1;
+		}
 	}
 
 	# Update the projector
