@@ -59,7 +59,7 @@ while (1) {
 
 	# Calculate the new state
 	$stateLast = $state;
-	if ($newState eq 'ON' || $newState eq 'PAUSE') {
+	if ($newState eq 'PLAY' || $newState eq 'PAUSE') {
 		$state = 'ON';
 	} elsif ($exists{'RAVE'}) {
 		$state = 'RAVE';
