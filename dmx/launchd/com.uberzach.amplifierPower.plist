@@ -11,18 +11,20 @@
 	<key>RunAtLoad</key>
 	<true/>
 	<key>Label</key>
-	<string>com.uberzach.amplifier.power</string>
+	<string>com.uberzach.amplifierPower</string>
 	<key>KeepAlive</key>
 	<dict>
 		<key>OtherJobEnabled</key>
 		<dict>
 			<key>com.uberzach.amplifier</key>
 			<true/>
+			<key>com.uberzach.state</key>
+			<true/>
 		</dict>
 	</dict>
 	<key>ProgramArguments</key>
 	<array>
-		<string>/Users/tv/bin/video/amplifier/amplifierPower.pl</string>
+		<string>/Users/tv/bin/video/dmx/amplifierPower.pl</string>
 	</array>
 </dict>
 </plist>
