@@ -13,8 +13,8 @@ use lib dirname(abs_path($0));
 use DMX;
 
 # Prototypes
-sub red_alert();
-sub rave();
+sub red_alert($);
+sub rave($);
 sub rave_loop();
 
 # Effects states
@@ -187,9 +187,15 @@ while (1) {
 	# Special handling for effects states
 	if (defined($EFFECTS{$newState})) {
 
+		# %exists is usually bogus when in entering a special effect state
+		my $existsTmp = \%exists;
+		if (scalar(keys(%exists)) < 1) {
+			$existsTmp = \%existsLast;
+		}
+
 		# Dispatch the handler
 		# Optionally skip the rest of this loop
-		if ($EFFECTS{$newState}->()) {
+		if ($EFFECTS{$newState}->($existsTmp)) {
 			next;
 		}
 
@@ -299,7 +305,8 @@ while (1) {
 # Effects routines
 # These are blocking, so be careful
 # ======================================
-sub red_alert() {
+sub red_alert($) {
+	my ($exists) = @_;
 	if ($DEBUG) {
 		print STDERR "red_alert()\n";
 	}
@@ -343,7 +350,8 @@ sub red_alert() {
 	return 0;
 }
 
-sub rave() {
+sub rave($) {
+	my ($exists) = @_;
 	if ($DEBUG) {
 		print STDERR "rave()\n";
 	}
@@ -384,16 +392,25 @@ sub rave() {
 	$data{'num_channels'}  = scalar(keys(%channels));
 	$data{'live_channels'} = 0;
 
+	# Reduce the amp delay if the amp is already on
+	my $amp_wait = $AMP_DELAY;
+	if ($exists->{'AMPLIFIER'}) {
+		$amp_wait = 0.5;
+	}
+
 	# Dim while we wait
 	my @data_set = ();
 	foreach my $chan (keys(%channels)) {
-		push(@data_set, { 'channel' => $chan, 'value' => 0, 'time' => $AMP_DELAY * 1000 });
+		push(@data_set, { 'channel' => $chan, 'value' => 0, 'time' => $amp_wait * 1000 });
 	}
 	DMX::applyDataset(\@data_set, 'RAVE', $OUTPUT_FILE);
 	$pushLast = time();
 
 	# Wait for the amp to boot
-	sleep($AMP_DELAY);
+	if ($DEBUG) {
+		print STDERR 'Waiting ' . $amp_wait . " seconds for the amp to boot\n";
+	}
+	sleep($amp_wait);
 
 	# Play the sound in a child (i.e. in the background)
 	$PID = fork();
@@ -415,10 +432,10 @@ sub rave_loop() {
 	}
 
 	# Config
-	my $max_dur  = 350;
+	my $max_dur  = 375;
 	my $max_val  = 255;
 	my $reserve  = 0.75;
-	my $ramp_dur = 10.15;
+	my $ramp_dur = 10.20;
 	my $hit_pos  = 43.15;
 	my $hit_dur  = 100;
 	my $fade_pos = 43.65;
