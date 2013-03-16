@@ -348,18 +348,16 @@ sub rave() {
 		print STDERR "rave()\n";
 	}
 
-	my $file  = '/mnt/media/DMX/Rave.mp3';
-	my @sound = ('afplay', $file);
+	# Config
+	my $file      = '/mnt/media/DMX/Rave.mp3';
+	my @sound     = ('afplay', $file);
+	my $AMP_DELAY = 9;
 
 	# Stat the file to bring the network up-to-date
 	stat($file);
 
-	# Play the sound in a child (i.e. in the background)
-	$PID = fork();
-	if (defined($PID) && $PID == 0) {
-		exec(@sound)
-		  or die('Unable to play sound: ' . join(' ', @sound) . "\n");
-	}
+	# Initiate the RAVE state
+	touch($RAVE_FILE);
 
 	# Setup our loop handler
 	$EFFECT = \&rave_loop;
@@ -367,9 +365,6 @@ sub rave() {
 	# Save data for future runs
 	my %data = ();
 	$PID_DATA = \%data;
-
-	# Record our start time
-	$data{'start'} = Time::HiRes::time();
 
 	# Initialize the channels hash
 	my %channels = (
@@ -389,8 +384,26 @@ sub rave() {
 	$data{'num_channels'}  = scalar(keys(%channels));
 	$data{'live_channels'} = 0;
 
-	# Initiate the RAVE state
-	touch($RAVE_FILE);
+	# Dim while we wait
+	my @data_set = ();
+	foreach my $chan (keys(%channels)) {
+		push(@data_set, { 'channel' => $chan, 'value' => 0, 'time' => $AMP_DELAY * 1000 });
+	}
+	DMX::applyDataset(\@data_set, 'RAVE', $OUTPUT_FILE);
+	$pushLast = time();
+
+	# Wait for the amp to boot
+	sleep($AMP_DELAY);
+
+	# Play the sound in a child (i.e. in the background)
+	$PID = fork();
+	if (defined($PID) && $PID == 0) {
+		exec(@sound)
+		  or die('Unable to play sound: ' . join(' ', @sound) . "\n");
+	}
+
+	# Record our start time
+	$data{'start'} = Time::HiRes::time();
 
 	# Do not pass GO, do not collect $200
 	return 1;

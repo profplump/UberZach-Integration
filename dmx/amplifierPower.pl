@@ -8,6 +8,12 @@ use File::Basename qw(dirname);
 use lib dirname(abs_path($0));
 use DMX;
 
+# Config
+my $USB_DEV     = 'USB Audio CODEC ';
+my $AMP_DEV     = 'Built-in Output';
+my $DEFAULT_DEV = $USB_DEV;
+my $RAVE_DEV    = $AMP_DEV;
+
 # App config
 my $DATA_DIR     = DMX::dataDir();
 my $OUTPUT_FILE  = $DATA_DIR . 'AMPLIFIER_POWER';
@@ -16,6 +22,8 @@ my $AMP_SOCK     = $DATA_DIR . 'AMPLIFIER.socket';
 my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
 my $DELAY        = $PULL_TIMEOUT / 2;
+my $START_DELAY  = 3.5;
+my @AUDIO_SET    = ('SwitchAudioSource', '-s');
 
 # Debug
 my $DEBUG = 0;
@@ -51,10 +59,23 @@ while (1) {
 
 	# Calculate the new state
 	$stateLast = $state;
-	if ($newState eq 'ON' || $exists{'RAVE'}) {
+	if ($newState eq 'ON') {
 		$state = 'ON';
+	} elsif ($exists{'RAVE'}) {
+		$state = 'RAVE';
 	} else {
 		$state = 'OFF';
+	}
+
+	# Force updates when there is a physical state mistmatch
+	if ($state eq 'OFF') {
+		if ($exists{'AMPLIFIER'}) {
+			$update = 1;
+		}
+	} else {
+		if (!$exists{'AMPLIFIER'}) {
+			$update = 1;
+		}
 	}
 
 	# Force updates on a periodic basis
@@ -85,19 +106,44 @@ while (1) {
 		}
 
 		# Send master power state
+		my $cmd = undef();
 		if ($state eq 'OFF' || $state eq 'ON') {
-			$amp->send($state)
-			  or die('Unable to write command to amp socket: ' . $state . ": ${!}\n");
+			$cmd = $state;
+		} elsif ($state eq 'RAVE') {
+			$cmd = 'ON';
+		}
+		if (defined($cmd)) {
+			$amp->send($cmd)
+			  or die('Unable to write command to amp socket: ' . $cmd . ": ${!}\n");
 		}
 
 		# Reset to TV @ 5.1 at power on
-		if ($state eq 'ON') {
+		if (defined($cmd) && $cmd eq 'ON') {
+			# Set the audio source back to the default
+			my @CMD = @AUDIO_SET;
+			push(@CMD, $DEFAULT_DEV);
+			system(@CMD);
+
 			# Wait for the amp to boot
-			sleep($DELAY);
+			sleep($START_DELAY);
+
+			# Set the mode
 			$amp->send('TV')
 			  or die('Unable to write command to amp socket: TV' . ": ${!}\n");
 			$amp->send('SURROUND')
 			  or die('Unable to write command to amp socket: SURROUND' . ": ${!}\n");
+		}
+
+		# Rave through the main amp
+		if ($state eq 'RAVE') {
+			# Set the audio source to the RAVE device
+			my @CMD = @AUDIO_SET;
+			push(@CMD, $RAVE_DEV);
+			system(@CMD);
+
+			# Set the mode
+			$amp->send('STEREO')
+			  or die('Unable to write command to amp socket: STEREO' . ": ${!}\n");
 		}
 
 		# No output file
