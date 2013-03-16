@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
+use POSIX qw(ceil floor);
 
 # Local modules
 use Cwd qw(abs_path);
@@ -8,11 +9,15 @@ use File::Basename qw(dirname);
 use lib dirname(abs_path($0));
 use DMX;
 
+# Config
+my $TIMEOUT   = 900;
+my $COUNTDOWN = 300;
+
 # App config
 my $DATA_DIR     = DMX::dataDir();
-my $OUTPUT_FILE  = $DATA_DIR . 'AMPLIFIER_POWER';
+my $OUTPUT_FILE  = $DATA_DIR . 'PROJECTOR_POWER';
 my $STATE_SOCK   = $OUTPUT_FILE . '.socket';
-my $AMP_SOCK     = $DATA_DIR . 'AMPLIFIER.socket';
+my $PROJ_SOCK    = $DATA_DIR . 'PROJECTOR.socket';
 my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
 my $DELAY        = $PULL_TIMEOUT / 2;
@@ -26,7 +31,7 @@ if ($ENV{'DEBUG'}) {
 # Sockets
 DMX::stateSocket($STATE_SOCK);
 DMX::stateSubscribe($STATE_SOCK);
-my $amp = DMX::clientSock($AMP_SOCK);
+my $proj = DMX::clientSock($PROJ_SOCK);
 
 # State
 my $state     = 'OFF';
@@ -35,9 +40,12 @@ my %exists    = ();
 my $pushLast  = 0;
 my $pullLast  = time();
 my $update    = 0;
+my $lastCount = 0;
+my $lastUser  = time();
 
 # Loop forever
 while (1) {
+
 
 	# State is calculated; use newState to gather data
 	my $newState = $state;
@@ -49,17 +57,30 @@ while (1) {
 		$pullLast = time();
 	}
 
+	# Record the lastUser time
+	if ($exists{'GUI'} || $exists{'PLAY_STATUS'}) {
+		$lastUser = time();
+	}
+	my $elapsed = time() - $lastUser;
+	if ($DEBUG) {
+		print STDERR 'Time since last user action: ' . $elapsed . "\n";
+	}
+
 	# Calculate the new state
 	$stateLast = $state;
-	if ($newState eq 'ON' || $exists{'RAVE'}) {
-		$state = 'ON';
-	} else {
-		$state = 'OFF';
+	if ($exists{'PROJECTOR'}) {
+		if ($elapsed > $TIMEOUT) {
+			$state = 'COUNTDOWN';
+			if ($elapsed > $TIMEOUT + $COUNTDOWN) {
+				$state = 'OFF';
+			}
+		}
 	}
+
 
 	# Force updates on a periodic basis
 	if (time() - $pushLast > $PUSH_TIMEOUT) {
-		# Not for the amp
+		# Not for the projector
 		#$update = 1;
 	}
 
@@ -76,7 +97,7 @@ while (1) {
 		$update = 1;
 	}
 
-	# Update the amp
+	# Update the projector
 	if ($update) {
 
 		# Extra debugging to record pushes
@@ -86,18 +107,8 @@ while (1) {
 
 		# Send master power state
 		if ($state eq 'OFF' || $state eq 'ON') {
-			$amp->send($state)
-			  or die('Unable to write command to amp socket: ' . $state . ": ${!}\n");
-		}
-
-		# Reset to TV @ 5.1 at power on
-		if ($state eq 'ON') {
-			# Wait for the amp to boot
-			sleep($DELAY);
-			$amp->send('TV')
-			  or die('Unable to write command to amp socket: TV' . ": ${!}\n");
-			$amp->send('SURROUND')
-			  or die('Unable to write command to amp socket: SURROUND' . ": ${!}\n");
+			$proj->send($state)
+			  or die('Unable to write command to proj socket: ' . $state . ": ${!}\n");
 		}
 
 		# No output file
@@ -107,5 +118,21 @@ while (1) {
 
 		# Clear the update flag
 		$update = 0;
+	}
+
+
+	# Announce a pending shutdown every minute
+	if ($state eq 'COUNTDOWN') {
+		my $timeLeft = ($TIMEOUT + $COUNTDOWN) - $elapsed;
+		$timeLeft = ceil($timeLeft / 60);
+
+		if ($lastCount != $timeLeft) {
+			my $plural = 's';
+			if ($timeLeft == 1) {
+				$plural = '';
+			}
+			system('say', 'Projector powerdown in about ' . $timeLeft . ' minute' . $plural);
+			$lastCount = $timeLeft;
+		}
 	}
 }

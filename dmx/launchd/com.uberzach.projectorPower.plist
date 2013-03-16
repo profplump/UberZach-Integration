@@ -11,18 +11,20 @@
 	<key>RunAtLoad</key>
 	<true/>
 	<key>Label</key>
-	<string>com.uberzach.projector.power</string>
+	<string>com.uberzach.projectorPower</string>
 	<key>KeepAlive</key>
 	<dict>
 		<key>OtherJobEnabled</key>
 		<dict>
 			<key>com.uberzach.projector</key>
 			<true/>
+			<key>com.uberzach.state</key>
+			<true/>
 		</dict>
 	</dict>
 	<key>ProgramArguments</key>
 	<array>
-		<string>/Users/tv/bin/video/projector/projectorPower.pl</string>
+		<string>/Users/tv/bin/video/dmx/projectorPower.pl</string>
 	</array>
 </dict>
 </plist>
