@@ -22,6 +22,7 @@ my %MON_FILES     = (
 	'GUI'         => 'MTIME',
 	'MOTION'      => 'MTIME',
 	'PROJECTOR'   => 'STATUS',
+	'AMPLIFIER'   => 'STATUS_NOMTIME',
 	'PLAY_STATUS' => 'STATUS',
 	'LIGHTS'      => 'EXISTS',
 	'FAN_CMD'     => 'EXISTS',
@@ -148,7 +149,7 @@ while (1) {
 		$file->{'status'} = 0;
 
 		# Record the last update
-		if ($file->{'type'} eq 'STATUS' || $file->{'type'} eq 'MTIME') {
+		if ($file->{'type'} eq 'STATUS' || $file->{'type'} =~ /^MTIME/) {
 			$file->{'update'} = mtime($file->{'path'});
 			if ($DEBUG) {
 				print STDERR 'Last change: ' . $file->{'name'} . ': ' . localtime($file->{'update'}) . "\n";
@@ -156,7 +157,7 @@ while (1) {
 		}
 
 		# Grab the new status and save the old one
-		if ($file->{'type'} eq 'STATUS') {
+		if ($file->{'type'} =~ /^STATUS/) {
 			my $fh;
 			open($fh, $file->{'path'})
 			  or die('Unable to open ' . $file->{'path'} . "\n");
@@ -238,15 +239,13 @@ while (1) {
 		}
 	}
 
-	# Append the status of all "exists" files
+	# Append the status of all files
 	{
-		my @exists = ();
+		my @status = ();
 		foreach my $file (values(%files)) {
-			if ($file->{'type'} =~ /^EXISTS/) {
-				push(@exists, $file->{'name'} . ':' . $file->{'status'});
-			}
+			push(@status, $file->{'name'} . ':' . $file->{'status'});
 		}
-		$state .= ' (' . join(', ', @exists) . ')';
+		$state .= ' (' . join(', ', @status) . ')';
 	}
 
 	# Clear exists_clear files immediately (but after we append their status)

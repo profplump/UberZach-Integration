@@ -42,14 +42,21 @@ sub dataDir() {
 	return $DATA_DIR;
 }
 
+# Generic client socket
+sub clientSock($) {
+	my ($path) = @_;
+	my $sock = IO::Socket::UNIX->new(
+		'Peer'    => $path,
+		'Type'    => IO::Socket::UNIX::SOCK_DGRAM,
+		'Timeout' => $SOCK_TIMEOUT,
+	) or die('Unable to open client socket: ' . $path . ": ${@}\n");
+	return $sock;
+}
+
 # DMX socket init
 sub dmxSock() {
 	if (!defined($DMX_FH)) {
-		$DMX_FH = IO::Socket::UNIX->new(
-			'Peer'    => $DMX_SOCK,
-			'Type'    => IO::Socket::UNIX::SOCK_DGRAM,
-			'Timeout' => $SOCK_TIMEOUT,
-		) or die('Unable to open DMX socket: ' . $DMX_SOCK . ": ${@}\n");
+		$DMX_FH = clientSock($DMX_SOCK);
 	}
 	return $DMX_FH;
 }

@@ -1,16 +1,21 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-use IO::Socket::UNIX;
-use POSIX qw(ceil floor);
+
+# Local modules
+use Cwd qw(abs_path);
+use File::Basename qw(dirname);
+use lib dirname(abs_path($0));
+use DMX;
 
 # App config
-my $DELAY    = 5;
-my $TIMEOUT  = 5;
-my $TEMP_DIR = `getconf DARWIN_USER_TEMP_DIR`;
-chomp($TEMP_DIR);
-my $DATA_DIR = $TEMP_DIR . 'plexMonitor/';
-my $CMD_FILE = $DATA_DIR . 'AMPLIFIER.socket';
+my $DATA_DIR     = DMX::dataDir();
+my $OUTPUT_FILE  = $DATA_DIR . 'AMPLIFIER_POWER';
+my $STATE_SOCK   = $OUTPUT_FILE . '.socket';
+my $AMP_SOCK     = $DATA_DIR . 'AMPLIFIER.socket';
+my $PUSH_TIMEOUT = 20;
+my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
+my $DELAY        = $PULL_TIMEOUT / 2;
 
 # Debug
 my $DEBUG = 0;
@@ -18,91 +23,90 @@ if ($ENV{'DEBUG'}) {
 	$DEBUG = 1;
 }
 
-# Sanity check
-if (!-d $DATA_DIR || !-S $CMD_FILE) {
-	die("Bad config\n");
-}
-
-# Socket init
-my $sock = IO::Socket::UNIX->new(
-	'Peer'    => $CMD_FILE,
-	'Type'    => SOCK_DGRAM,
-	'Timeout' => $TIMEOUT
-) or die('Unable to open socket: ' . $CMD_FILE . ": ${@}\n");
+# Sockets
+DMX::stateSocket($STATE_SOCK);
+DMX::stateSubscribe($STATE_SOCK);
+my $amp = DMX::clientSock($AMP_SOCK);
 
 # State
-my $state     = 'INIT';
+my $state     = 'OFF';
 my $stateLast = $state;
-my $projector = 0;
+my %exists    = ();
+my $pushLast  = 0;
+my $pullLast  = time();
+my $update    = 0;
 
 # Loop forever
 while (1) {
 
-	# Monitor the PROJECTOR file for state only
-	{
-		$projector = 0;
-		my $fh;
-		open($fh, $DATA_DIR . 'PROJECTOR')
-		  or die("Unable to open PROJECTOR\n");
-		my $text = <$fh>;
-		close($fh);
-		if ($text =~ /1/) {
-			$projector = 1;
-		}
-		if ($DEBUG) {
-			print STDERR 'Projector: ' . $projector . "\n";
-		}
+	# State is calculated; use newState to gather data
+	my $newState = $state;
+
+	# Wait for state updates
+	my $cmdState = DMX::readState($DELAY, \%exists, undef());
+	if (defined($cmdState)) {
+		$newState = $cmdState;
+		$pullLast = time();
 	}
 
-	# Monitor the AMPLIFIER file for state only
-	{
-		$stateLast = 'OFF';
-		my $fh;
-		open($fh, $DATA_DIR . 'AMPLIFIER')
-		  or die("Unable to open AMPLIFIER\n");
-		my $text = <$fh>;
-		close($fh);
-		if ($text =~ /1/) {
-			$stateLast = 'ON';
-		}
-		if ($DEBUG) {
-			print STDERR 'Amplifier: ' . $stateLast . "\n";
-		}
-	}
-
-	# Calculate the new state -- track the projector power state
-	if ($projector) {
+	# Calculate the new state
+	$stateLast = $state;
+	if ($newState eq 'ON' || $exists{'RAVE'}) {
 		$state = 'ON';
 	} else {
 		$state = 'OFF';
 	}
 
-	# If the state changed, do something about if
-	if ($state ne $stateLast) {
+
+	# Force updates on a periodic basis
+	if (time() - $pushLast > $PUSH_TIMEOUT) {
+		# Not for the amp
+		#$update = 1;
+	}
+
+	# Die if we don't see regular updates
+	if (time() - $pullLast > $PULL_TIMEOUT) {
+		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
+	}
+
+	# Force updates on any state change
+	if ($stateLast ne $state) {
 		if ($DEBUG) {
 			print STDERR 'State change: ' . $stateLast . ' => ' . $state . "\n";
 		}
+		$update = 1;
+	}
+
+	# Update the amp
+	if ($update) {
+
+		# Extra debugging to record pushes
+		if ($DEBUG) {
+			print STDERR 'State: ' . $state . "\n";
+		}
+
+		# Send master power state
 		if ($state eq 'OFF' || $state eq 'ON') {
-			$sock->send($state)
-			  or die('Unable to write command to socket: ' . $CMD_FILE . ': ' . $state . ": ${!}\n");
+			$amp->send($state)
+			  or die('Unable to write command to amp socket: ' . $state . ": ${!}\n");
 		}
 
 		# Reset to TV @ 5.1 at power on
 		if ($state eq 'ON') {
 			# Wait for the amp to boot
 			sleep($DELAY);
-			$sock->send('TV')
-			  or die('Unable to write command to socket: ' . $CMD_FILE . ': TV' . ": ${!}\n");
-			$sock->send('SURROUND')
-			  or die('Unable to write command to socket: ' . $CMD_FILE . ': SURROUND' . ": ${!}\n");
+			$amp->send('TV')
+			  or die('Unable to write command to amp socket: TV' . ": ${!}\n");
+			$amp->send('SURROUND')
+			  or die('Unable to write command to amp socket: SURROUND' . ": ${!}\n");
 		}
+
+		# No output file
+
+		# Update the push time
+		$pushLast = time();
+
+		# Clear the update flag
+		$update = 0;
 	}
-
-	# Wait and loop
-	sleep($DELAY);
 }
-
-# Cleanup
-$sock->close();
-undef($sock);
-exit(0);
