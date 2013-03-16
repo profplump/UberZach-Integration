@@ -22,7 +22,7 @@ my %MON_FILES     = (
 	'MOTION'    => 'MTIME',
 	'PROJECTOR' => 'STATUS',
 	'AMPLIFIER' => 'STATUS_NOMTIME',
-	'PLAYING'   => 'PLAYING',
+	'PLAYING'   => 'STATUS_PLAYING',
 	'LIGHTS'    => 'EXISTS',
 	'FAN_CMD'   => 'EXISTS',
 	'RAVE'      => 'EXISTS_OFF',
@@ -158,7 +158,7 @@ while (1) {
 		}
 
 		# Grab the new status
-		if ($file->{'type'} =~ /^STATUS/ || $file->{'type'} eq 'PLAYING') {
+		if ($file->{'type'} =~ /^STATUS/) {
 			my $text = undef();
 			{
 				my $fh;
@@ -169,12 +169,12 @@ while (1) {
 				close($fh);
 			}
 
-			if ($file->{'type'} =~ /^STATUS/) {
-				if ($text =~ /1/) {
+			if ($file->{'type'} eq 'STATUS_PLAYING') {
+				if ($text =~ /PlayStatus\:Playing/) {
 					$file->{'status'} = 1;
 				}
 			} else {
-				if ($text =~ /PlayStatus\:Playing/) {
+				if ($text =~ /1/) {
 					$file->{'status'} = 1;
 				}
 			}
