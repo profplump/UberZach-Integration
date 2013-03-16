@@ -79,7 +79,7 @@ foreach my $file (keys(%MON_FILES)) {
 
 	# Allow absolute paths to override the $DATA_DIR path
 	if ($file =~ /^\//) {
-		$tmp{$path} = $file;
+		$tmp{'path'} = $file;
 	}
 
 	$files{$file} = \%tmp;

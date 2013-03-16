@@ -91,7 +91,7 @@ while (1) {
 	# Special handling for toggle systems: only push if the state is "ACTIVATE"
 	if ($update && $state ne 'ACTIVATE') {
 		if ($DEBUG) {
-			print STDERR 'Skipping non-activate state: ' . $state "\n";
+			print STDERR 'Skipping non-activate state: ' . $state . "\n";
 		}
 		$update = 0;
 	}
