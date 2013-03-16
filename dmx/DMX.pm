@@ -109,7 +109,7 @@ sub parseState($$) {
 	}
 	if (defined($exists_text)) {
 		foreach my $exists_val (split(/\s*,\s*/, $exists_text)) {
-			my ($name, $value) = $exists_val =~ /(\w+)\:(0|1)/;
+			my ($name, $value) = $exists_val =~ /(\w+)\:(\d+)/;
 			if (!defined($name) || !defined($value)) {
 				print STDERR 'State parse error (exists): ' . $text . "\n";
 				next;
