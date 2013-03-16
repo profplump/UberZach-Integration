@@ -130,6 +130,7 @@ while (1) {
 
 		} else {
 			if (defined($cmd) && $cmd eq 'ON') {
+
 				# Set the audio source back to the default
 				my @CMD = @AUDIO_SET;
 				push(@CMD, $DEFAULT_DEV);
