@@ -268,14 +268,19 @@ while (1) {
 			print STDERR 'State change: ' . $stateLast . ' => ' . $state . "\n";
 		}
 		$update = 1;
-		
-		# Reset the color change sequence, so we always spend 1 cycle at white
-		@COLOR       = ();
-		$colorChange = time() + $COLOR_TIME_MIN;
 	}
 	
 	# Update the lighting
 	if ($update) {
+
+		# Reset the color change sequence on any state change, so we always spend 1 cycle at white
+		if ($stateLast ne $state) {
+			if ($DEBUG) {
+				print STDERR "Reset color sequence\n";
+			}
+			@COLOR       = ();
+			$colorChange = time() + $COLOR_TIME_MIN;
+		}
 
 		# Select a data set (color or standard)
 		my @data_set    = ();
