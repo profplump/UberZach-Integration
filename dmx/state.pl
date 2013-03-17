@@ -21,7 +21,7 @@ my %MON_FILES     = (
 	'GUI'       => 'MTIME',
 	'MOTION'    => 'MTIME',
 	'PROJECTOR' => 'STATUS',
-	'AMPLIFIER' => 'STATUS_NOMTIME',
+	'AMPLIFIER' => 'STATUS',
 	'PLAYING'   => 'STATUS_PLAYING',
 	'LIGHTS'    => 'EXISTS',
 	'FAN_CMD'   => 'EXISTS',
@@ -62,6 +62,8 @@ my @subscribers = ();
 # State
 my $state      = 'INIT';
 my $stateLast  = $state;
+my $status     = '';
+my $statusLast = $status;
 my $updateLast = 0;
 my $pushLast   = 0;
 
@@ -147,11 +149,8 @@ while (1) {
 		$file->{'status'} = 0;
 
 		# Record the last update
-		if ($file->{'type'} eq 'STATUS' || $file->{'type'} =~ /^MTIME/) {
+		if ($file->{'type'} =~ /^STATUS/ || $file->{'type'} =~ /^MTIME/) {
 			$file->{'update'} = mtime($file->{'path'});
-			if ($file->{'type'} =~ /^MTIME/) {
-				$file->{'status'} = $file->{'update'};
-			}
 			if ($DEBUG) {
 				print STDERR 'Last change: ' . $file->{'name'} . ': ' . localtime($file->{'update'}) . "\n";
 			}
@@ -201,6 +200,7 @@ while (1) {
 
 			if (-e $file->{'path'}) {
 				$file->{'status'} = 1;
+				$file->{'update'} = time();
 			}
 			if ($DEBUG) {
 				print STDERR 'Exists: ' . $file->{'name'} . ': ' . $file->{'status'} . "\n";
@@ -251,13 +251,18 @@ while (1) {
 		}
 	}
 
-	# Append the status of all files
+	# Calculate the new status
+	$statusLast     = $status;
+	my $statusMtime = '';
 	{
-		my @status = ();
+		my @statTime = ();
+		my @statOnly = ();
 		foreach my $file (values(%files)) {
-			push(@status, $file->{'name'} . ':' . $file->{'status'});
+			push(@statOnly, $file->{'name'} . ':' . $file->{'status'});
+			push(@statTime, $file->{'name'} . ':' . $file->{'status'} . ':' . $file->{'update'});
 		}
-		$state .= ' (' . join(', ', @status) . ')';
+		$status      = ' (' . join(', ', @statOnly) . ')';
+		$statusMtime = ' (' . join(', ', @statTime) . ')';
 	}
 
 	# Clear exists_clear files immediately (but after we append their status)
@@ -285,9 +290,9 @@ while (1) {
 	}
 
 	# Force updates on any state change
-	if ($stateLast ne $state) {
+	if ($stateLast ne $state || $statusLast ne $status) {
 		if ($DEBUG) {
-			print STDERR 'State change: ' . $stateLast . ' => ' . $state . "\n";
+			print STDERR 'State change: ' . $stateLast . $statusLast . ' => ' . $state . $status . "\n";
 		}
 		$update = 1;
 	}
@@ -302,7 +307,7 @@ while (1) {
 		foreach my $sub (@subscribers) {
 
 			# Drop subscribers that are not available
-			if (!eval { $sub->{'socket'}->send($state) }) {
+			if (!eval { $sub->{'socket'}->send($state . $statusMtime) }) {
 				print STDERR 'Dropping bad socket from subscriber list: ' . $sub->{'path'} . "\n";
 
 				my @new_subscribers = ();

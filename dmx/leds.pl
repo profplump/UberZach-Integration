@@ -134,7 +134,7 @@ while (1) {
 	}
 
 	# Wait for state updates
-	my $cmdState = DMX::readState($delay, \%exists, \%VALID);
+	my $cmdState = DMX::readState($delay, \%exists, undef(), \%VALID);
 	if (defined($cmdState)) {
 		$newState = $cmdState;
 		$pullLast = time();

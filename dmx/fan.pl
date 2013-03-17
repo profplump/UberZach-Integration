@@ -50,7 +50,7 @@ while (1) {
 	my $newState = $state;
 
 	# Wait for state updates
-	my $cmdState = DMX::readState($DELAY, \%exists, undef());
+	my $cmdState = DMX::readState($DELAY, \%exists, undef(), undef());
 	if (defined($cmdState)) {
 		$newState = $cmdState;
 		$pullLast = time();

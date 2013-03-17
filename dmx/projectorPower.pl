@@ -37,6 +37,7 @@ my $proj = DMX::clientSock($PROJ_SOCK);
 my $state     = 'OFF';
 my $stateLast = $state;
 my %exists    = ();
+my %mtime     = ();
 my $pushLast  = 0;
 my $pullLast  = time();
 my $update    = 0;
@@ -50,7 +51,7 @@ while (1) {
 	my $newState = $state;
 
 	# Wait for state updates
-	my $cmdState = DMX::readState($DELAY, \%exists, undef());
+	my $cmdState = DMX::readState($DELAY, \%exists, \%mtime, undef());
 	if (defined($cmdState)) {
 		$newState = $cmdState;
 		$pullLast = time();
@@ -61,22 +62,17 @@ while (1) {
 		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
 	}
 
-	# Record the lastUser time -- last GUI update or last time we were playing
-	if ($lastUser < $exists{'GUI'}) {
-		$lastUser = $exists{'GUI'};
+	# Menu changes count as activity
+	if ($lastUser < $mtime{'GUI'}) {
+		$lastUser = $mtime{'GUI'};
 	}
-	my $now = time();
-	if ($lastUser < $now) {
-		if ($exists{'PLAYING'}) {
-			$lastUser = $now;
-		}
+	# Projector starts count as activity
+	if ($exists{'PROJECTOR'} && $lastUser < $mtime{'PROJECTOR'}) {
+		$lastUser = $mtime{'PROJECTOR'};
 	}
-
-	# Treat a transition from "OFF" to "PAUSE" as user activity (i.e. someone fired up the projector)
-	if ($lastUser < $now) {
-		if ($newState eq 'PAUSE' && $stateLast eq 'OFF') {
-			$lastUser = $now;
-		}
+	# Playing counts as activity
+	if ($exists{'PLAYING'} && $lastUser < time()) {
+		$lastUser = time();
 	}
 
 	# Calculate the elapsed time
@@ -136,8 +132,8 @@ while (1) {
 
 		# Send master power state
 		if ($state eq 'OFF' || $state eq 'ON') {
-			$proj->send($state)
-			  or die('Unable to write command to proj socket: ' . $state . ": ${!}\n");
+		#	$proj->send($state)
+		#	  or die('Unable to write command to proj socket: ' . $state . ": ${!}\n");
 		}
 
 		# No output file

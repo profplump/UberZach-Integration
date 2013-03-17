@@ -94,14 +94,18 @@ sub stateSocket($) {
 }
 
 # Parse the state->client comm string
-sub parseState($$) {
-	my ($text, $exists) = @_;
+sub parseState($$$) {
+	my ($text, $exists, $mtime) = @_;
 	my $cmdState    = undef();
 	my $exists_text = undef();
+	if (!defined($mtime)) {
+		my %tmp = ();
+		$mtime  = \%tmp;
+	}
 
 	# Parse the string
-	my %tmp = ();
 	%{$exists} = ();
+	%{$mtime}  = ();
 	($cmdState, $exists_text) = $text =~ /^(\w+)(?:\s+\(([^\)]+)\))?/;
 	if (!defined($cmdState)) {
 		print STDERR 'State parse error: ' . $text . "\n";
@@ -109,18 +113,19 @@ sub parseState($$) {
 	}
 	if (defined($exists_text)) {
 		foreach my $exists_val (split(/\s*,\s*/, $exists_text)) {
-			my ($name, $value) = $exists_val =~ /(\w+)\:(\d+)/;
-			if (!defined($name) || !defined($value)) {
+			my ($name, $value, $time) = $exists_val =~ /(\w+)\:(\d+)\:(\d+)/;
+			if (!defined($name) || !defined($value) || !defined($time)) {
 				print STDERR 'State parse error (exists): ' . $text . "\n";
 				next;
 			}
 			$exists->{$name} = $value;
+			$mtime->{$name}  = $time;
 		}
 	}
 	if ($DEBUG) {
 		my @exists_tmp = ();
 		foreach my $key (keys(%{$exists})) {
-			push(@exists_tmp, $key . ':' . $exists->{$key});
+			push(@exists_tmp, $key . ':' . $exists->{$key} . ':' . $mtime->{$key});
 		}
 		print STDERR 'Got state: ' . $cmdState . ' (' . join(', ', @exists_tmp) . ")\n";
 	}
@@ -220,8 +225,8 @@ sub applyDataset($$$) {
 	}
 }
 
-sub readState($$$) {
-	my ($delay, $exists, $valid) = @_;
+sub readState($$$$) {
+	my ($delay, $exists, $mtime, $valid) = @_;
 	my $cmdState = undef();
 
 	# Wait for state updates
@@ -235,7 +240,7 @@ sub readState($$$) {
 		while (defined($fh->recv(my $text, $MAX_CMD_LEN))) {
 
 			# Parse the string
-			my $state = parseState($text, $exists);
+			my $state = parseState($text, $exists, $mtime);
 
 			# Ignore invalid states
 			if (defined($valid)) {
