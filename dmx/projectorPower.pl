@@ -72,6 +72,8 @@ while (1) {
 	# Projector starts count as activity
 	if ($exists{'PROJECTOR'} && $lastUser < $mtime{'PROJECTOR'}) {
 		$lastUser = $mtime{'PROJECTOR'};
+	} elsif ($newState eq 'ON') {
+		$lastUser = time();
 	}
 
 	# Playing counts as activity
@@ -122,6 +124,10 @@ while (1) {
 				$state = 'OFF';
 			}
 		} else {
+			$state = 'ON';
+		}
+	} else {
+		if ($newState eq 'ON') {
 			$state = 'ON';
 		}
 	}
