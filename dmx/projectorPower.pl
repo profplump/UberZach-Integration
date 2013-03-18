@@ -12,6 +12,7 @@ use DMX;
 # Config
 my $TIMEOUT   = 900;
 my $COUNTDOWN = 300;
+my $OFF_DELAY = 60;
 
 # App config
 my $DATA_DIR     = DMX::dataDir();
@@ -43,6 +44,7 @@ my $pullLast  = time();
 my $update    = 0;
 my $lastCount = 0;
 my $lastUser  = time();
+my $shutdown  = 0;
 
 # Loop forever
 while (1) {
@@ -77,8 +79,28 @@ while (1) {
 		$lastUser = time();
 	}
 
-	# Calculate the elapsed time
-	my $elapsed = time() - $lastUser;
+	# Record the shutdown timestamp
+	if ($newState eq 'SHUTDOWN') {
+		$shutdown = time();
+	}
+
+	# Clear the shutdown timestamp if there is new user activity
+	if ($shutdown && $lastUser > $shutdown) {
+		$shutdown = 0;
+	}
+
+	# Calculate the elapsed time, faking for $shutdown as needed
+	my $elapsed = 0;
+	if ($shutdown && $lastUser < $shutdown) {
+
+		# Power off happens when $elapsed > $TIMEOUT + $COUNTDOWN
+		# Adjust back from that for the $OFF_DELAY
+		# Which gives us the number of seconds back we want to use as the start of our countdown
+		# So subtract that from $shutdown, and we'll have a $lastUser timestamp substitute
+		$elapsed = time() - ($shutdown - (($TIMEOUT + $COUNTDOWN) - $OFF_DELAY));
+	} else {
+		$elapsed = time() - $lastUser;
+	}
 	if ($DEBUG) {
 		print STDERR 'Time since last user action: ' . $elapsed . "\n";
 	}
