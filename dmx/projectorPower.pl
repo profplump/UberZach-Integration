@@ -65,7 +65,7 @@ while (1) {
 	}
 
 	# Menu changes count as activity
-	if ($lastUser < $mtime{'GUI'}) {
+	if ($mtime{'GUI'} && $lastUser < $mtime{'GUI'}) {
 		$lastUser = $mtime{'GUI'};
 	}
 
@@ -79,14 +79,19 @@ while (1) {
 		$lastUser = time();
 	}
 
-	# Record the shutdown timestamp
-	if ($exists{'PROJECTOR'} && $newState eq 'SHUTDOWN') {
-		$shutdown = time();
-	}
-
 	# Clear the shutdown timestamp if there is new user activity
 	if ($shutdown && (!$exists{'PROJECTOR'} || $lastUser > $shutdown)) {
 		$shutdown = 0;
+	}
+
+	# Record the shutdown timestamp
+	if ($newState eq 'SHUTDOWN') {
+		$shutdown = time();
+
+		# If the projector is likely to be on, fake the flag to force a state calculation
+		if ($stateLast ne 'OFF') {
+			$exists{'PROJECTOR'} = 1;
+		}
 	}
 
 	# Calculate the elapsed time, faking for $shutdown as needed
@@ -103,6 +108,9 @@ while (1) {
 	}
 	if ($DEBUG) {
 		print STDERR 'Time since last user action: ' . $elapsed . "\n";
+		if ($shutdown) {
+			print STDERR 'Time since shutdown command: ' . (time() - $shutdown) . "\n";
+		}
 	}
 
 	# Calculate the new state
