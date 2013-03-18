@@ -80,12 +80,12 @@ while (1) {
 	}
 
 	# Record the shutdown timestamp
-	if ($newState eq 'SHUTDOWN') {
+	if ($exists{'PROJECTOR'} && $newState eq 'SHUTDOWN') {
 		$shutdown = time();
 	}
 
 	# Clear the shutdown timestamp if there is new user activity
-	if ($shutdown && $lastUser > $shutdown) {
+	if ($shutdown && (!$exists{'PROJECTOR'} || $lastUser > $shutdown)) {
 		$shutdown = 0;
 	}
 
