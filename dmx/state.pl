@@ -23,9 +23,10 @@ my %MON_FILES     = (
 	'PROJECTOR' => 'STATUS',
 	'AMPLIFIER' => 'STATUS',
 	'PLAYING'   => 'STATUS_PLAYING',
-	'LIGHTS'    => 'EXISTS',
 	'FAN_CMD'   => 'EXISTS',
-	'RAVE'      => 'EXISTS_OFF',
+	'NO_MOTION' => 'EXISTS',
+	'RAVE'      => 'EXISTS',
+	'LIGHTS'    => 'EXISTS_ON',
 
 	'/mnt/media/DMX/cmd/GARAGE_CMD' => 'EXISTS_CLEAR',
 );
@@ -233,16 +234,20 @@ while (1) {
 		if ($timeSinceUpdate > $STATE_TIMEOUT) {
 			$state = 'OFF';
 		} elsif ($timeSinceUpdate < $STATE_TIMEOUT) {
-			$state = 'MOTION';
+			if ($files{'NO_MOTION'}->{'status'}) {
+				$state = 'OFF';
+			} else {
+				$state = 'MOTION';
+			}
 		}
 	}
 	if ($state eq 'INIT') {
 		$state = 'OFF';
 	}
 
-	# Clear exists files when the main state is "OFF" (and before we append their status)
+	# Clear EXISTS_ON files when the main state is "OFF" (and before we append their status)
 	foreach my $file (values(%files)) {
-		if ($file->{'type'} eq 'EXISTS' && $file->{'status'} && $state eq 'OFF') {
+		if ($file->{'type'} eq 'EXISTS_ON' && $file->{'status'} && $state eq 'OFF') {
 			unlink($file->{'path'});
 			$file->{'stauts'} = 0;
 			if ($DEBUG) {
@@ -252,7 +257,7 @@ while (1) {
 	}
 
 	# Calculate the new status
-	$statusLast     = $status;
+	$statusLast = $status;
 	my $statusMtime = '';
 	{
 		my @statTime = ();
@@ -265,7 +270,7 @@ while (1) {
 		$statusMtime = ' (' . join(', ', @statTime) . ')';
 	}
 
-	# Clear exists_clear files immediately (but after we append their status)
+	# Clear EXISTS_CLEAR files immediately (but after we append their status)
 	foreach my $file (values(%files)) {
 		if ($file->{'type'} eq 'EXISTS_CLEAR' && $file->{'status'}) {
 			unlink($file->{'path'});
