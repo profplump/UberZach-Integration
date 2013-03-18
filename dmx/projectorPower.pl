@@ -66,10 +66,12 @@ while (1) {
 	if ($lastUser < $mtime{'GUI'}) {
 		$lastUser = $mtime{'GUI'};
 	}
+
 	# Projector starts count as activity
 	if ($exists{'PROJECTOR'} && $lastUser < $mtime{'PROJECTOR'}) {
 		$lastUser = $mtime{'PROJECTOR'};
 	}
+
 	# Playing counts as activity
 	if ($exists{'PLAYING'} && $lastUser < time()) {
 		$lastUser = time();
@@ -132,8 +134,8 @@ while (1) {
 
 		# Send master power state
 		if ($state eq 'OFF' || $state eq 'ON') {
-		#	$proj->send($state)
-		#	  or die('Unable to write command to proj socket: ' . $state . ": ${!}\n");
+			$proj->send($state)
+			  or die('Unable to write command to proj socket: ' . $state . ": ${!}\n");
 		}
 
 		# No output file
