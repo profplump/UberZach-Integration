@@ -27,9 +27,9 @@ my %EFFECTS = (
 my $COLOR_TIMEOUT  = 30;
 my $COLOR_TIME_MIN = int($COLOR_TIMEOUT / 2);
 my %COLOR_VAR      = (
-	'PLAY'      => 0.50,
-	'PLAY_HIGH' => 0.50,
-	'PAUSE'     => 0.65,
+	'PLAY'      => 0.55,
+	'PLAY_HIGH' => 0.40,
+	'PAUSE'     => 0.50,
 	'MOTION'    => 0.15,
 );
 my %DIM            = (
