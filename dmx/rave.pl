@@ -38,12 +38,6 @@ if ($ENV{'DEBUG'}) {
 	$DEBUG = 1;
 }
 
-# Construct a list of valid states
-my %VALID = ('STOP' => 1);
-foreach my $key (keys(%EFFECTS)) {
-	$VALID{$key} = 1;
-}
-
 # Sockets
 DMX::stateSocket($STATE_SOCK);
 DMX::stateSubscribe($STATE_SOCK);
@@ -77,7 +71,7 @@ while (1) {
 	# Wait for state updates
 	{
 		my %existsTmp = ();
-		my $cmdState = DMX::readState($delay, \%existsTmp, undef(), \%VALID);
+		my $cmdState = DMX::readState($delay, \%existsTmp, undef(), undef());
 		if (defined($cmdState)) {
 			$newState = $cmdState;
 			$pullLast = time();
