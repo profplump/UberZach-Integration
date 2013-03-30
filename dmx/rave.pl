@@ -28,6 +28,7 @@ my $DATA_DIR     = DMX::dataDir();
 my $OUTPUT_FILE  = $DATA_DIR . 'RAVE_CMD';
 my $STATE_SOCK   = $OUTPUT_FILE . '.socket';
 my $RAVE_FILE    = $DATA_DIR . 'RAVE';
+my $EFFECT_FILE  = $DATA_DIR . 'EFFECT';
 my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
 my $DELAY        = $PULL_TIMEOUT / 2;
@@ -50,9 +51,12 @@ my $PID      = undef();
 my $EFFECT   = undef();
 my $PID_DATA = undef();
 
-# Always clear the RAVE file
+# Always clear the RAVE and EFFECT files
 if (-e $RAVE_FILE) {
 	unlink($RAVE_FILE);
+}
+if (-e $EFFECT_FILE) {
+	unlink($EFFECT_FILE);
 }
 
 # Loop forever
@@ -113,9 +117,12 @@ while (1) {
 			$EFFECT   = undef();
 			$PID_DATA = undef();
 
-			# Clear the RAVE flag
+			# Clear the RAVE and EFFECT flags
 			if (-e $RAVE_FILE) {
 				unlink($RAVE_FILE);
+			}
+			if (-e $EFFECT_FILE) {
+				unlink($EFFECT_FILE);
 			}
 		}
 	}
@@ -129,24 +136,30 @@ while (1) {
 	# Handle effects by name
 	if (defined($EFFECTS{$newState})) {
 
-		# Initiate the RAVE state
-		touch($RAVE_FILE);
+		# Initiate the EFFECT state
+		touch($EFFECT_FILE);
 
 		# Dispatch the effect
 		$EFFECTS{$newState}{'cmd'}(\%exists, $EFFECTS{$newState});
 
-		# Clear the RAVE state if there is no background process
+		# Clear the EFFECT state if there is no background process
 		if (!defined($PID)) {
-			unlink($RAVE_FILE);
+			if (-e $EFFECT_FILE) {
+				unlink($EFFECT_FILE);
+			}
 		}
 
 		next;
 	}
 
-	# Clear the RAVE flag, just in case
+	# Clear the RAVE and EFFECT flags, just in case
 	if (-e $RAVE_FILE) {
 		unlink($RAVE_FILE);
 		die("Unexpected RAVE file\n");
+	}
+	if (-e $EFFECT_FILE) {
+		unlink($EFFECT_FILE);
+		die("Unexpected EFFECT file\n");
 	}
 }
 
@@ -217,6 +230,9 @@ sub rave_init($$) {
 	# Stat the file to bring the network up-to-date
 	stat($SILENCE);
 	stat($effect->{'file'});
+
+	# Initiate the RAVE state
+	touch($RAVE_FILE);
 
 	# Setup our loop handler
 	if ($effect->{'next'}) {

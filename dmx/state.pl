@@ -26,6 +26,7 @@ my %MON_FILES     = (
 	'FAN_CMD'   => 'EXISTS',
 	'NO_MOTION' => 'EXISTS',
 	'RAVE'      => 'EXISTS',
+	'EFFECT'    => 'EXISTS',
 	'LIGHTS'    => 'EXISTS_ON',
 
 	'/mnt/media/DMX/cmd/GARAGE_CMD' => 'EXISTS_CLEAR',
