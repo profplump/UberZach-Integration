@@ -259,16 +259,12 @@ while (1) {
 
 	# Calculate the new status
 	$statusLast = $status;
-	my $statusMtime = '';
 	{
 		my @statTime = ();
-		my @statOnly = ();
 		foreach my $file (values(%files)) {
-			push(@statOnly, $file->{'name'} . ':' . $file->{'status'});
 			push(@statTime, $file->{'name'} . ':' . $file->{'status'} . ':' . $file->{'update'});
 		}
-		$status      = ' (' . join(', ', @statOnly) . ')';
-		$statusMtime = ' (' . join(', ', @statTime) . ')';
+		$status      = ' (' . join(', ', @statTime) . ')';
 	}
 
 	# Clear EXISTS_CLEAR files immediately (but after we append their status)
@@ -313,7 +309,7 @@ while (1) {
 		foreach my $sub (@subscribers) {
 
 			# Drop subscribers that are not available
-			if (!eval { $sub->{'socket'}->send($state . $statusMtime) }) {
+			if (!eval { $sub->{'socket'}->send($state . $status) }) {
 				print STDERR 'Dropping bad socket from subscriber list: ' . $sub->{'path'} . "\n";
 
 				my @new_subscribers = ();
