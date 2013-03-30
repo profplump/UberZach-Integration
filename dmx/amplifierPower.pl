@@ -23,7 +23,7 @@ my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
 my $DELAY        = $PULL_TIMEOUT / 2;
 my $START_DELAY  = 3.5;
-my @AUDIO_SET    = ('SwitchAudioSource', '-s');
+my @AUDIO_SET    = ('/Users/tv/bin/SwitchAudioSource', '-s');
 
 # Debug
 my $DEBUG = 0;

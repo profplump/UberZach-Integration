@@ -4,6 +4,8 @@
 <dict>
 	<key>UserName</key>
 	<string>tv</string>
+	<key>LimitLoadToSessionType</key>
+	<string>Aqua</string>
 	<key>LimitLoadToHosts</key>
 	<array>
 		<string>heady.uberzach.com</string>
@@ -26,5 +28,14 @@
 	<array>
 		<string>/Users/tv/bin/video/dmx/amplifierPower.pl</string>
 	</array>
-</dict>
+	<!--
+		<key>EnvironmentVariables</key>
+		<dict>
+			<key>DEBUG</key>
+			<string>1</string>
+		</dict>
+		<key>StandardErrorPath</key>
+		<string>/Users/tv/com.uberzach.ampliferPower_errlog.txt</string>
+	-->
+	</dict>
 </plist>
