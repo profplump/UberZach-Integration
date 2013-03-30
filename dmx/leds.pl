@@ -2,6 +2,7 @@
 use strict;
 use warnings;
 use POSIX;
+use Math::Random;
 
 # Local modules
 use Cwd qw(abs_path);
@@ -121,6 +122,7 @@ while (1) {
 	}
 
 	# Calculate the new state
+	$stateLast = $state;
 	if ($exists{'LIGHTS'}) {
 		if ($newState eq 'PLAY') {
 			$newState = 'PLAY_HIGH';

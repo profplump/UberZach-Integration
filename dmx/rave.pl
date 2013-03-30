@@ -3,7 +3,6 @@ use strict;
 use warnings;
 use POSIX;
 use File::Touch;
-use Math::Random;
 use Time::HiRes qw( usleep );
 
 # Local modules
@@ -20,8 +19,8 @@ sub lsr_loop();
 # User config
 my @CHANNELS = (1, 2, 4, 5, 6, 7, 8, 9, 13, 14, 15);
 my %EFFECTS = (
-	'RED_ALERT' => [ 'cmd' => \&red_alert ],
-	'LSR'       => [ 'cmd' => \&rave_init, 'file' => '/mnt/media/DMX/Rave.mp3', 'next' => \&lsr_loop ],
+	'RED_ALERT' => { 'cmd' => \&red_alert },
+	'LSR'       => { 'cmd' => \&rave_init, 'file' => '/mnt/media/DMX/Rave.mp3', 'next' => \&lsr_loop },
 );
 
 # App config
@@ -85,7 +84,7 @@ while (1) {
 		}
 
 		# Only record valid exists hashes
-		if (scalar(keys(%existTmp)) < 1) {
+		if (scalar(keys(%existsTmp)) < 1) {
 			%exists = %existsTmp;
 		}
 	}
@@ -104,8 +103,7 @@ while (1) {
 			kill(SIGTERM, $PID);
 		}
 
-		$newState = $state;
-		$update   = 1;
+		$update = 1;
 	}
 
 	# Reap zombie children
@@ -136,7 +134,18 @@ while (1) {
 
 	# Handle effects by name
 	if (defined($EFFECTS{$newState})) {
-		$EFFECTS{$newState}->{'cmd'}->(\%exists, $EFFECTS{$newState});
+
+		# Initiate the RAVE state
+		touch($RAVE_FILE);
+
+		# Dispatch the effect
+		$EFFECTS{$newState}{'cmd'}(\%exists, $EFFECTS{$newState});
+
+		# Clear the RAVE state if there is no background process
+		if (!defined($PID)) {
+			unlink($RAVE_FILE);
+		}
+
 		next;
 	}
 
@@ -213,10 +222,7 @@ sub rave_init($$) {
 
 	# Stat the file to bring the network up-to-date
 	stat($SILENCE);
-	stat($file);
-
-	# Initiate the RAVE state
-	touch($RAVE_FILE);
+	stat($effect->{'file'});
 
 	# Setup our loop handler
 	if ($effect->{'next'}) {
@@ -230,7 +236,7 @@ sub rave_init($$) {
 	# Initialize the channels hash
 	my %chans = ();
 	foreach my $chan (@CHANNELS) {
-		$channels{$chan} = 0;
+		$chans{$chan} = 0;
 	}
 	$data{'channels'}      = \%chans;
 	$data{'num_channels'}  = scalar(keys(%chans));
@@ -262,7 +268,7 @@ sub rave_init($$) {
 	# Play the sound in a child (i.e. in the background)
 	$PID = fork();
 	if (defined($PID) && $PID == 0) {
-		my @sound = ($SND_APP, $file);
+		my @sound = ($SND_APP, $effect->{'file'});
 		exec(@sound)
 		  or die('Unable to play sound: ' . join(' ', @sound) . "\n");
 	}
