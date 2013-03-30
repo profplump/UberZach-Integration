@@ -245,7 +245,9 @@ sub readState($$$$) {
 			# Ignore invalid states
 			if (defined($valid)) {
 				if (!defined($valid->{$state})) {
-					print STDERR 'Invalid state: ' . $state . "\n";
+					if ($DEBUG) {
+						print STDERR 'Invalid state: ' . $state . "\n";
+					}
 					next;
 				}
 			}
