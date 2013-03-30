@@ -106,12 +106,12 @@ while (1) {
 		$newState = $cmdState;
 		$pullLast = time();
 	}
-	
+
 	# Die if we don't see regular updates
 	if (time() - $pullLast > $PULL_TIMEOUT) {
 		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
 	}
-	
+
 	# Skip processing when in RAVE or EFFECT mode
 	if ($exists{'RAVE'} || $exists{'EFFECT'}) {
 		if ($DEBUG) {
@@ -179,7 +179,7 @@ while (1) {
 		}
 		$update = 1;
 	}
-	
+
 	# Update the lighting
 	if ($update) {
 
