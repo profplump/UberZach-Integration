@@ -2,26 +2,12 @@
 use strict;
 use warnings;
 use POSIX;
-use File::Touch;
-use Math::Random;
-use Time::HiRes qw( usleep );
 
 # Local modules
 use Cwd qw(abs_path);
 use File::Basename qw(dirname);
 use lib dirname(abs_path($0));
 use DMX;
-
-# Prototypes
-sub red_alert($);
-sub rave($);
-sub rave_loop();
-
-# Effects states
-my %EFFECTS = (
-	'RED_ALERT' => \&red_alert,
-	'RAVE'      => \&rave,
-);
 
 # User config
 my $COLOR_TIMEOUT  = 30;
@@ -64,7 +50,6 @@ my %DIM            = (
 my $DATA_DIR     = DMX::dataDir();
 my $OUTPUT_FILE  = $DATA_DIR . 'LED';
 my $STATE_SOCK   = $OUTPUT_FILE . '.socket';
-my $RAVE_FILE    = $DATA_DIR . 'RAVE';
 my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
 my $DELAY        = $PULL_TIMEOUT / 2;
@@ -88,10 +73,6 @@ my %VALID = ();
 foreach my $key (keys(%DIM)) {
 	$VALID{$key} = 1;
 }
-foreach my $key (keys(%EFFECTS)) {
-	$VALID{$key} = 1;
-}
-$VALID{'STOP'} = 1;
 
 # Sockets
 DMX::stateSocket($STATE_SOCK);
@@ -101,15 +82,11 @@ DMX::stateSubscribe($STATE_SOCK);
 my $state       = 'OFF';
 my $stateLast   = $state;
 my %exists      = ();
-my %existsLast  = %exists;
 my $pushLast    = 0;
 my $pullLast    = time();
 my $update      = 0;
 my @COLOR       = ();
 my $colorChange = time();
-my $PID         = undef();
-my $EFFECT      = undef();
-my $PID_DATA    = undef();
 
 # Always force lights out at launch
 DMX::dim({ 'channel' => 13, 'value' => 0, 'time' => 0 });
@@ -119,22 +96,11 @@ DMX::dim({ 'channel' => 15, 'value' => 0, 'time' => 0 });
 # Loop forever
 while (1) {
 
-	# Record the last state/exists data for diffs/resets
-	$stateLast  = $state;
-	%existsLast = %exists;
-
 	# State is calculated; use newState to gather data
 	my $newState = $state;
 
-	# Reduce the select delay when we're processing background effects
-	# We don't want to hang waiting for event updates
-	my $delay = $DELAY;
-	if (defined($PID)) {
-		$delay = 0.001;
-	}
-
 	# Wait for state updates
-	my $cmdState = DMX::readState($delay, \%exists, undef(), \%VALID);
+	my $cmdState = DMX::readState($DELAY, \%exists, undef(), \%VALID);
 	if (defined($cmdState)) {
 		$newState = $cmdState;
 		$pullLast = time();
@@ -144,72 +110,14 @@ while (1) {
 	if (time() - $pullLast > $PULL_TIMEOUT) {
 		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
 	}
-
-	# Handle "STOP" commands
-	if ($newState eq 'STOP') {
-		if (defined($PID)) {
-			if ($DEBUG) {
-				print STDERR "Ending background processing\n";
-			}
-			kill(SIGTERM, $PID);
+	
+	# Skip processing when in RAVE mode
+	if ($exists{'RAVE'}) {
+		if ($DEBUG) {
+			print STDERR "Suspending normal operation while in RAVE mode\n";
 		}
-
-		$newState = $state;
-		$update   = 1;
-	}
-
-	# Reap zombie children
-	if (defined($PID)) {
-		my $kid = waitpid($PID, WNOHANG);
-		if ($kid > 0) {
-			if ($DEBUG) {
-				print STDERR 'Reaped child: ' . $PID . "\n";
-			}
-
-			# Forget our local bypass state
-			$PID      = undef();
-			$EFFECT   = undef();
-			$PID_DATA = undef();
-
-			# Clear the RAVE flag for other daemons
-			if (-e $RAVE_FILE) {
-				unlink($RAVE_FILE);
-			}
-
-			# Reset to standard
-			@COLOR       = ();
-			$colorChange = time() + $COLOR_TIME_MIN;
-			$update      = 1;
-		}
-	}
-
-	# Continue special processing
-	if (defined($EFFECT)) {
-		$EFFECT->();
+		$update = 1;
 		next;
-	}
-
-	# Special handling for effects states
-	if (defined($EFFECTS{$newState})) {
-
-		# %exists is usually bogus when in entering a special effect state
-		my $existsTmp = \%exists;
-		if (scalar(keys(%exists)) < 1) {
-			$existsTmp = \%existsLast;
-		}
-
-		# Dispatch the handler
-		# Optionally skip the rest of this loop
-		if ($EFFECTS{$newState}->($existsTmp)) {
-			next;
-		}
-
-		# Force an update back to the original state
-		$newState    = $stateLast;
-		%exists      = %existsLast;
-		@COLOR       = ();
-		$colorChange = time() + $COLOR_TIME_MIN;
-		$update      = 1;
 	}
 
 	# Calculate the new state
@@ -300,221 +208,5 @@ while (1) {
 
 		# Clear the update flag
 		$update = 0;
-
-		# Clear the RAVE file, just in case
-		if (-e $RAVE_FILE) {
-			unlink($RAVE_FILE);
-			die("Cleared orphan RAVE file\n");
-		}
 	}
-}
-
-# ======================================
-# Effects routines
-# These are blocking, so be careful
-# ======================================
-sub red_alert($) {
-	my ($exists) = @_;
-	if ($DEBUG) {
-		print STDERR "red_alert()\n";
-	}
-
-	my $file  = '/mnt/media/DMX/Red Alert.mp3';
-	my @sound = ('afplay', $file);
-	my $ramp  = 450;
-	my $sleep = $ramp;
-
-	# Stat the file to bring the network up-to-date
-	stat($file);
-
-	# Bring the B & G channels down to 0
-	my @other = ();
-	push(@other, { 'channel' => 13, 'value' => 0, 'time' => 0 });
-	push(@other, { 'channel' => 15, 'value' => 0, 'time' => 0 });
-	foreach my $data (@other) {
-		DMX::dim($data);
-	}
-
-	my %high = ('channel' => 14, 'value' => 255, 'time' => $ramp);
-	my %low = %high;
-	$low{'value'} = 64;
-
-	DMX::dim(\%high);
-	system(@sound);
-	DMX::dim(\%low);
-	usleep($sleep * 1000);
-
-	DMX::dim(\%high);
-	system(@sound);
-	DMX::dim(\%low);
-	usleep($sleep * 1000);
-
-	DMX::dim(\%high);
-	system(@sound);
-	DMX::dim(\%low);
-	usleep($sleep * 1000);
-
-	# Follow through on the loop
-	return 0;
-}
-
-sub rave($) {
-	my ($exists) = @_;
-	if ($DEBUG) {
-		print STDERR "rave()\n";
-	}
-
-	# Config
-	my $SND_APP   = 'afplay';
-	my $RAVE_MP3  = '/mnt/media/DMX/Rave.mp3';
-	my $SILENCE   = '/mnt/media/DMX/Silence.wav';
-	my $SIL_DELAY = 1.3;
-	my $AMP_SHORT = 5;
-	my $AMP_LONG  = $AMP_SHORT + 5;
-
-	# Stat the file to bring the network up-to-date
-	stat($SILENCE);
-	stat($RAVE_MP3);
-
-	# Initiate the RAVE state
-	touch($RAVE_FILE);
-
-	# Setup our loop handler
-	$EFFECT = \&rave_loop;
-
-	# Save data for future runs
-	my %data = ();
-	$PID_DATA = \%data;
-
-	# Initialize the channels hash
-	my %channels = (
-		1  => 0,
-		2  => 0,
-		4  => 0,
-		5  => 0,
-		6  => 0,
-		7  => 0,
-		8  => 0,
-		9  => 0,
-		13 => 0,
-		14 => 0,
-		15 => 0,
-	);
-	$data{'channels'}      = \%channels;
-	$data{'num_channels'}  = scalar(keys(%channels));
-	$data{'live_channels'} = 0;
-
-	# Reduce the amp delay if the amp is already on
-	my $amp_wait = $AMP_LONG;
-	if ($exists->{'AMPLIFIER'}) {
-		$amp_wait = $AMP_SHORT;
-	}
-
-	# Dim while we wait
-	my @data_set = ();
-	foreach my $chan (keys(%channels)) {
-		push(@data_set, { 'channel' => $chan, 'value' => 0, 'time' => $amp_wait / 2 * 1000 });
-	}
-	DMX::applyDataset(\@data_set, 'RAVE', $OUTPUT_FILE);
-	$pushLast = time();
-
-	# Wait for the amp to power up
-	if ($DEBUG) {
-		print STDERR 'Waiting ' . $amp_wait . " seconds for the amp to boot\n";
-	}
-	sleep($amp_wait - $SIL_DELAY);
-
-	# Play a short burst of silence to get all the audio in-sync
-	my @sound = ($SND_APP, $SILENCE);
-	system(@sound);
-
-	# Play the sound in a child (i.e. in the background)
-	$PID = fork();
-	if (defined($PID) && $PID == 0) {
-		my @sound = ($SND_APP, $RAVE_MP3);
-		exec(@sound)
-		  or die('Unable to play sound: ' . join(' ', @sound) . "\n");
-	}
-
-	# Record our start time
-	$data{'start'} = Time::HiRes::time();
-
-	# Do not pass GO, do not collect $200
-	return 1;
-}
-
-sub rave_loop() {
-	if ($DEBUG) {
-		print STDERR "rave_loop()\n";
-	}
-
-	# Config
-	my $max_dur  = 375;
-	my $max_val  = 255;
-	my $reserve  = 0.75;
-	my $ramp_dur = 10.20;
-	my $hit_pos  = 43.15;
-	my $hit_dur  = 100;
-	my $fade_pos = 43.65;
-	my $fade_dur = 2000;
-
-	# How long have we been playing
-	my $elapsed = Time::HiRes::time() - $PID_DATA->{'start'};
-	if ($DEBUG) {
-		print STDERR 'Elapsed: ' . $elapsed . "\n";
-	}
-
-	# Ramp up the number of channels in our effect
-	if ($elapsed < $ramp_dur) {
-		my $ratio = $PID_DATA->{'live_channels'} / ($PID_DATA->{'num_channels'} * (1 - $reserve));
-		if ($PID_DATA->{'live_channels'} < 1 || $ratio < $elapsed / $ramp_dur) {
-			my @keys  = keys(%{ $PID_DATA->{'channels'} });
-			my $index = int(rand($PID_DATA->{'num_channels'}));
-			while ($PID_DATA->{'channels'}->{ $keys[$index] } > 0) {
-				$index = int(rand($PID_DATA->{'num_channels'}));
-			}
-			$PID_DATA->{'channels'}->{ $keys[$index] } = 1;
-			$PID_DATA->{'live_channels'}++;
-		}
-	} else {
-		if ($PID_DATA->{'live_channels'} < $PID_DATA->{'num_channels'}) {
-			foreach my $chan (keys(%{ $PID_DATA->{'channels'} })) {
-				$PID_DATA->{'channels'}->{$chan} = 1;
-			}
-			$PID_DATA->{'live_channels'} = $PID_DATA->{'num_channels'};
-		}
-	}
-
-	# Prepare data for each channel
-	my @data_set = ();
-	my $wait     = $max_dur;
-	foreach my $chan (keys(%{ $PID_DATA->{'channels'} })) {
-		my $val = 0;
-		my $dur = 0;
-
-		# Random data on enabled channels until the fade
-		if ($elapsed < $hit_pos) {
-			if ($PID_DATA->{'channels'}->{$chan} > 0) {
-				$dur = int(rand($max_dur));
-				$val = int(rand($max_val));
-			}
-		} elsif ($elapsed < $fade_pos) {
-			$val  = $max_val;
-			$dur  = $hit_dur;
-			$wait = ($fade_pos - $hit_pos) * 1000;
-		} else {
-			$val  = 0;
-			$dur  = $fade_dur;
-			$wait = $dur;
-		}
-
-		push(@data_set, { 'channel' => $chan, 'value' => $val, 'time' => $dur });
-	}
-
-	# Push the data set
-	DMX::applyDataset(\@data_set, 'RAVE', $OUTPUT_FILE);
-	$pushLast = time();
-
-	# Wait for the fade interval
-	usleep($wait * 1000);
 }
