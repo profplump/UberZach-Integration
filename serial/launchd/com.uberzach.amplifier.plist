@@ -11,18 +11,18 @@
 	<key>RunAtLoad</key>
 	<true/>
 	<key>Label</key>
-	<string>com.uberzach.projector</string>
+	<string>com.uberzach.amplifier</string>
 	<key>KeepAlive</key>
 	<dict>
 		<key>PathState</key>
 		<dict>
-			<key>/dev/tty.Projector-DevB</key>
+			<key>/dev/tty.Amplifier-DevB</key>
 			<true/>
 		</dict>
 	</dict>
 	<key>ProgramArguments</key>
 	<array>
-		<string>/Users/tv/bin/video/projector/projector.pl</string>
+		<string>/Users/tv/bin/video/serial/amplifier.pl</string>
 		<string>15</string>
 	</array>
 </dict>
