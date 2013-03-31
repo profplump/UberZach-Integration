@@ -42,7 +42,7 @@ my %mtime     = ();
 my $pushLast  = 0;
 my $pullLast  = time();
 my $update    = 0;
-my $lastCount = 0;
+my $lastCount = -1;
 my $lastUser  = time();
 my $shutdown  = 0;
 
@@ -98,7 +98,7 @@ while (1) {
 
 	# Calculate the elapsed time, faking for $shutdown as needed
 	my $elapsed = 0;
-	if ($shutdown && $lastUser < $shutdown) {
+	if ($shutdown && $lastUser <= $shutdown) {
 
 		# Power off happens when $elapsed > $TIMEOUT + $COUNTDOWN
 		# Adjust back from that for the $OFF_DELAY
@@ -170,6 +170,7 @@ while (1) {
 
 		# Send master power state
 		if ($state eq 'OFF' || $state eq 'ON') {
+			system('say', 'Projector ' . $state);
 			$proj->send($state)
 			  or die('Unable to write command to proj socket: ' . $state . ": ${!}\n");
 		}
@@ -181,6 +182,9 @@ while (1) {
 
 		# Clear the update flag
 		$update = 0;
+
+		# Clear the lastCount
+		$lastCount = -1;
 	}
 
 	# Announce a pending shutdown every minute
