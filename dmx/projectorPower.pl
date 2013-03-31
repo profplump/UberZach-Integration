@@ -22,6 +22,7 @@ my $PROJ_SOCK    = $DATA_DIR . 'PROJECTOR.socket';
 my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
 my $DELAY        = $PULL_TIMEOUT / 2;
+my $CMD_DELAY    = 15;
 
 # Debug
 my $DEBUG = 0;
@@ -185,6 +186,9 @@ while (1) {
 
 		# Clear the lastCount
 		$lastCount = -1;
+
+		# Wait before accepting a new command
+		sleep($CMD_DELAY)
 	}
 
 	# Announce a pending shutdown every minute
