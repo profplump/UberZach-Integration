@@ -26,5 +26,16 @@
 	<array>
 		<string>/Users/tv/bin/video/dmx/projectorPower.pl</string>
 	</array>
+	<!--
+		<key>EnvironmentVariables</key>
+		<dict>
+			<key>DEBUG</key>
+			<string>1</string>
+		</dict>
+		<key>StandardOutPath</key>
+		<string>/Users/tv/com.uberzach.projectorPower_log.txt</string>
+		<key>StandardErrorPath</key>
+		<string>/Users/tv/com.uberzach.projectorPower_errlog.txt</string>
+	-->
 </dict>
 </plist>

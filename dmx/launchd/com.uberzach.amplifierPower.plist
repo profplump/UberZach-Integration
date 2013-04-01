@@ -32,8 +32,10 @@
 			<key>DEBUG</key>
 			<string>1</string>
 		</dict>
+		<key>StandardOutPath</key>
+		<string>/Users/tv/com.uberzach.ampliferPower_log.txt</string>
 		<key>StandardErrorPath</key>
 		<string>/Users/tv/com.uberzach.ampliferPower_errlog.txt</string>
 	-->
-	</dict>
+</dict>
 </plist>
