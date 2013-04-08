@@ -12,7 +12,7 @@ use DMX;
 # Config
 my $TIMEOUT   = 900;
 my $COUNTDOWN = 300;
-my $OFF_DELAY = 60;
+my $OFF_DELAY = 15;
 
 # App config
 my $DATA_DIR     = DMX::dataDir();
@@ -22,7 +22,11 @@ my $PROJ_SOCK    = $DATA_DIR . 'PROJECTOR.socket';
 my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
 my $DELAY        = $PULL_TIMEOUT / 2;
-my $CMD_DELAY    = 15;
+my $CMD_DELAY    = $PUSH_TIMEOUT / 4;
+
+# Prototypes
+sub say($);
+sub sayShutdown($);
 
 # Debug
 my $DEBUG = 0;
@@ -36,16 +40,16 @@ DMX::stateSubscribe($STATE_SOCK);
 my $proj = DMX::clientSock($PROJ_SOCK);
 
 # State
-my $state     = 'OFF';
-my $stateLast = $state;
-my %exists    = ();
-my %mtime     = ();
-my $pushLast  = 0;
-my $pullLast  = time();
-my $update    = 0;
-my $lastCount = -1;
-my $lastUser  = time();
-my $shutdown  = 0;
+my $state        = 'OFF';
+my $stateLast    = $state;
+my %exists       = ();
+my %mtime        = ();
+my $pushLast     = 0;
+my $pullLast     = time();
+my $update       = 0;
+my $lastAnnounce = 0;
+my $lastUser     = time();
+my $shutdown     = 0;
 
 # Loop forever
 while (1) {
@@ -54,10 +58,18 @@ while (1) {
 	my $newState = $state;
 
 	# Wait for state updates
-	my $cmdState = DMX::readState($DELAY, \%exists, \%mtime, undef());
-	if (defined($cmdState)) {
-		$newState = $cmdState;
-		$pullLast = time();
+	{
+		my %existsTmp = ();
+		my $cmdState = DMX::readState($DELAY, \%existsTmp, \%mtime, undef());
+		if (defined($cmdState)) {
+			$newState = $cmdState;
+			$pullLast = time();
+		}
+
+		# Only record valid exists hashes
+		if (scalar(keys(%existsTmp)) < 1) {
+			%exists = %existsTmp;
+		}
 	}
 
 	# Die if we don't see regular updates
@@ -87,45 +99,35 @@ while (1) {
 		$shutdown = 0;
 	}
 
-	# Record the shutdown timestamp
-	if ($newState eq 'SHUTDOWN') {
+	# Record the shutdown timestamp, if the projector is on
+	if ($newState eq 'SHUTDOWN' && $exists{'PROJECTOR'}) {
 		$shutdown = time();
-
-		# If the projector is likely to be on, fake the flag to force a state calculation
-		if ($stateLast ne 'OFF') {
-			$exists{'PROJECTOR'} = 1;
-		}
+		$lastUser = $shutdown;
 	}
 
-	# Calculate the elapsed time, faking for $shutdown as needed
-	my $elapsed = 0;
-	if ($shutdown && $lastUser <= $shutdown) {
-
-		# Power off happens when $elapsed > $TIMEOUT + $COUNTDOWN
-		# Adjust back from that for the $OFF_DELAY
-		# Which gives us the number of seconds back we want to use as the start of our countdown
-		# So subtract that from $shutdown, and we'll have a $lastUser timestamp substitute
-		$elapsed = time() - ($shutdown - (($TIMEOUT + $COUNTDOWN) - $OFF_DELAY));
-	} else {
-		$elapsed = time() - $lastUser;
-	}
+	# Calculate the elapsed time
+	my $elapsed = time() - $lastUser;
 	if ($DEBUG) {
 		print STDERR 'Time since last user action: ' . $elapsed . "\n";
-		if ($shutdown) {
-			print STDERR 'Time since shutdown command: ' . (time() - $shutdown) . "\n";
-		}
 	}
 
 	# Calculate the new state
 	$stateLast = $state;
 	if ($exists{'PROJECTOR'}) {
-		if ($elapsed > $TIMEOUT) {
-			$state = 'COUNTDOWN';
-			if ($elapsed > $TIMEOUT + $COUNTDOWN) {
+		if ($shutdown) {
+			$state = 'SHUTDOWN';
+			if ($elapsed > $OFF_DELAY) {
 				$state = 'OFF';
 			}
 		} else {
-			$state = 'ON';
+			if ($elapsed > $TIMEOUT) {
+				$state = 'COUNTDOWN';
+				if ($elapsed > $TIMEOUT + $COUNTDOWN) {
+					$state = 'OFF';
+				}
+			} else {
+				$state = 'ON';
+			}
 		}
 	} else {
 		if ($newState eq 'ON') {
@@ -161,6 +163,22 @@ while (1) {
 		}
 	}
 
+	# Announce a pending shutdown
+	if ($state eq 'COUNTDOWN' || $state eq 'SHUTDOWN') {
+		my $timeLeft = 0;
+		if ($state eq 'SHUTDOWN') {
+			$timeLeft = $OFF_DELAY - $elapsed;
+		} else {
+			$timeLeft = ($TIMEOUT + $COUNTDOWN) - $elapsed;
+		}
+		sayShutdown($timeLeft / 60);
+	}
+
+	# Only allow updates to "ON" or "OFF" -- the projector knows no other states
+	if ($update && ($state ne 'ON' && $state ne 'OFF')) {
+		$update = 0;
+	}
+
 	# Update the projector
 	if ($update) {
 
@@ -170,39 +188,56 @@ while (1) {
 		}
 
 		# Send master power state
-		if ($state eq 'OFF' || $state eq 'ON') {
-			system('say', 'Projector ' . $state);
-			$proj->send($state)
-			  or die('Unable to write command to proj socket: ' . $state . ": ${!}\n");
-		}
+		say('Projector ' . $state);
+		$proj->send($state)
+		  or die('Unable to write command to proj socket: ' . $state . ": ${!}\n");
 
 		# No output file
 
 		# Update the push time
 		$pushLast = time();
 
+		# Clear the lastAnnounce timer
+		$lastAnnounce = 0;
+
 		# Clear the update flag
 		$update = 0;
-
-		# Clear the lastCount
-		$lastCount = -1;
 
 		# Wait before accepting a new command
 		sleep($CMD_DELAY)
 	}
+}
 
-	# Announce a pending shutdown every minute
-	if ($state eq 'COUNTDOWN') {
-		my $timeLeft = ($TIMEOUT + $COUNTDOWN) - $elapsed;
-		$timeLeft = ceil($timeLeft / 60);
+# Speak
+sub say($) {
+	my $str = (@_);
+	system('say', $str);
+}
 
-		if ($lastCount != $timeLeft) {
-			my $plural = 's';
-			if ($timeLeft == 1) {
-				$plural = '';
-			}
-			system('say', 'Projector powerdown in about ' . $timeLeft . ' minute' . $plural);
-			$lastCount = $timeLeft;
-		}
+sub sayShutdown($) {
+	my $minutesLeft = (@_);
+
+	# Only allow annoucements once per minute
+	if (time() < $lastAnnounce + 60) {
+		return;
 	}
+	$lastAnnounce = time();
+
+	# Determine the unit
+	my $unit     = 'minute';
+	my $timeLeft = ceil($minutesLeft);
+	if ($minutesLeft < 1) {
+		$timeLeft = $minutesLeft * 60;
+		$unit = 'second';
+	}
+
+	# Add an "s" as needed
+	my $plural = 's';
+	if ($timeLeft == 1) {
+		$plural = '';
+	}
+	$unit .= $plural;
+
+	# Speak
+	say('Projector shutdown in about ' . $timeLeft . ' ' . $unit);
 }
