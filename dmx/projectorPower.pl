@@ -204,7 +204,7 @@ while (1) {
 		$update = 0;
 
 		# Wait before accepting a new command
-		sleep($CMD_DELAY)
+		sleep($CMD_DELAY);
 	}
 }
 
@@ -228,7 +228,7 @@ sub sayShutdown($) {
 	my $timeLeft = ceil($minutesLeft);
 	if ($minutesLeft < 1) {
 		$timeLeft = $minutesLeft * 60;
-		$unit = 'second';
+		$unit     = 'second';
 	}
 
 	# Add an "s" as needed
