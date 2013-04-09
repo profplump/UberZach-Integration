@@ -60,7 +60,7 @@ while (1) {
 	{
 		my %mtimeTmp  = ();
 		my %existsTmp = ();
-		my $cmdState = DMX::readState($DELAY, \%existsTmp, \%mtimeTmp, undef());
+		my $cmdState  = DMX::readState($DELAY, \%existsTmp, \%mtimeTmp, undef());
 		if (defined($cmdState)) {
 			$newState = $cmdState;
 			$pullLast = time();
@@ -101,15 +101,12 @@ while (1) {
 	}
 
 	# Record the shutdown timestamp, if the projector is on
-print STDERR 'NewState: ' . $newState . "\n";
 	if ($newState eq 'SHUTDOWN' && $exists{'PROJECTOR'}) {
 		if ($DEBUG) {
 			print STDERR "Recorded shutdown timestamp\n";
 		}
 		$shutdown = time();
 		$lastUser = $shutdown;
-} elsif ($newState eq 'SHUTDOWN') {
-print STDERR "Not recording shutdown because exists is false?\n";
 	}
 
 	# Calculate the elapsed time
