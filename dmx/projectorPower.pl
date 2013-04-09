@@ -13,6 +13,7 @@ use DMX;
 my $TIMEOUT   = 900;
 my $COUNTDOWN = 300;
 my $OFF_DELAY = 15;
+my $CMD_DELAY = 5;
 
 # App config
 my $DATA_DIR     = DMX::dataDir();
@@ -180,6 +181,17 @@ while (1) {
 
 	# Only allow updates to "ON" or "OFF" -- the projector knows no other states
 	if ($update && ($state ne 'ON' && $state ne 'OFF')) {
+		if ($DEBUG) {
+			print STDERR 'Ignoring update state other than ON/OFF: ' . $state . "\n";
+		}
+		$update = 0;
+	}
+
+	# Only allow updates every few seconds
+	if ($update && time() < $pushLast + $CMD_DELAY) {
+		if ($DEBUG) {
+			print STDERR 'Ignoring overrate update: ' . $state . "\n";
+		}
 		$update = 0;
 	}
 
@@ -192,9 +204,11 @@ while (1) {
 		}
 
 		# Send master power state
-		say('Projector ' . $state);
 		$proj->send($state)
 		  or die('Unable to write command to proj socket: ' . $state . ": ${!}\n");
+
+		# Annouce the state change, after the fact
+		say('Projector ' . $state);
 
 		# No output file
 
