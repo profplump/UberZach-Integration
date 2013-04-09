@@ -82,7 +82,7 @@ while (1) {
 		}
 
 		# Only record valid exists hashes
-		if (scalar(keys(%existsTmp)) < 1) {
+		if (scalar(keys(%existsTmp)) > 0) {
 			%exists = %existsTmp;
 		}
 	}
