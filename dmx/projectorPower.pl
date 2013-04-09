@@ -22,7 +22,6 @@ my $PROJ_SOCK    = $DATA_DIR . 'PROJECTOR.socket';
 my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
 my $DELAY        = $PULL_TIMEOUT / 2;
-my $CMD_DELAY    = $PUSH_TIMEOUT / 4;
 
 # Prototypes
 sub say($);
@@ -59,15 +58,17 @@ while (1) {
 
 	# Wait for state updates
 	{
+		my %mtimeTmp  = ();
 		my %existsTmp = ();
-		my $cmdState = DMX::readState($DELAY, \%existsTmp, \%mtime, undef());
+		my $cmdState = DMX::readState($DELAY, \%existsTmp, \%mtimeTmp, undef());
 		if (defined($cmdState)) {
 			$newState = $cmdState;
 			$pullLast = time();
 		}
 
-		# Only record valid exists hashes
-		if (scalar(keys(%existsTmp)) < 1) {
+		# Only record valid exists/mtime hashes
+		if (scalar(keys(%existsTmp)) > 0) {
+			%mtime  = %mtimeTmp;
 			%exists = %existsTmp;
 		}
 	}
@@ -100,9 +101,15 @@ while (1) {
 	}
 
 	# Record the shutdown timestamp, if the projector is on
+print STDERR 'NewState: ' . $newState . "\n";
 	if ($newState eq 'SHUTDOWN' && $exists{'PROJECTOR'}) {
+		if ($DEBUG) {
+			print STDERR "Recorded shutdown timestamp\n";
+		}
 		$shutdown = time();
 		$lastUser = $shutdown;
+} elsif ($newState eq 'SHUTDOWN') {
+print STDERR "Not recording shutdown because exists is false?\n";
 	}
 
 	# Calculate the elapsed time
@@ -202,20 +209,21 @@ while (1) {
 
 		# Clear the update flag
 		$update = 0;
-
-		# Wait before accepting a new command
-		sleep($CMD_DELAY);
 	}
 }
 
 # Speak
 sub say($) {
-	my $str = (@_);
+	my ($str) = @_;
+
+	if ($DEBUG) {
+		print STDERR 'Say: ' . $str . "\n";
+	}
 	system('say', $str);
 }
 
 sub sayShutdown($) {
-	my $minutesLeft = (@_);
+	my ($minutesLeft) = @_;
 
 	# Only allow annoucements once per minute
 	if (time() < $lastAnnounce + 60) {
