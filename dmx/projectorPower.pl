@@ -244,14 +244,11 @@ sub sayShutdown($) {
 
 	# Determine the unit
 	my $unit     = 'minute';
-	my $timeLeft = $minutesLeft;
+	my $timeLeft = ceil($minutesLeft);
 	if ($minutesLeft < 1) {
 		$timeLeft = $minutesLeft * 60;
 		$unit     = 'second';
 	}
-
-	# Avoid saying "0" unless we *really* mean it
-	$timeLeft = ceil($timeLeft);
 
 	# Add an "s" as needed
 	my $plural = 's';
