@@ -122,24 +122,28 @@ while (1) {
 			  or die('Unable to write command to amp socket: ' . $cmd . ": ${!}\n");
 		}
 
-		# Select an output device
+		# Select an output device, changing if needed
+		my $outDev = undef();
 		if ($state eq 'RAVE') {
-			my @CMD = @AUDIO_SET;
-			push(@CMD, $RAVE_DEV);
-			system(@CMD);
+			$outDev = $RAVE_DEV;
 
-		} else {
-			if (defined($cmd) && $cmd eq 'ON') {
-
-				# Set the audio source back to the default
-				my @CMD = @AUDIO_SET;
-				push(@CMD, $DEFAULT_DEV);
-				system(@CMD);
+		} elsif (defined($cmd) && $cmd eq 'ON') {
+			$outDev = $DEFAULT_DEV;
+		}
+		if (defined($outDev)) {
+			if ($DEBUG) {
+				print STDERR 'Selecting output device: ' . $outDev . "\n";
 			}
+			my @CMD = @AUDIO_SET;
+			push(@CMD, $outDev);
+			system(@CMD);
 		}
 
 		# Reset to TV @ 5.1 at power on
 		if (defined($cmd) && $cmd eq 'ON') {
+			if ($DEBUG) {
+				print STDERR "Selecting ON mode\n";
+			}
 
 			# Wait for the amp to boot
 			if (!$exists{'AMPLIFIER'}) {
@@ -155,6 +159,9 @@ while (1) {
 
 		# Rave through the main amp
 		if ($state eq 'RAVE') {
+			if ($DEBUG) {
+				print STDERR "Selecting RAVE mode\n";
+			}
 
 			# Set the mode
 			$amp->send('TV')
