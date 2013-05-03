@@ -96,9 +96,6 @@ foreach my $file (keys(%MON_FILES)) {
 # Loop forever
 while (1) {
 
-	# Reset the folder monitor state
-	my %folders = ();
-
 	# Provide a method to force updates even when the state does not change
 	my $update = 0;
 
@@ -143,6 +140,22 @@ while (1) {
 		$update = 1;
 	}
 
+	# Use opendir/readdir in each folder to ensure fresh results
+	my %folders = ();
+	foreach my $file (values(%files)) {
+		if (!$folders{ $file->{'dir'} }) {
+			my $dh = undef();
+			if (opendir($dh, $file->{'dir'})) {
+				if ($DEBUG) {
+					print STDERR 'Refreshed folder: ' . $file->{'dir'} . "\n";
+				}
+				my @files = readdir($dh);
+				closedir($dh);
+			}
+			$folders{ $file->{'dir'} } = 1;
+		}
+	}
+
 	# Monitor files of all types
 	foreach my $file (values(%files)) {
 
@@ -150,7 +163,7 @@ while (1) {
 		$file->{'last'}   = $file->{'status'};
 		$file->{'status'} = 0;
 
-		# Record the last update
+		# Record the last update for STATUS and MTIME files
 		if ($file->{'type'} =~ /^STATUS/ || $file->{'type'} =~ /^MTIME/) {
 			$file->{'update'} = mtime($file->{'path'});
 			if ($DEBUG) {
@@ -158,7 +171,7 @@ while (1) {
 			}
 		}
 
-		# Grab the new status
+		# Grab the state from STATUS files
 		if ($file->{'type'} =~ /^STATUS/) {
 			my $text = undef();
 			{
@@ -184,29 +197,17 @@ while (1) {
 			}
 		}
 
-		# Check for the presence of a file
+		# Check for the presence of EXISTS files and record their last change
 		if ($file->{'type'} =~ /^EXISTS/) {
-
-			# Use opendir/readdir in each folder before calling stat(), to ensure fresh results
-			if (!$folders{ $file->{'dir'} }) {
-				my $dh = undef();
-				if (opendir($dh, $file->{'dir'})) {
-					if ($DEBUG) {
-						print STDERR 'Refreshed folder: ' . $file->{'dir'} . "\n";
-					}
-					my @files = readdir($dh);
-					closedir($dh);
-				}
-				$folders{ $file->{'dir'} } = 1;
-			}
-
-			my @stat = stat($file->{'path'});
-			if (scalar(@stat) > 0) {
+			my $mtime = mtime($file->{'path'});
+			if ($mtime > 0) {
 				$file->{'status'} = 1;
-				$file->{'update'} = $stat[9];
+				$file->{'update'} = $mtime;
+			} elsif ($file->{'last'}) {
+				$file->{'update'} = time();
 			}
 			if ($DEBUG) {
-				print STDERR 'Exists: ' . $file->{'name'} . ': ' . $file->{'status'} . "\n";
+				print STDERR 'Exists: ' . $file->{'name'} . ': ' . $file->{'status'} . ':' . $file->{'update'} . "\n";
 			}
 		}
 	}
