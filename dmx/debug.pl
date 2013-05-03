@@ -24,6 +24,18 @@ DMX::stateSocket($STATE_SOCK);
 DMX::stateSubscribe($STATE_SOCK);
 
 # Loop forever
+my %exists = ();
+my %mtime  = ();
 while (1) {
-	DMX::readState($DELAY, undef(), undef(), undef());
+	my $state = DMX::readState($DELAY, \%exists, \%mtime, undef());
+
+	if ($state) {
+		my $file = undef();
+		foreach my $key (keys(%mtime)) {
+			if (!defined($file) || $mtime{$key} > $mtime{$file}) {
+				$file = $key;
+			}
+		}
+		print STDERR "\tLast update: " . $file . ': ' . localtime($mtime{$file}) . "\n";
+	}
 }
