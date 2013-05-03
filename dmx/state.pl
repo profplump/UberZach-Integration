@@ -23,10 +23,10 @@ my %MON_FILES     = (
 	'PROJECTOR' => 'STATUS',
 	'AMPLIFIER' => 'STATUS',
 	'PLAYING'   => 'STATUS_PLAYING',
-	'FAN_CMD'   => 'EXISTS',
 	'NO_MOTION' => 'EXISTS',
 	'RAVE'      => 'EXISTS',
 	'EFFECT'    => 'EXISTS',
+	'FAN_CMD'   => 'EXISTS_ON',
 	'LIGHTS'    => 'EXISTS_ON',
 
 	'/mnt/media/DMX/cmd/GARAGE_CMD' => 'EXISTS_CLEAR',
@@ -187,7 +187,7 @@ while (1) {
 		# Check for the presence of a file
 		if ($file->{'type'} =~ /^EXISTS/) {
 
-			# Use opendir/readdir before calling -e, to ensure fresh results
+			# Use opendir/readdir in each folder before calling stat(), to ensure fresh results
 			if (!$folders{ $file->{'dir'} }) {
 				my $dh = undef();
 				if (opendir($dh, $file->{'dir'})) {
@@ -200,9 +200,10 @@ while (1) {
 				$folders{ $file->{'dir'} } = 1;
 			}
 
-			if (-e $file->{'path'}) {
+			my @stat = stat($file->{'path'});
+			if (scalar(@stat) > 0) {
 				$file->{'status'} = 1;
-				$file->{'update'} = time();
+				$file->{'update'} = $stat[9];
 			}
 			if ($DEBUG) {
 				print STDERR 'Exists: ' . $file->{'name'} . ': ' . $file->{'status'} . "\n";
