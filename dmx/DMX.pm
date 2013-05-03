@@ -98,6 +98,10 @@ sub parseState($$$) {
 	my ($text, $exists, $mtime) = @_;
 	my $cmdState    = undef();
 	my $exists_text = undef();
+	if (!defined($exists)) {
+		my %tmp = ();
+		$exists  = \%tmp;
+	}
 	if (!defined($mtime)) {
 		my %tmp = ();
 		$mtime  = \%tmp;
