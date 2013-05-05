@@ -32,6 +32,7 @@ my %MON_FILES     = (
 	'AMPLIFIER_VOL'   => 'STATUS_VALUE',
 	'AMPLIFIER_MODE'  => 'STATUS_VALUE',
 	'AMPLIFIER_INPUT' => 'STATUS_VALUE',
+	'AUDIO_OUTPUT'    => 'STATUS_VALUE',
 
 	'/mnt/media/DMX/cmd/GARAGE_CMD' => 'EXISTS_CLEAR',
 );
@@ -192,8 +193,7 @@ while (1) {
 					$file->{'status'} = 1;
 				}
 			} elsif ($file->{'type'} eq 'STATUS_VALUE') {
-				$text =~ s/^\s*//;
-				$text =~ s/\s*$//;
+				$text =~ s/\n$//;
 				$file->{'status'} = $text;
 			} else {
 				if ($text =~ /1/) {

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>LimitLoadToSessionType</key>
+	<string>Aqua</string>
+	<key>LimitLoadToHosts</key>
+	<array>
+		<string>heady.uberzach.com</string>
+		<string>Heady.local</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>Label</key>
+	<string>com.uberzach.audioOutput</string>
+	<key>KeepAlive</key>
+	<dict>
+		<key>OtherJobEnabled</key>
+		<dict>
+			<key>com.uberzach.amplifier</key>
+			<true/>
+			<key>com.uberzach.state</key>
+			<true/>
+		</dict>
+	</dict>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/Users/tv/bin/video/dmx/audioOutput.pl</string>
+	</array>
+	<!--
+		<key>EnvironmentVariables</key>
+		<dict>
+			<key>DEBUG</key>
+			<string>1</string>
+		</dict>
+		<key>StandardOutPath</key>
+		<string>/Users/tv/com.uberzach.audioOutput_log.txt</string>
+		<key>StandardErrorPath</key>
+		<string>/Users/tv/com.uberzach.audioOutput_errlog.txt</string>
+	-->
+</dict>
+</plist>
