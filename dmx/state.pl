@@ -29,6 +29,9 @@ my %MON_FILES     = (
 	'FAN_CMD'   => 'EXISTS_ON',
 	'LIGHTS'    => 'EXISTS_ON',
 
+	'AMPLIFIER_VOL'  => 'STATUS_VALUE',
+	'AMPLIFIER_MODE' => 'STATUS_VALUE',
+
 	'/mnt/media/DMX/cmd/GARAGE_CMD' => 'EXISTS_CLEAR',
 );
 
@@ -187,6 +190,10 @@ while (1) {
 				if ($text =~ /PlayStatus\:Playing/) {
 					$file->{'status'} = 1;
 				}
+			} elsif ($file->{'type'} eq 'STATUS_VALUE') {
+				$text =~ s/^\s*//;
+				$text =~ s/\s*$//;
+				$file->{'status'} = $text;
 			} else {
 				if ($text =~ /1/) {
 					$file->{'status'} = 1;
@@ -287,7 +294,7 @@ while (1) {
 
 	# Update on any status change
 	foreach my $file (values(%files)) {
-		if ($file->{'status'} != $file->{'last'}) {
+		if ($file->{'status'} ne $file->{'last'}) {
 			$update = 1;
 			last;
 		}
