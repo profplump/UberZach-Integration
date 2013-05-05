@@ -7,6 +7,7 @@ use IO::Select;
 use IO::Socket::UNIX;
 use Device::SerialPort;
 use Time::HiRes qw( usleep sleep time );
+use IPC::System::Simple qw( system capture );
 
 # Local modules
 use Cwd qw(abs_path);
