@@ -18,17 +18,17 @@ sub mtime($);
 # User config
 my $STATE_TIMEOUT = 180;
 my %MON_FILES     = (
-	'GUI'       => 'MTIME',
-	'MOTION'    => 'MTIME',
-	'PROJECTOR' => 'STATUS',
-	'AMPLIFIER' => 'STATUS',
-	'PLAYING'   => 'STATUS_PLAYING',
-	'NO_MOTION' => 'EXISTS',
-	'RAVE'      => 'EXISTS',
-	'EFFECT'    => 'EXISTS',
-	'FAN_CMD'   => 'EXISTS_ON',
-	'LIGHTS'    => 'EXISTS_ON',
-
+	'GUI'            => 'MTIME',
+	'MOTION'         => 'MTIME',
+	'PROJECTOR'      => 'STATUS',
+	'AMPLIFIER'      => 'STATUS',
+	'PLAYING'        => 'STATUS_PLAYING',
+	'NO_MOTION'      => 'EXISTS',
+	'RAVE'           => 'EXISTS',
+	'EFFECT'         => 'EXISTS',
+	'FAN_CMD'        => 'EXISTS_ON',
+	'LIGHTS'         => 'EXISTS_ON',
+	'STEREO_CMD'     => 'EXISTS_ON',
 	'AMPLIFIER_VOL'  => 'STATUS_VALUE',
 	'AMPLIFIER_MODE' => 'STATUS_VALUE',
 
