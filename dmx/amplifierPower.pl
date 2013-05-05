@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
+use IPC::System::Simple qw( system capture );
 
 # Local modules
 use Cwd qw(abs_path);
@@ -38,6 +39,9 @@ my $amp = DMX::clientSock($AMP_SOCK);
 
 # State
 my $state     = 'OFF';
+my $mode      = 'SURROUND';
+my $input     = 'TV';
+my $output    = $DEFAULT_DEV;
 my $stateLast = $state;
 my %exists    = ();
 my $pushLast  = 0;
@@ -74,6 +78,20 @@ while (1) {
 		$state = 'OFF';
 	}
 
+	# Cacluate the channel mode
+	if ($exists{'STEREO_CMD'} || $state eq 'RAVE') {
+		$mode = 'STEREO';
+	} else {
+		$mode = 'SURROUND';
+	}
+
+	# Calculate the output device
+	if ($state eq 'RAVE') {
+		$output = $RAVE_DEV;
+	} else {
+		$output = $DEFAULT_DEV;
+	}
+
 	# Force updates on a periodic basis
 	if (!$update && time() - $pushLast > $PUSH_TIMEOUT) {
 
@@ -102,6 +120,32 @@ while (1) {
 		}
 	}
 
+	# Set the channel mode as needed
+	if ($exists{'AMPLIFIER_MODE'} ne $mode) {
+		if ($DEBUG) {
+			print STDERR 'Setting mode to: ' . $mode . "\n";
+		}
+		$amp->send($mode)
+		  or die('Unable to write command to amp socket: ' . $input . ": ${!}\n");
+	}
+
+	# Set the amplifier input as needed
+	if ($exists{'AMPLIFIER_INPUT'} ne $input) {
+		if ($DEBUG) {
+			print STDERR 'Setting input to: ' . $input . "\n";
+		}
+		$amp->send($input)
+		  or die('Unable to write command to amp socket: ' . $input . ": ${!}\n");
+	}
+
+	# Update the output device as needed
+	if ($exists{'AUDIO_OUTPUT'} ne $output) {
+		if ($DEBUG) {
+			print STDERR 'Setting output to: ' . $output . "\n";
+		}
+		system(@AUDIO_SET, $output);
+	}
+
 	# Update the amp
 	if ($update) {
 
@@ -120,54 +164,6 @@ while (1) {
 		if (defined($cmd)) {
 			$amp->send($cmd)
 			  or die('Unable to write command to amp socket: ' . $cmd . ": ${!}\n");
-		}
-
-		# Select an output device, changing if needed
-		my $outDev = undef();
-		if ($state eq 'RAVE') {
-			$outDev = $RAVE_DEV;
-
-		} elsif (defined($cmd) && $cmd eq 'ON') {
-			$outDev = $DEFAULT_DEV;
-		}
-		if (defined($outDev)) {
-			if ($DEBUG) {
-				print STDERR 'Selecting output device: ' . $outDev . "\n";
-			}
-			my @CMD = @AUDIO_SET;
-			push(@CMD, $outDev);
-			system(@CMD);
-		}
-
-		# Reset to TV @ 5.1 at power on
-		if (defined($cmd) && $cmd eq 'ON') {
-			if ($DEBUG) {
-				print STDERR "Selecting ON mode\n";
-			}
-
-			# Wait for the amp to boot
-			if (!$exists{'AMPLIFIER'}) {
-				sleep($START_DELAY);
-			}
-
-			# Set the mode
-			$amp->send('TV')
-			  or die('Unable to write command to amp socket: TV' . ": ${!}\n");
-			$amp->send('SURROUND')
-			  or die('Unable to write command to amp socket: SURROUND' . ": ${!}\n");
-		}
-
-		# Rave through the main amp
-		if ($state eq 'RAVE') {
-			if ($DEBUG) {
-				print STDERR "Selecting RAVE mode\n";
-			}
-
-			# Set the mode
-			$amp->send('TV')
-			  or die('Unable to write command to amp socket: TV' . ": ${!}\n");
-			$amp->send('STEREO')
-			  or die('Unable to write command to amp socket: STEREO' . ": ${!}\n");
 		}
 
 		# No output file
