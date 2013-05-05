@@ -42,6 +42,11 @@ sub dataDir() {
 	return $DATA_DIR;
 }
 
+# Maximum command length
+sub maxCmdLen() {
+	return $MAX_CMD_LEN;
+}
+
 # Generic client socket
 sub clientSock($) {
 	my ($path) = @_;
