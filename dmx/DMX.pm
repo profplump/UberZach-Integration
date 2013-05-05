@@ -53,6 +53,32 @@ sub clientSock($) {
 	return $sock;
 }
 
+# Generic server socket
+sub serverSock($) {
+	my ($path) = @_;
+
+	if (-e $path) {
+		unlink($path);
+	}
+
+	my $sock = IO::Socket::UNIX->new(
+		'Local' => $path,
+		'Type'  => IO::Socket::UNIX::SOCK_DGRAM,
+	) or die('Unable to open server socket: ' . $path . ": ${@}\n");
+	return $sock;
+}
+
+# Select on a server socket
+sub selectSock($) {
+	my ($path) = @_;
+
+	my $sock = serverSock($path);
+
+	my $sel = IO::Select->new($sock)
+	  or die('Unable to select socket: ' . $path . ": ${!}\n");
+	return $sel;
+}
+
 # DMX socket init
 sub dmxSock() {
 	if (!defined($DMX_FH)) {
@@ -65,31 +91,17 @@ sub dmxSock() {
 sub stateSubscribe($) {
 	my ($STATE_SOCK) = @_;
 
-	my $sub_fh = IO::Socket::UNIX->new(
-		'Peer'    => $SUB_SOCK,
-		'Type'    => IO::Socket::UNIX::SOCK_DGRAM,
-		'Timeout' => $SOCK_TIMEOUT
-	) or die('Unable to open state subscription socket: ' . $SUB_SOCK . ": ${@}\n");
+	my $sub_fh = clientSock($SUB_SOCK);
 	$sub_fh->send($STATE_SOCK)
 	  or die('Unable to subscribe: ' . $! . "\n");
 	shutdown($sub_fh, 2);
 	undef($sub_fh);
 }
 
-# State client socket init
+# Alias for selectSock() that also sets the global $SELECT pointer
 sub stateSocket($) {
 	my ($STATE_SOCK) = @_;
-
-	if (-e $STATE_SOCK) {
-		unlink($STATE_SOCK);
-	}
-	my $state_fh = IO::Socket::UNIX->new(
-		'Local' => $STATE_SOCK,
-		'Type'  => IO::Socket::UNIX::SOCK_DGRAM,
-	) or die('Unable to open state client socket: ' . $STATE_SOCK . ": ${@}\n");
-
-	$SELECT = IO::Select->new($state_fh)
-	  or die('Unable to select state client socket: ' . $STATE_SOCK . ": ${!}\n");
+	$SELECT = selectSock($STATE_SOCK);
 	return $SELECT;
 }
 
