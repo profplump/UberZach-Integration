@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use POSIX;
 use File::Touch;
-use Time::HiRes qw( usleep );
+use Time::HiRes qw( usleep sleep time );
 
 # Local modules
 use Cwd qw(abs_path);

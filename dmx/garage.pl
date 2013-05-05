@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-use Time::HiRes qw( usleep );
+use Time::HiRes qw( usleep sleep time );
 
 # Local modules
 use Cwd qw(abs_path);
