@@ -6,6 +6,7 @@
 	<string>Aqua</string>
 	<key>LimitLoadToHosts</key>
 	<array>
+		<string>Heady.local</string>
 		<string>heady.uberzach.com</string>
 	</array>
 	<key>RunAtLoad</key>
