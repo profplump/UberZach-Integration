@@ -12,10 +12,10 @@ use lib dirname(abs_path($0));
 use DMX;
 
 # App config
-my $DATA_DIR     = DMX::dataDir();
-my $OUTPUT_FILE  = $DATA_DIR . 'AUDIO_OUTPUT';
-my $DELAY        = 1;
-my @AUDIO_GET    = ('/Users/tv/bin/SwitchAudioSource', '-c');
+my $DATA_DIR    = DMX::dataDir();
+my $OUTPUT_FILE = $DATA_DIR . 'AUDIO_OUTPUT';
+my $DELAY       = 1;
+my @AUDIO_GET   = ('/Users/tv/bin/SwitchAudioSource', '-c');
 
 # Debug
 my $DEBUG = 0;

@@ -34,9 +34,7 @@ if (basename($0) =~ /PROJECTOR/i) {
 		'OFF'    => 'PWR OFF',
 		'STATUS' => 'PWR?'
 	);
-	%STATUS_CMDS = (
-		'STATUS' => { 'EQUAL' => 'PWR=01' },
-	);
+	%STATUS_CMDS = ('STATUS' => { 'EQUAL' => 'PWR=01' },);
 } elsif (basename($0) =~ /AMPLIFIER/i) {
 	$DEV       = 'Amplifier';
 	$PORT      = '/dev/tty.usbserial-A5006x9u';
@@ -64,10 +62,10 @@ if (basename($0) =~ /PROJECTOR/i) {
 
 	);
 	%STATUS_CMDS = (
-		'STATUS' => { 'EQUAL'    => $CMDS{'ON'} },
-		'MODE'   => { 'EVAL'     => 'if ($a =~ /STEREO/i) { $a = "STEREO" } elsif ($a =~ /MSDOLBY/i) { $a = "SURROUND" } else { $a = "UNKNOWN" }' },
-		'VOL'    => { 'EVAL'     => '$a =~ s/^MV//; if (length($a) > 2) { $a =~ s/(\d\d)(\d)/$1.$2/ }'},
-		'INPUT'  => { 'REPLACE'  => qr/^SI(.*)/},
+		'STATUS' => { 'EQUAL'   => $CMDS{'ON'} },
+		'MODE'   => { 'EVAL'    => 'if ($a =~ /STEREO/i) { $a = "STEREO" } elsif ($a =~ /MSDOLBY/i) { $a = "SURROUND" } else { $a = "UNKNOWN" }' },
+		'VOL'    => { 'EVAL'    => '$a =~ s/^MV//; if (length($a) > 2) { $a =~ s/(\d\d)(\d)/$1.$2/ }' },
+		'INPUT'  => { 'REPLACE' => qr/^SI(.*)/ },
 	);
 } elsif (basename($0) =~ /TV/i) {
 	$DEV       = 'TV';
@@ -93,9 +91,7 @@ if (basename($0) =~ /PROJECTOR/i) {
 		'VOL+'      => 'VOLM',
 		'VOL-'      => 'VOLM'
 	);
-	%STATUS_CMDS = (
-		'STATUS' => { 'EQUAL' => '1' },
-	);
+	%STATUS_CMDS = ('STATUS' => { 'EQUAL' => '1' },);
 } else {
 	die("No device specified\n");
 }
@@ -114,7 +110,6 @@ if ($ENV{'DEBUG'}) {
 	$DEBUG = $ENV{'DEBUG'};
 	print STDERR "Debug enabled\n";
 }
-
 
 # Command-line arguments
 my ($DELAY) = @ARGV;
@@ -151,7 +146,7 @@ sendQuery($port, $CMDS{'INIT'});
 
 # State
 my $lastStatus = 0;
-my %STATUS = ();
+my %STATUS     = ();
 foreach my $cmd (keys(%STATUS_CMDS)) {
 	my %tmp = ('status' => 0, 'last' => 0);
 	$tmp{'path'} = $DATA_DIR . uc($DEV);

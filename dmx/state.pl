@@ -274,7 +274,7 @@ while (1) {
 		foreach my $file (values(%files)) {
 			push(@statTime, $file->{'name'} . ':' . $file->{'status'} . ':' . $file->{'update'});
 		}
-		$status      = ' (' . join(', ', @statTime) . ')';
+		$status = ' (' . join(', ', @statTime) . ')';
 	}
 
 	# Clear EXISTS_CLEAR files immediately (but after we append their status)

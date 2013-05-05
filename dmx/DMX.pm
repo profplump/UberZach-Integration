@@ -117,11 +117,11 @@ sub parseState($$$) {
 	my $exists_text = undef();
 	if (!defined($exists)) {
 		my %tmp = ();
-		$exists  = \%tmp;
+		$exists = \%tmp;
 	}
 	if (!defined($mtime)) {
 		my %tmp = ();
-		$mtime  = \%tmp;
+		$mtime = \%tmp;
 	}
 
 	# Parse the string
