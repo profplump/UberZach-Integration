@@ -52,6 +52,7 @@ if (basename($0) =~ /PROJECTOR/i) {
 		'VOL-'     => 'MVDOWN',
 		'MUTE'     => 'MUON',
 		'UNMUTE'   => 'MUOFF',
+		'INPUT'    => 'SI?',
 		'TV'       => 'SITV',
 		'DVD'      => 'SIDVD',
 		'MODE'     => 'MS?',
@@ -62,9 +63,10 @@ if (basename($0) =~ /PROJECTOR/i) {
 
 	);
 	%STATUS_CMDS = (
-		'STATUS' => { 'EQUAL' => $CMDS{'ON'} },
-		'MODE'   => { 'EVAL'  => 'if ($a =~ /STEREO/i) { $a = "STEREO" } elsif ($a =~ /MSDOLBY/i) { $a = "SURROUND" } else { $a = "UNKNOWN" }' },
-		'VOL'    => { 'EVAL'  => '$a =~ s/^MV//; if (length($a) > 2) { $a =~ s/(\d\d)(\d)/$1.$2/ }'},
+		'STATUS' => { 'EQUAL'    => $CMDS{'ON'} },
+		'MODE'   => { 'EVAL'     => 'if ($a =~ /STEREO/i) { $a = "STEREO" } elsif ($a =~ /MSDOLBY/i) { $a = "SURROUND" } else { $a = "UNKNOWN" }' },
+		'VOL'    => { 'EVAL'     => '$a =~ s/^MV//; if (length($a) > 2) { $a =~ s/(\d\d)(\d)/$1.$2/ }'},
+		'INPUT'  => { 'REPLACE'  => qr/^SI(.*)/},
 	);
 } elsif (basename($0) =~ /TV/i) {
 	$DEV       = 'TV';
