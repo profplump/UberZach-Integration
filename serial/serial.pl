@@ -6,6 +6,13 @@ use File::Temp qw( tempfile );
 use IO::Select;
 use IO::Socket::UNIX;
 use Device::SerialPort;
+use Time::HiRes qw( usleep sleep time );
+
+# Local modules
+use Cwd qw(abs_path);
+use File::Basename qw(dirname);
+use lib dirname(abs_path($0));
+use DMX;
 
 # Prototypes
 sub sendQuery($$);
@@ -13,7 +20,7 @@ sub clearBuffer($);
 sub collectUntil($$);
 
 # Device parameters
-my ($DEV, $PORT, $BLUETOOTH, $CRLF, $DELIMITER, %CMDS, $STATUS_ON);
+my ($DEV, $PORT, $BLUETOOTH, $CRLF, $DELIMITER, %CMDS, %STATUS_CMDS);
 if (basename($0) =~ /PROJECTOR/i) {
 	$DEV       = 'Projector';
 	$PORT      = '/dev/tty.usbserial-A5006xbj';
@@ -26,7 +33,9 @@ if (basename($0) =~ /PROJECTOR/i) {
 		'OFF'    => 'PWR OFF',
 		'STATUS' => 'PWR?'
 	);
-	$STATUS_ON = 'PWR=01';
+	%STATUS_CMDS = (
+		'STATUS' => { 'EQUAL' => 'PWR=01' },
+	);
 } elsif (basename($0) =~ /AMPLIFIER/i) {
 	$DEV       = 'Amplifier';
 	$PORT      = '/dev/tty.usbserial-A5006x9u';
@@ -38,19 +47,25 @@ if (basename($0) =~ /PROJECTOR/i) {
 		'ON'       => 'PWON',
 		'OFF'      => 'PWSTANDBY',
 		'STATUS'   => 'PW?',
+		'VOL'      => 'MV?',
 		'VOL+'     => 'MVUP',
 		'VOL-'     => 'MVDOWN',
 		'MUTE'     => 'MUON',
 		'UNMUTE'   => 'MUOFF',
 		'TV'       => 'SITV',
 		'DVD'      => 'SIDVD',
+		'MODE'     => 'MS?',
 		'SURROUND' => 'MSDOLBY DIGITAL',
 		'STEREO'   => 'MS7CH STEREO',
 		'TV'       => 'SITV',
 		'INPUT'    => 'SI?',
 
 	);
-	$STATUS_ON = 'PWON';
+	%STATUS_CMDS = (
+		'STATUS' => { 'EQUAL' => $CMDS{'ON'} },
+		'MODE'   => { 'EVAL'  => 'if ($a =~ /STEREO/i) { $a = "STEREO" } elsif ($a =~ /MSDOLBY/i) { $a = "SURROUND" } else { $a = "UNKNOWN" }' },
+		'VOL'    => { 'EVAL'  => '$a =~ s/^MV//; if (length($a) > 2) { $a =~ s/(\d\d)(\d)/$1.$2/ }'},
+	);
 } elsif (basename($0) =~ /TV/i) {
 	$DEV       = 'TV';
 	$PORT      = '/dev/tty.' . $DEV . '-DevB';
@@ -75,26 +90,25 @@ if (basename($0) =~ /PROJECTOR/i) {
 		'VOL+'      => 'VOLM',
 		'VOL-'      => 'VOLM'
 	);
-	$STATUS_ON = '1';
+	%STATUS_CMDS = (
+		'STATUS' => { 'EQUAL' => '1' },
+	);
 } else {
 	die("No device specified\n");
 }
 
 # App config
-my $DELAY_STATUS    = 5;
+my $DATA_DIR        = DMX::dataDir();
+my $CMD_FILE        = $DATA_DIR . uc($DEV) . '.socket';
+my $BT_CHECK        = $ENV{'HOME'} . '/bin/btcheck';
+my $DELAY_STATUS    = 1;
 my $BYTE_TIMEOUT    = 50;
 my $SILENCE_TIMEOUT = $BYTE_TIMEOUT * 10;
-my $MAX_CMD_LEN     = 1024;
-my $BT_CHECK        = $ENV{'HOME'} . '/bin/btcheck';
-my $TEMP_DIR        = `getconf DARWIN_USER_TEMP_DIR`;
-chomp($TEMP_DIR);
-my $DATA_DIR = $TEMP_DIR . 'plexMonitor/';
-my $CMD_FILE = $DATA_DIR . uc($DEV) . '.socket';
 
 # Debug
 my $DEBUG = 0;
 if ($ENV{'DEBUG'}) {
-	$DEBUG = 1;
+	$DEBUG = $ENV{'DEBUG'};
 	print STDERR "Debug enabled\n";
 }
 
@@ -106,8 +120,10 @@ if (!$DELAY) {
 }
 
 # Sanity check
-if (!-r $PORT || !-d $DATA_DIR) {
-	die("Bad config\n");
+if (!-r $PORT) {
+	die('Serial port not available: ' . $PORT . "\n");
+} elsif (!-d $DATA_DIR) {
+	die('Data directory not available: ' . $DATA_DIR . "\n");
 }
 
 # Wait for the serial port to become available
@@ -120,18 +136,7 @@ if ($BLUETOOTH) {
 }
 
 # Socket init
-if (-e $CMD_FILE) {
-	unlink($CMD_FILE);
-}
-my $sock = IO::Socket::UNIX->new(
-	'Local' => $CMD_FILE,
-	'Type'  => SOCK_DGRAM
-) or die('Unable to open socket: ' . $CMD_FILE . ": ${@}\n");
-if (!-S $CMD_FILE) {
-	die('Failed to create socket: ' . $CMD_FILE . "\n");
-}
-my $select = IO::Select->new($sock)
-  or die('Unable to select socket: ' . $CMD_FILE . ": ${!}\n");
+my $select = DMX::selectSock($CMD_FILE);
 
 # Port init
 my $port = new Device::SerialPort($PORT)
@@ -141,21 +146,29 @@ $port->read_const_time($BYTE_TIMEOUT);
 # Init (clear any previous state)
 sendQuery($port, $CMDS{'INIT'});
 
-# Track the power state
-# Check for new commands
-my $power      = -1;
-my $powerLast  = $power;
+# State
 my $lastStatus = 0;
+my %STATUS = ();
+foreach my $cmd (keys(%STATUS_CMDS)) {
+	my %tmp = ('status' => 0, 'last' => 0);
+	$tmp{'path'} = $DATA_DIR . uc($DEV);
+	if ($cmd ne 'STATUS') {
+		$tmp{'path'} .= '_' . uc($cmd);
+	}
+
+	$STATUS{$cmd} = \%tmp;
+}
+
+# Loop forever
 while (1) {
 
 	# Calculate our next timeout
 	# Hold on select() but not more than $DELAY_STATUS after our last update
-	# Plus 1 because we aren't using hi-res time
-	my $timeout = ($lastStatus + $DELAY_STATUS + 1) - time();
-	if ($timeout < 1) {
+	my $timeout = ($lastStatus + $DELAY_STATUS) - time();
+	if ($timeout < 0) {
 		$timeout = 0;
 	}
-	if ($DEBUG) {
+	if ($DEBUG > 1) {
 		print STDERR 'Waiting for commands with timeout: ' . $timeout . "\n";
 	}
 
@@ -163,69 +176,109 @@ while (1) {
 	my @ready_clients = $select->can_read($timeout);
 	foreach my $fh (@ready_clients) {
 
+		# Ensure we won't block on recv()
+		$fh->blocking(0);
+
 		# Grab the inbound text
-		my $text = undef();
-		$fh->recv($text, $MAX_CMD_LEN);
-		$text =~ s/^\s+//;
-		$text =~ s/\s+$//;
-		if ($DEBUG) {
-			print STDERR 'Got command: ' . $text . "\n";
-		}
+		while (defined($fh->recv(my $text, DMX::maxCmdLen()))) {
 
-		# Only accept valid commands
-		my $cmd = undef();
-		foreach my $name (keys(%CMDS)) {
-			if ($name eq $text) {
-				$cmd = $name;
-				last;
-			}
-		}
-
-		# Send command to serial device
-		if ($cmd) {
+			# Clean the input data
+			$text =~ s/^\s+//;
+			$text =~ s/\s+$//;
 			if ($DEBUG) {
-				print STDERR 'Sending command: ' . $cmd . "\n";
+				print STDERR 'Got command: ' . $text . "\n";
 			}
-			my $result = sendQuery($port, $CMDS{$cmd});
-			if ($DEBUG && $result) {
-				print STDERR "\tGot result: " . $result . "\n";
+
+			# Only accept valid commands
+			my $cmd = undef();
+			foreach my $name (keys(%CMDS)) {
+				if ($name eq $text) {
+					$cmd = $name;
+					last;
+				}
+			}
+
+			# Send commands to serial device
+			if ($cmd) {
+				if ($DEBUG) {
+					print STDERR 'Sending command: ' . $cmd . "\n";
+				}
+				my $result = sendQuery($port, $CMDS{$cmd});
+				if ($DEBUG && $result) {
+					print STDERR "\tGot result: " . $result . "\n";
+				}
 			}
 		}
 	}
 
-	# Check the power state, but not too frequently
+	# Read periodic data, but not too frequently
 	if (time() > $lastStatus + $DELAY_STATUS) {
-		$lastStatus = time();
-		$powerLast  = $power;
-		$power      = 0;
-		my $result = sendQuery($port, $CMDS{'STATUS'});
-		if ($result && $result eq $STATUS_ON) {
-			$power = 1;
-		}
 
-		# If something has changed, save the state to disk
-		if ($powerLast != $power) {
-			if ($DEBUG) {
-				print STDERR 'New ' . uc($DEV) . ' power state: ' . $power . "\n";
+		# Record the last status update time
+		$lastStatus = time();
+
+		foreach my $cmd (keys(%STATUS_CMDS)) {
+
+			# Save the previous status
+			$STATUS{$cmd}->{'last'}   = $STATUS{$cmd}->{'status'};
+			$STATUS{$cmd}->{'status'} = 0;
+
+			# Less typing
+			my $scmd = $STATUS_CMDS{$cmd};
+
+			# Query
+			my $result = sendQuery($port, $CMDS{$cmd});
+
+			# Process the result as requested
+			if ($result) {
+				if ($scmd->{'EQUAL'}) {
+					if ($result eq $scmd->{'EQUAL'}) {
+						$STATUS{$cmd}->{'status'} = 1;
+					}
+				} elsif ($scmd->{'MATCH'}) {
+					if ($result =~ $scmd->{'MATCH'}) {
+						$STATUS{$cmd}->{'status'} = 1;
+					}
+				} elsif ($scmd->{'REPLACE'}) {
+					$STATUS{$cmd}->{'status'} = $result;
+					$STATUS{$cmd}->{'status'} =~ s/$scmd->{'REPLACE'}/$1/;
+				} elsif ($scmd->{'EVAL'}) {
+					my $a = $result;
+					eval($scmd->{'EVAL'});
+					$STATUS{$cmd}->{'status'} = $a;
+				} else {
+					$STATUS{$cmd}->{'status'} = $result;
+				}
 			}
-			my ($fh, $tmp) = tempfile($DATA_DIR . uc($DEV) . '.XXXXXXXX', 'UNLINK' => 0);
-			print $fh $power . "\n";
-			close($fh);
-			rename($tmp, $DATA_DIR . uc($DEV));
+
+			# Ensure the data is clean
+			$STATUS{$cmd}->{'status'} =~ s/[^\w\.\-]/_/g;
+
+			# If something has changed, save the state to disk
+			if ($STATUS{$cmd}->{'status'} ne $STATUS{$cmd}->{'last'}) {
+				if ($DEBUG) {
+					print STDERR 'New ' . uc($DEV) . ' status: ' . $cmd . ' => ' . $STATUS{$cmd}->{'status'} . "\n";
+				}
+				my ($fh, $tmp) = tempfile($STATUS{$cmd}->{'path'} . '.XXXXXXXX', 'UNLINK' => 0);
+				print $fh $STATUS{$cmd}->{'status'} . "\n";
+				close($fh);
+				rename($tmp, $STATUS{$cmd}->{'path'});
+			}
 		}
 	}
 }
 
 # Cleanup
 undef($select);
-close($sock);
-undef($sock);
 $port->close();
 undef($port);
 exit(0);
 
 sub sendQuery($$) {
 	my ($port, $query) = @_;
+
+	# Enforce an inter-command delay
+	usleep($SILENCE_TIMEOUT);
 
 	# Read until the queue is clear (i.e. no data available)
 	# Since we don't have flow control this always causes one read timeout
@@ -269,7 +322,7 @@ sub collectUntil($$) {
 			$count = 0;
 			$string .= $byte;
 
-			if ($DEBUG) {
+			if ($DEBUG > 1) {
 				print STDERR "\tRead: " . $byte . "\n";
 			}
 
