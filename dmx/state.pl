@@ -178,14 +178,15 @@ while (1) {
 
 		# Grab the state from STATUS files
 		if ($file->{'type'} =~ /^STATUS/) {
-			my $text = undef();
+			my $text = '';
 			{
-				my $fh;
-				open($fh, $file->{'path'})
-				  or die('Unable to open ' . $file->{'path'} . "\n");
-				local $/;
-				$text = <$fh>;
-				close($fh);
+				if (!open(my $fh, $file->{'path'})) {
+					warn('Unable to open ' . $file->{'path'} . "\n");
+				} else {
+					local $/;
+					$text = <$fh>;
+					close($fh);
+				}
 			}
 
 			if ($file->{'type'} eq 'STATUS_PLAYING') {
