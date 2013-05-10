@@ -7,9 +7,9 @@
 	<key>LimitLoadToHosts</key>
 	<array>
 		<string>Beddy.local</string>
-		<string>Heady.local</string>
+		<string>Loki.local</string>
 		<string>beddy.uberzach.com</string>
-		<string>heady.uberzach.com</string>
+		<string>loki.uberzach.com</string>
 	</array>
 	<key>RunAtLoad</key>
 	<true/>
