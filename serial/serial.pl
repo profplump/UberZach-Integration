@@ -63,7 +63,7 @@ if (basename($0) =~ /PROJECTOR/i) {
 	);
 	%STATUS_CMDS = (
 		'STATUS' => { 'EQUAL'   => $CMDS{'ON'} },
-		'MODE'   => { 'EVAL'    => 'if ($a =~ /STEREO/i) { $a = "STEREO" } elsif ($a =~ /MSDOLBY/i) { $a = "SURROUND" } else { $a = "UNKNOWN" }' },
+		'MODE'   => { 'EVAL'    => 'if ($a =~ /STEREO/i) { $a = "STEREO" } elsif ($a =~ /MS(?:DOLBY|DTS)/i) { $a = "SURROUND" } else { $a = "UNKNOWN" }' },
 		'VOL'    => { 'EVAL'    => '$a =~ s/^MV//; if (length($a) > 2) { $a =~ s/(\d\d)(\d)/$1.$2/ }' },
 		'INPUT'  => { 'REPLACE' => qr/^SI(.*)/ },
 	);
