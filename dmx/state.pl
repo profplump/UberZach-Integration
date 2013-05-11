@@ -29,10 +29,11 @@ my %MON_FILES     = (
 	'FAN_CMD'         => 'EXISTS_ON',
 	'LIGHTS'          => 'EXISTS_ON',
 	'STEREO_CMD'      => 'EXISTS_ON',
+	'AUDIO_AMP'       => 'EXISTS_ON',
 	'AMPLIFIER_VOL'   => 'STATUS_VALUE',
 	'AMPLIFIER_MODE'  => 'STATUS_VALUE',
 	'AMPLIFIER_INPUT' => 'STATUS_VALUE',
-	'AUDIO_OUTPUT'    => 'STATUS_VALUE',
+	'AUDIO'           => 'STATUS_VALUE',
 
 	'/mnt/media/DMX/cmd/GARAGE_CMD' => 'EXISTS_CLEAR',
 );

@@ -9,12 +9,6 @@ use File::Basename qw(dirname);
 use lib dirname(abs_path($0));
 use DMX;
 
-# Config
-my $USB_DEV     = 'USB Audio CODEC ';
-my $AMP_DEV     = 'Built-in Output';
-my $DEFAULT_DEV = $USB_DEV;
-my $RAVE_DEV    = $AMP_DEV;
-
 # App config
 my $DATA_DIR     = DMX::dataDir();
 my $OUTPUT_FILE  = $DATA_DIR . 'AMPLIFIER_POWER';
@@ -23,8 +17,6 @@ my $AMP_SOCK     = $DATA_DIR . 'AMPLIFIER.socket';
 my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
 my $DELAY        = $PULL_TIMEOUT / 2;
-my $START_DELAY  = 3.5;
-my @AUDIO_SET    = ('/Users/tv/bin/SwitchAudioSource', '-s');
 
 # Debug
 my $DEBUG = 0;
@@ -41,7 +33,6 @@ my $amp = DMX::clientSock($AMP_SOCK);
 my $state     = 'OFF';
 my $mode      = 'SURROUND';
 my $input     = 'TV';
-my $output    = $DEFAULT_DEV;
 my $stateLast = $state;
 my %exists    = ();
 my $pushLast  = 0;
@@ -83,13 +74,6 @@ while (1) {
 		$mode = 'STEREO';
 	} else {
 		$mode = 'SURROUND';
-	}
-
-	# Calculate the output device
-	if ($state eq 'RAVE') {
-		$output = $RAVE_DEV;
-	} else {
-		$output = $DEFAULT_DEV;
 	}
 
 	# Force updates on a periodic basis
@@ -136,14 +120,6 @@ while (1) {
 		}
 		$amp->send($input)
 		  or die('Unable to write command to amp socket: ' . $input . ": ${!}\n");
-	}
-
-	# Update the output device as needed
-	if ($exists{'AUDIO_OUTPUT'} ne $output) {
-		if ($DEBUG) {
-			print STDERR 'Setting output to: ' . $output . "\n";
-		}
-		system(@AUDIO_SET, $output);
 	}
 
 	# Update the amp

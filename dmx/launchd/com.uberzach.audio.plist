@@ -12,7 +12,7 @@
 	<key>RunAtLoad</key>
 	<true/>
 	<key>Label</key>
-	<string>com.uberzach.audioOutput</string>
+	<string>com.uberzach.audio</string>
 	<key>KeepAlive</key>
 	<dict>
 		<key>OtherJobEnabled</key>
@@ -25,7 +25,7 @@
 	</dict>
 	<key>ProgramArguments</key>
 	<array>
-		<string>/Users/tv/bin/video/dmx/audioOutput.pl</string>
+		<string>/Users/tv/bin/video/dmx/audio.pl</string>
 	</array>
 	<!--
 		<key>EnvironmentVariables</key>
@@ -34,9 +34,9 @@
 			<string>1</string>
 		</dict>
 		<key>StandardOutPath</key>
-		<string>/Users/tv/com.uberzach.audioOutput_log.txt</string>
+		<string>/Users/tv/com.uberzach.audio_log.txt</string>
 		<key>StandardErrorPath</key>
-		<string>/Users/tv/com.uberzach.audioOutput_errlog.txt</string>
+		<string>/Users/tv/com.uberzach.audio_errlog.txt</string>
 	-->
 </dict>
 </plist>
