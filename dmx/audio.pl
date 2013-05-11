@@ -39,7 +39,7 @@ DMX::stateSubscribe($STATE_SOCK);
 
 # State
 my $state      = 'OFF';
-my $device     = $DEFAULT_DEV;
+my $device     = '';
 my $deviceLast = '';
 my $cmdDevice  = $device;
 my %exists     = ();
