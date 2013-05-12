@@ -6,7 +6,8 @@
 	<string>tv</string>
 	<key>LimitLoadToHosts</key>
 	<array>
-		<string>heady.uberzach.com</string>
+		<string>loki.uberzach.com</string>
+		<string>Loki.local</string>
 	</array>
 	<key>RunAtLoad</key>
 	<true/>

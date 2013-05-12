@@ -17,7 +17,7 @@
 	<dict>
 		<key>PathState</key>
 		<dict>
-			<key>/dev/tty.Amplifier-DevB</key>
+			<key>/dev/tty.usbserial-A5006x9u</key>
 			<true/>
 		</dict>
 	</dict>

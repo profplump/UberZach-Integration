@@ -17,7 +17,7 @@
 	<dict>
 		<key>PathState</key>
 		<dict>
-			<key>/dev/tty.Projector-DevB</key>
+			<key>/dev/tty.usbserial-A5006xbj</key>
 			<true/>
 		</dict>
 	</dict>
