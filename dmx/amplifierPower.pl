@@ -104,8 +104,8 @@ while (1) {
 		}
 	}
 
-	# Set the channel mode as needed
-	if ($exists{'AMPLIFIER_MODE'} ne $mode) {
+	# Set the channel mode as needed, but do not change when the mode is "UNKNOWN"
+	if ($exists{'AMPLIFIER_MODE'} ne $mode && $exists{'AMPLIFIER_MODE'} ne 'UNKNOWN') {
 		if ($DEBUG) {
 			print STDERR 'Setting mode to: ' . $mode . "\n";
 		}
