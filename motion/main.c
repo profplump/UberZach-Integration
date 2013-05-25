@@ -48,7 +48,7 @@ int main(int argc, const char * argv[])
 		for (i = 0; i < NUM_DEVICES; i++) {
 			if (readDev(device[i])) {
 				motion = 1;
-				i = NUM_DEVICES;
+				break;
 			}
 		}
 
@@ -58,10 +58,8 @@ int main(int argc, const char * argv[])
 			printf("Motion detected\n");
 			#endif
 			if (utimes(outfile, NULL) != 0) {
-				if (errno == ENOENT) {
-				} else {
-					fprintf(stderr, "Error touching output file (%s): %s\n", strerror(errno), outfile);
-				}
+				fprintf(stderr, "Error touching output file (%s): %s\n", strerror(errno), outfile);
+				exit(2);
 			}
 		} else {
 			#ifdef DEBUG
