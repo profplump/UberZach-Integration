@@ -17,6 +17,7 @@ sub mtime($);
 
 # User config
 my $STATE_TIMEOUT = 180;
+my $MEDIA_PATH    = `~/bin/video/mediaPath`;
 my %MON_FILES     = (
 	'GUI'             => 'MTIME',
 	'MOTION'          => 'MTIME',
@@ -35,7 +36,7 @@ my %MON_FILES     = (
 	'AMPLIFIER_INPUT' => 'STATUS_VALUE',
 	'AUDIO'           => 'STATUS_VALUE',
 
-	'/mnt/media/DMX/cmd/GARAGE_CMD' => 'EXISTS_CLEAR',
+	$MEDIA_PATH . '/DMX/cmd/GARAGE_CMD' => 'EXISTS_CLEAR',
 );
 
 # App config

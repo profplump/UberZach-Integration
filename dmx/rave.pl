@@ -17,10 +17,11 @@ sub rave_init($$);
 sub lsr_loop();
 
 # User config
-my @CHANNELS = (1, 2, 4, 5, 6, 7, 8, 9, 13, 14, 15);
-my %EFFECTS = (
+my $MEDIA_PATH = `~/bin/video/mediaPath`;
+my @CHANNELS   = (1, 2, 4, 5, 6, 7, 8, 9, 13, 14, 15);
+my %EFFECTS    = (
 	'RED_ALERT' => { 'cmd' => \&red_alert },
-	'LSR'       => { 'cmd' => \&rave_init, 'file' => '/mnt/media/DMX/Rave.mp3', 'next' => \&lsr_loop },
+	'LSR'       => { 'cmd' => \&rave_init, 'file' => $MEDIA_PATH . '/DMX/Rave.mp3', 'next' => \&lsr_loop },
 );
 
 # App config
@@ -172,7 +173,7 @@ sub red_alert($$) {
 		print STDERR "red_alert()\n";
 	}
 
-	my $file  = '/mnt/media/DMX/Red Alert.mp3';
+	my $file  = $MEDIA_PATH . '/DMX/Red Alert.mp3';
 	my @sound = ('afplay', $file);
 	my $ramp  = 450;
 	my $sleep = $ramp;
@@ -222,7 +223,7 @@ sub rave_init($$) {
 
 	# Config
 	my $SND_APP   = 'afplay';
-	my $SILENCE   = '/mnt/media/DMX/Silence.wav';
+	my $SILENCE   = $MEDIA_PATH . '/DMX/Silence.wav';
 	my $SIL_DELAY = 1.3;
 	my $AMP_SHORT = 5;
 	my $AMP_LONG  = $AMP_SHORT + 5;
