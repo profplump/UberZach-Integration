@@ -3,7 +3,9 @@ use strict;
 use warnings;
 use POSIX;
 use File::Touch;
+use File::Basename;
 use Time::HiRes qw( usleep sleep time );
+use IPC::System::Simple qw( system capture );
 
 # Local modules
 use Cwd qw(abs_path);
@@ -11,18 +13,26 @@ use File::Basename qw(dirname);
 use lib dirname(abs_path($0));
 use DMX;
 
-# Prototypes
+# Effect Prototypes
 sub red_alert($$);
 sub rave_init($$);
 sub lsr_loop();
 
 # User config
 my $MEDIA_PATH = `~/bin/video/mediaPath`;
+my $SILENCE    = $MEDIA_PATH . '/DMX/Silence.wav';
 my @CHANNELS   = (1, 2, 4, 5, 6, 7, 8, 9, 13, 14, 15);
 my %EFFECTS    = (
 	'RED_ALERT' => { 'cmd' => \&red_alert },
 	'LSR'       => { 'cmd' => \&rave_init, 'file' => $MEDIA_PATH . '/DMX/Rave.mp3', 'next' => \&lsr_loop },
 );
+
+# Utility prototypes
+sub loadAudio($);
+sub playAudio($);
+sub closeAudio($);
+sub stopAudio();
+sub playOnce($);
 
 # App config
 my $DATA_DIR     = DMX::dataDir();
@@ -99,6 +109,7 @@ while (1) {
 			if ($DEBUG) {
 				print STDERR "Ending background processing\n";
 			}
+			stopAudio();
 			kill(SIGTERM, $PID);
 		}
 
@@ -165,6 +176,95 @@ while (1) {
 }
 
 # ======================================
+# Utility routines
+# ======================================
+sub runApplescript($) {
+	my ($script) = @_;
+	if ($DEBUG) {
+		print STDERR 'Running AppleScript: ' . $script . "\n";
+	}
+
+	my $retval = capture('osascript', '-e', $script);
+	if ($DEBUG) {
+		print STDERR "\tAppleScript result: " . $retval . "\n";
+	}
+
+	return $retval;
+}
+
+sub loadAudio($) {
+	my ($file) = @_;
+	if ($DEBUG) {
+		print STDERR 'Opening QT file: ' . $file . "\n";
+	}
+
+	# Cleanup, to ensure "document 1" is what we want
+	stopAudio();
+
+	# Open with open, requesting QT as the app
+	system('open', '-a', 'QuickTime Player', $file);
+
+	# Get the document name
+	my @cmd = ('tell application "QuickTime Player"');
+	push(@cmd, 'repeat while (count items of every document) < 1');
+	push(@cmd, 'delay 0.05');
+	push(@cmd, 'end repeat');
+	push(@cmd, 'get document 1');
+	push(@cmd, 'end tell');
+	my $doc = runApplescript(join("\n", @cmd));
+
+	# Put Plex back in front
+	runApplescript('tell application "Plex" to activate');
+
+	# Clean up and return the document name for later use
+	$doc =~ s/^\s*document //;
+	$doc =~ s/\s+$//;
+	$doc =~ s/\"/\\\"/g;
+	$doc = '"' . $doc . '"';
+	return $doc;
+}
+
+sub playAudio($) {
+	my ($doc) = @_;
+	if ($DEBUG) {
+		print STDERR 'Playing QT document: ' . $doc . "\n";
+	}
+
+	my @cmd = ('tell application "QuickTime Player"');
+	push(@cmd, 'play document ' . $doc);
+	push(@cmd, 'repeat while playing of document ' . $doc . ' = true');
+	push(@cmd, 'delay 0.05');
+	push(@cmd, 'end repeat');
+	push(@cmd, 'end tell');
+
+	runApplescript(join("\n", @cmd));
+}
+
+sub closeAudio($) {
+	my ($doc) = @_;
+	if ($DEBUG) {
+		print STDERR 'Closing QT document: ' . $doc . "\n";
+	}
+	runApplescript('tell application "QuickTime Player" to close document ' . $doc);
+	runApplescript('tell application "Plex" to activate');
+}
+
+sub stopAudio() {
+	if ($DEBUG) {
+		print STDERR "Stopping all QT audio\n";
+	}
+	runApplescript('tell application "QuickTime Player" to close every document');
+	runApplescript('tell application "Plex" to activate');
+}
+
+sub playOnce($) {
+	my ($file) = @_;
+	my $doc = loadAudio($file);
+	playAudio($doc);
+	closeAudio($doc);
+}
+
+# ======================================
 # Effects routines
 # ======================================
 sub red_alert($$) {
@@ -174,12 +274,11 @@ sub red_alert($$) {
 	}
 
 	my $file  = $MEDIA_PATH . '/DMX/Red Alert.mp3';
-	my @sound = ('afplay', $file);
 	my $ramp  = 450;
 	my $sleep = $ramp;
 
-	# Stat the file to bring the network up-to-date
-	stat($file);
+	# Pre-load the audio file for better timing
+	my $audio = loadAudio($file);
 
 	# Bring the B & G channels down to 0
 	my @other = ();
@@ -189,24 +288,21 @@ sub red_alert($$) {
 		DMX::dim($data);
 	}
 
+	# Set the high/low values for the ramp
 	my %high = ('channel' => 14, 'value' => 255, 'time' => $ramp);
 	my %low = %high;
 	$low{'value'} = 64;
 
-	DMX::dim(\%high);
-	system(@sound);
-	DMX::dim(\%low);
-	usleep($sleep * 1000);
+	# Three blasts
+	for (my $i = 0 ; $i < 3 ; $i++) {
+		DMX::dim(\%high);
+		playAudio($audio);
+		DMX::dim(\%low);
+		usleep($sleep * 1000);
+	}
 
-	DMX::dim(\%high);
-	system(@sound);
-	DMX::dim(\%low);
-	usleep($sleep * 1000);
-
-	DMX::dim(\%high);
-	system(@sound);
-	DMX::dim(\%low);
-	usleep($sleep * 1000);
+	# Close the audio file
+	closeAudio($audio);
 
 	# Follow through on the loop
 	return 0;
@@ -222,15 +318,9 @@ sub rave_init($$) {
 	}
 
 	# Config
-	my $SND_APP   = 'afplay';
-	my $SILENCE   = $MEDIA_PATH . '/DMX/Silence.wav';
 	my $SIL_DELAY = 1.3;
 	my $AMP_SHORT = 5;
 	my $AMP_LONG  = $AMP_SHORT + 5;
-
-	# Stat the file to bring the network up-to-date
-	stat($SILENCE);
-	stat($effect->{'file'});
 
 	# Initiate the RAVE state
 	touch($RAVE_FILE);
@@ -273,15 +363,17 @@ sub rave_init($$) {
 	sleep($amp_wait - $SIL_DELAY);
 
 	# Play a short burst of silence to get all the audio in-sync
-	my @sound = ($SND_APP, $SILENCE);
-	system(@sound);
+	playOnce($SILENCE);
+
+	# Pre-load the audio file for better timing
+	my $audio = loadAudio($effect->{'file'});
 
 	# Play the sound in a child (i.e. in the background)
 	$PID = fork();
 	if (defined($PID) && $PID == 0) {
-		my @sound = ($SND_APP, $effect->{'file'});
-		exec(@sound)
-		  or die('Unable to play sound: ' . join(' ', @sound) . "\n");
+		playAudio($audio);
+		closeAudio($audio);
+		exit(0);
 	}
 
 	# Record our start time
