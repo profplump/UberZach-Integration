@@ -62,9 +62,9 @@ if (basename($0) =~ /PROJECTOR/i) {
 
 	);
 	%STATUS_CMDS = (
-		'STATUS' => { 'EQUAL'   => $CMDS{'ON'} },
-		'MODE'   => { 'EVAL'    => 'if ($a =~ /STEREO/i) { $a = "STEREO" } elsif ($a =~ /MS(?:DOLBY|DTS)/i) { $a = "SURROUND" } else { $a = "UNKNOWN" }' },
-		'VOL'    => { 'EVAL'    => '$a =~ s/^MV//; if (length($a) > 2) { $a =~ s/(\d\d)(\d)/$1.$2/ }' },
+		'STATUS' => { 'MATCH'   => [ qr/^PW/, qr/$CMDS{'ON'}/ ] },
+		'MODE'   => { 'EVAL'    => [ qr/^MS/, 'if ($a =~ /STEREO/i) { $a = "STEREO" } elsif ($a =~ /MS(?:DOLBY|DTS)/i) { $a = "SURROUND" }' ] },
+		'VOL'    => { 'EVAL'    => [ qr/^MV/, '$a =~ s/^MV//; if (length($a) > 2) { $a =~ s/(\d\d)(\d)/$1.$2/ }' ] },
 		'INPUT'  => { 'REPLACE' => qr/^SI(.*)/ },
 	);
 } elsif (basename($0) =~ /TV/i) {
@@ -218,34 +218,40 @@ while (1) {
 		foreach my $cmd (keys(%STATUS_CMDS)) {
 
 			# Save the previous status
-			$STATUS{$cmd}->{'last'}   = $STATUS{$cmd}->{'status'};
-			$STATUS{$cmd}->{'status'} = 0;
+			$STATUS{$cmd}->{'last'} = $STATUS{$cmd}->{'status'};
 
 			# Less typing
 			my $scmd = $STATUS_CMDS{$cmd};
 
 			# Query
+			if (!defined($CMDS{$cmd})) {
+				die('No such command: ' . $cmd . "\n");
+			}
 			my $result = sendQuery($port, $CMDS{$cmd});
 
 			# Process the result as requested
 			if ($result) {
-				if ($scmd->{'EQUAL'}) {
-					if ($result eq $scmd->{'EQUAL'}) {
-						$STATUS{$cmd}->{'status'} = 1;
-					}
-				} elsif ($scmd->{'MATCH'}) {
-					if ($result =~ $scmd->{'MATCH'}) {
-						$STATUS{$cmd}->{'status'} = 1;
+				if ($scmd->{'MATCH'}) {
+					if ($result =~ $scmd->{'MATCH'}[0]) {
+						if ($result =~ $scmd->{'MATCH'}[1]) {
+							$STATUS{$cmd}->{'status'} = 1;
+						} else {
+							$STATUS{$cmd}->{'status'} = 0;
+						}
 					}
 				} elsif ($scmd->{'REPLACE'}) {
-					$STATUS{$cmd}->{'status'} = $result;
-					$STATUS{$cmd}->{'status'} =~ s/$scmd->{'REPLACE'}/$1/;
+					if ($result =~ $scmd->{'REPLACE'}) {
+						$STATUS{$cmd}->{'status'} = $result;
+						$STATUS{$cmd}->{'status'} =~ s/$scmd->{'REPLACE'}/$1/;
+					}
 				} elsif ($scmd->{'EVAL'}) {
 					my $a = $result;
-					eval($scmd->{'EVAL'});
-					$STATUS{$cmd}->{'status'} = $a;
+					if ($result =~ $scmd->{'EVAL'}[0]) {
+						eval($scmd->{'EVAL'}[1]);
+						$STATUS{$cmd}->{'status'} = $a;
+					}
 				} else {
-					$STATUS{$cmd}->{'status'} = $result;
+					die('Invalid status match type "' . (keys(%{$scmd}))[0] . '" in command: ' . $cmd . "\n");
 				}
 			}
 
