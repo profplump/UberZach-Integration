@@ -205,7 +205,10 @@ sub loadAudio($) {
 	system('open', '-a', 'QuickTime Player', $file);
 
 	# Get the document name
-	my @cmd = ('tell application "QuickTime Player"');
+	my @cmd = ('repeat while application "QuickTime Player" is not running');
+	push(@cmd, 'delay 0.05');
+	push(@cmd, 'end repeat');
+	push(@cmd, 'tell application "QuickTime Player"');
 	push(@cmd, 'repeat while (count items of every document) < 1');
 	push(@cmd, 'delay 0.05');
 	push(@cmd, 'end repeat');
