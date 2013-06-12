@@ -28,10 +28,8 @@ my %EFFECTS    = (
 );
 
 # Utility prototypes
-sub loadAudio($);
 sub playAudio($);
-sub closeAudio($);
-sub stopAudio();
+sub loadAudio($$);
 sub playOnce($);
 
 # App config
@@ -69,6 +67,9 @@ if (-e $RAVE_FILE) {
 if (-e $EFFECT_FILE) {
 	unlink($EFFECT_FILE);
 }
+
+# Launch the QuickTime Player
+loadAudio(undef(), undef());
 
 # Loop forever
 while (1) {
@@ -109,7 +110,7 @@ while (1) {
 			if ($DEBUG) {
 				print STDERR "Ending background processing\n";
 			}
-			stopAudio();
+			loadAudio(undef(), undef());
 			kill(SIGTERM, $PID);
 		}
 
@@ -192,41 +193,6 @@ sub runApplescript($) {
 	return $retval;
 }
 
-sub loadAudio($) {
-	my ($file) = @_;
-	if ($DEBUG) {
-		print STDERR 'Opening QT file: ' . $file . "\n";
-	}
-
-	# Cleanup, to ensure "document 1" is what we want
-	stopAudio();
-
-	# Open with open, requesting QT as the app
-	system('open', '-a', 'QuickTime Player', $file);
-
-	# Get the document name
-	my @cmd = ('repeat while application "QuickTime Player" is not running');
-	push(@cmd, 'delay 0.05');
-	push(@cmd, 'end repeat');
-	push(@cmd, 'tell application "QuickTime Player"');
-	push(@cmd, 'repeat while (count items of every document) < 1');
-	push(@cmd, 'delay 0.05');
-	push(@cmd, 'end repeat');
-	push(@cmd, 'get document 1');
-	push(@cmd, 'end tell');
-	my $doc = runApplescript(join("\n", @cmd));
-
-	# Put Plex back in front
-	runApplescript('tell application "Plex" to activate');
-
-	# Clean up and return the document name for later use
-	$doc =~ s/^\s*document //;
-	$doc =~ s/\s+$//;
-	$doc =~ s/\"/\\\"/g;
-	$doc = '"' . $doc . '"';
-	return $doc;
-}
-
 sub playAudio($) {
 	my ($doc) = @_;
 	if ($DEBUG) {
@@ -243,28 +209,50 @@ sub playAudio($) {
 	runApplescript(join("\n", @cmd));
 }
 
-sub closeAudio($) {
-	my ($doc) = @_;
-	if ($DEBUG) {
-		print STDERR 'Closing QT document: ' . $doc . "\n";
+sub loadAudio($$) {
+	my ($docStr, $file) = @_;
+	if (!$docStr) {
+		$docStr = 'every document';
+	} else {
+		$docStr = 'document ' . $docStr;
 	}
-	runApplescript('tell application "QuickTime Player" to close document ' . $doc);
-	runApplescript('tell application "Plex" to activate');
-}
+	if (!$file) {
+		$file = $SILENCE;
+	}
+	if ($DEBUG) {
+		print STDERR 'Closing QT document: ' . $docStr . "\n";
+		print STDERR 'Opening QT file: ' . $file . "\n";
+	}
 
-sub stopAudio() {
-	if ($DEBUG) {
-		print STDERR "Stopping all QT audio\n";
-	}
-	runApplescript('tell application "QuickTime Player" to close every document');
+	# Close the specified document(s) and open a new one (or silence)
+	runApplescript('tell application "QuickTime Player" to close ' . $docStr);
+	system('open', '-a', 'QuickTime Player', $file);
+
+	# Wait for QT to load the new file
+	my @cmd = ('tell application "QuickTime Player"');
+	push(@cmd, 'repeat while (count items of every document) < 1');
+	push(@cmd, 'delay 0.05');
+	push(@cmd, 'end repeat');
+	push(@cmd, 'get document 1');
+	push(@cmd, 'end tell');
+	my $doc = runApplescript(join("\n", @cmd));
+
+	# Bring Plex back to the front
 	runApplescript('tell application "Plex" to activate');
+
+	# Clean up and return the document name for later use
+	$doc =~ s/^\s*document //;
+	$doc =~ s/\s+$//;
+	$doc =~ s/\"/\\\"/g;
+	$doc = '"' . $doc . '"';
+	return $doc;
 }
 
 sub playOnce($) {
 	my ($file) = @_;
-	my $doc = loadAudio($file);
+	my $doc = loadAudio(undef(), $file);
 	playAudio($doc);
-	closeAudio($doc);
+	loadAudio(undef(), undef());
 }
 
 # ======================================
@@ -281,7 +269,7 @@ sub red_alert($$) {
 	my $sleep = $ramp;
 
 	# Pre-load the audio file for better timing
-	my $audio = loadAudio($file);
+	my $audio = loadAudio(undef(), $file);
 
 	# Bring the B & G channels down to 0
 	my @other = ();
@@ -305,7 +293,7 @@ sub red_alert($$) {
 	}
 
 	# Close the audio file
-	closeAudio($audio);
+	loadAudio($audio, undef());
 
 	# Follow through on the loop
 	return 0;
@@ -365,17 +353,18 @@ sub rave_init($$) {
 	}
 	sleep($amp_wait - $SIL_DELAY);
 
-	# Play a short burst of silence to get all the audio in-sync
-	playOnce($SILENCE);
+	# Play a short burst of silence to get all the audio devices in-sync
+	my $audio = loadAudio(undef(), undef());
+	playAudio($audio);
 
 	# Pre-load the audio file for better timing
-	my $audio = loadAudio($effect->{'file'});
+	$audio = loadAudio(undef(), $effect->{'file'});
 
 	# Play the sound in a child (i.e. in the background)
 	$PID = fork();
 	if (defined($PID) && $PID == 0) {
 		playAudio($audio);
-		closeAudio($audio);
+		loadAudio($audio, undef());
 		exit(0);
 	}
 
