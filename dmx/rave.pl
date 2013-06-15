@@ -14,23 +14,29 @@ use lib dirname(abs_path($0));
 use DMX;
 
 # Effect Prototypes
-sub red_alert($$);
-sub rave_init($$);
-sub lsr_loop();
+sub red_alert($$$);
+sub lsr_init($$$);
+sub lsr_run($$$);
+sub lsr_loop($$$);
 
 # User config
-my $MEDIA_PATH = `~/bin/video/mediaPath`;
-my $SILENCE    = $MEDIA_PATH . '/DMX/Silence.wav';
+my $MEDIA_PATH = `~/bin/video/mediaPath` . '/DMX';
 my @CHANNELS   = (1, 2, 4, 5, 6, 7, 8, 9, 13, 14, 15);
 my %EFFECTS    = (
 	'RED_ALERT' => { 'cmd' => \&red_alert },
-	'LSR'       => { 'cmd' => \&rave_init, 'file' => $MEDIA_PATH . '/DMX/Rave.mp3', 'next' => \&lsr_loop },
+	'LSR'       => { 'cmd' => \&lsr_init, 'next' => \&lsr_run, 'loop' => \&lsr_loop },
+);
+my %FILES = (
+	'SILENCE'   => { 'file' => 'Silence.wav' },
+	'RED_ALERT' => { 'file' => 'Red Alert.mp3' },
+	'LSR'       => { 'file' => 'Rave.mp3' },
 );
 
 # Utility prototypes
+sub openQT($);
 sub playAudio($);
-sub loadAudio($$);
-sub playOnce($);
+sub stopAudio();
+sub ampWait($$$);
 
 # App config
 my $DATA_DIR     = DMX::dataDir();
@@ -41,6 +47,7 @@ my $EFFECT_FILE  = $DATA_DIR . 'EFFECT';
 my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
 my $DELAY        = $PULL_TIMEOUT / 2;
+my $AMP_DELAY    = 7;
 
 # Debug
 my $DEBUG = 0;
@@ -57,7 +64,8 @@ my %exists   = ();
 my $pullLast = time();
 my $update   = 0;
 my $PID      = undef();
-my $EFFECT   = undef();
+my $NAME     = undef();
+my $NEXT     = undef();
 my $PID_DATA = undef();
 
 # Always clear the RAVE and EFFECT files
@@ -68,8 +76,8 @@ if (-e $EFFECT_FILE) {
 	unlink($EFFECT_FILE);
 }
 
-# Launch the QuickTime Player
-loadAudio(undef(), undef());
+# Load all our audio files
+openQT(\%FILES);
 
 # Loop forever
 while (1) {
@@ -110,7 +118,7 @@ while (1) {
 			if ($DEBUG) {
 				print STDERR "Ending background processing\n";
 			}
-			loadAudio(undef(), undef());
+			stopAudio();
 			kill(SIGTERM, $PID);
 		}
 
@@ -127,7 +135,8 @@ while (1) {
 
 			# Forget our local bypass state
 			$PID      = undef();
-			$EFFECT   = undef();
+			$NAME     = undef();
+			$NEXT     = undef();
 			$PID_DATA = undef();
 
 			# Clear the RAVE and EFFECT flags
@@ -141,8 +150,8 @@ while (1) {
 	}
 
 	# Continue special processing
-	if (defined($EFFECT)) {
-		$EFFECT->();
+	if (defined($NEXT)) {
+		$NEXT->($NAME, \%exists, $EFFECTS{$NAME});
 		next;
 	}
 
@@ -152,8 +161,11 @@ while (1) {
 		# Initiate the EFFECT state
 		touch($EFFECT_FILE);
 
+		# Store the effect name
+		$NAME = $newState;
+
 		# Dispatch the effect
-		$EFFECTS{$newState}{'cmd'}(\%exists, $EFFECTS{$newState});
+		$EFFECTS{$NAME}{'cmd'}($NAME, \%exists, $EFFECTS{$NAME});
 
 		# Clear the EFFECT state if there is no background process
 		if (!defined($PID)) {
@@ -194,14 +206,21 @@ sub runApplescript($) {
 }
 
 sub playAudio($) {
-	my ($doc) = @_;
+	my ($name) = @_;
+	if (!defined($name)) {
+		$name = 'SILENCE';
+	}
+	if (!defined($FILES{$name}) || !defined($FILES{$name}->{'name'})) {
+		die('Invalid QT document: ' . $name . "\n");
+	}
 	if ($DEBUG) {
-		print STDERR 'Playing QT document: ' . $doc . "\n";
+		print STDERR 'Playing QT document: ' . $FILES{$name}->{'name'} . "\n";
 	}
 
 	my @cmd = ('tell application "QuickTime Player"');
-	push(@cmd, 'play document ' . $doc);
-	push(@cmd, 'repeat while playing of document ' . $doc . ' = true');
+	push(@cmd, 'set current time of document ' . $FILES{$name}->{'name'} . ' to 0');
+	push(@cmd, 'play document ' . $FILES{$name}->{'name'});
+	push(@cmd, 'repeat while playing of document ' . $FILES{$name}->{'name'} . ' = true');
 	push(@cmd, 'delay 0.05');
 	push(@cmd, 'end repeat');
 	push(@cmd, 'end tell');
@@ -209,67 +228,104 @@ sub playAudio($) {
 	runApplescript(join("\n", @cmd));
 }
 
-sub loadAudio($$) {
-	my ($docStr, $file) = @_;
-	if (!$docStr) {
-		$docStr = 'every document';
-	} else {
-		$docStr = 'document ' . $docStr;
-	}
-	if (!$file) {
-		$file = $SILENCE;
-	}
+sub stopAudio() {
 	if ($DEBUG) {
-		print STDERR 'Closing QT document: ' . $docStr . "\n";
-		print STDERR 'Opening QT file: ' . $file . "\n";
+		print STDERR "Stopping QT audio\n";
 	}
 
-	# Close the specified document(s) and open a new one (or silence)
-	runApplescript('tell application "QuickTime Player" to close ' . $docStr);
-	system('open', '-a', 'QuickTime Player', $file);
-
-	# Wait for QT to load the new file
-	my @cmd = ('tell application "QuickTime Player"');
-	push(@cmd, 'repeat while (count items of every document) < 1');
-	push(@cmd, 'delay 0.05');
-	push(@cmd, 'end repeat');
-	push(@cmd, 'get document 1');
-	push(@cmd, 'end tell');
-	my $doc = runApplescript(join("\n", @cmd));
+	# Stop and rewind all QT documents
+	runApplescript('tell application "QuickTime Player" to stop every document');
+	runApplescript('tell application "QuickTime Player" to set current time of every document to 0');
 
 	# Bring Plex back to the front
 	runApplescript('tell application "Plex" to activate');
-
-	# Clean up and return the document name for later use
-	$doc =~ s/^\s*document //;
-	$doc =~ s/\s+$//;
-	$doc =~ s/\"/\\\"/g;
-	$doc = '"' . $doc . '"';
-	return $doc;
 }
 
-sub playOnce($) {
-	my ($file) = @_;
-	my $doc = loadAudio(undef(), $file);
-	playAudio($doc);
-	loadAudio(undef(), undef());
+sub openQT($) {
+	my ($files) = @_;
+
+	# Open QT Player and close all documents, so we know what we're getting
+	system('open', '-a', 'QuickTime Player');
+	runApplescript('tell application "QuickTime Player" to close every document');
+
+	# Keep track of our document numbers
+	my $docIndex = 0;
+
+	# Load all the audio files
+	foreach my $key (keys(%{$files})) {
+		if ($DEBUG) {
+			print STDERR 'Loading QT document: ' . $key . "\n";
+		}
+
+		# Increment the index
+		$docIndex++;
+
+		# Record the document number
+		$files->{$key}->{'index'} = $docIndex;
+
+		# Construct a relative or absolute file path
+		my $file = $files->{$key}->{'file'};
+		if (!($file =~ /^\//)) {
+			$file = $MEDIA_PATH . '/' . $file;
+		}
+
+		# Open the file
+		system('open', '-a', 'QuickTime Player', $file);
+
+		# Wait for QT to load the new file (it's always document 1 -- we just brought it forward)
+		my @cmd = ('tell application "QuickTime Player"');
+		push(@cmd, 'repeat while (count items of every document) < ' . $docIndex);
+		push(@cmd, 'delay 0.05');
+		push(@cmd, 'end repeat');
+		push(@cmd, 'get document 1');
+		push(@cmd, 'end tell');
+		my $doc = runApplescript(join("\n", @cmd));
+
+		# Clean up and store the document name for later use
+		$doc =~ s/^\s*document //;
+		$doc =~ s/\s+$//;
+		$doc =~ s/\"/\\\"/g;
+		$doc = '"' . $doc . '"';
+		$files->{$key}->{'name'} = $doc;
+	}
+
+	# Bring Plex back to the front
+	runApplescript('tell application "Plex" to activate');
+}
+
+sub ampWait($$$) {
+	my ($name, $exists, $params) = @_;
+	if ($DEBUG) {
+		print STDERR "ampWait()\n";
+	}
+
+	# Just loop until the amp is up, then set a new "next" handler
+	if ($exists{'AMPLIFIER'}) {
+		if ($params->{'next'}) {
+			$NEXT = $params->{'next'};
+		} else {
+			$NEXT = undef();
+		}
+
+		# Wait for the main amp power to come up
+		sleep($AMP_DELAY);
+	}
+
+	# Do not pass GO, do not collect $200
+	return 1;
 }
 
 # ======================================
 # Effects routines
 # ======================================
-sub red_alert($$) {
-	my ($exists, $effect) = @_;
+sub red_alert($$$) {
+	my ($name, $exists, $params) = @_;
 	if ($DEBUG) {
 		print STDERR "red_alert()\n";
 	}
 
-	my $file  = $MEDIA_PATH . '/DMX/Red Alert.mp3';
 	my $ramp  = 450;
 	my $sleep = $ramp;
-
-	# Pre-load the audio file for better timing
-	my $audio = loadAudio(undef(), $file);
 
 	# Bring the B & G channels down to 0
 	my @other = ();
@@ -287,39 +343,23 @@ sub red_alert($$) {
 	# Three blasts
 	for (my $i = 0 ; $i < 3 ; $i++) {
 		DMX::dim(\%high);
-		playAudio($audio);
+		playAudio($name);
 		DMX::dim(\%low);
 		usleep($sleep * 1000);
 	}
-
-	# Close the audio file
-	loadAudio($audio, undef());
 
 	# Follow through on the loop
 	return 0;
 }
 
-sub rave_init($$) {
-	my ($exists, $effect) = @_;
+sub lsr_init($$$) {
+	my ($name, $exists, $params) = @_;
 	if ($DEBUG) {
-		print STDERR "rave_init()\n";
+		print STDERR "lsr_init()\n";
 	}
-	if (!defined($effect->{'file'}) || !-r $effect->{'file'}) {
-		die('Invalid RAVE audio file: ' . $effect->{'file'} . "\n");
-	}
-
-	# Config
-	my $SIL_DELAY = 1.3;
-	my $AMP_SHORT = 5;
-	my $AMP_LONG  = $AMP_SHORT + 5;
 
 	# Initiate the RAVE state
 	touch($RAVE_FILE);
-
-	# Setup our loop handler
-	if ($effect->{'next'}) {
-		$EFFECT = $effect->{'next'};
-	}
 
 	# Save data for future runs
 	my %data = ();
@@ -334,48 +374,52 @@ sub rave_init($$) {
 	$data{'num_channels'}  = scalar(keys(%chans));
 	$data{'live_channels'} = 0;
 
-	# Reduce the amp delay if the amp is already on
-	my $amp_wait = $AMP_LONG;
-	if ($exists->{'AMPLIFIER'}) {
-		$amp_wait = $AMP_SHORT;
-	}
-
 	# Dim while we wait
 	my @data_set = ();
 	foreach my $chan (@CHANNELS) {
-		push(@data_set, { 'channel' => $chan, 'value' => 0, 'time' => $amp_wait / 2 * 1000 });
+		push(@data_set, { 'channel' => $chan, 'value' => 0, 'time' => $AMP_DELAY * 1000 });
 	}
 	DMX::applyDataset(\@data_set, 'RAVE', $OUTPUT_FILE);
 
-	# Wait for the amp to power up
-	if ($DEBUG) {
-		print STDERR 'Waiting ' . $amp_wait . " seconds for the amp to boot\n";
+	# Wait for the amp to power up, if necessary
+	if (!$exists{'AMPLIFIER'}) {
+		$NEXT = \&ampWait;
+	} else {
+		$NEXT = $params->{'next'};
 	}
-	sleep($amp_wait - $SIL_DELAY);
-
-	# Play a short burst of silence to get all the audio devices in-sync
-	my $audio = loadAudio(undef(), undef());
-	playAudio($audio);
-
-	# Pre-load the audio file for better timing
-	$audio = loadAudio(undef(), $effect->{'file'});
-
-	# Play the sound in a child (i.e. in the background)
-	$PID = fork();
-	if (defined($PID) && $PID == 0) {
-		playAudio($audio);
-		loadAudio($audio, undef());
-		exit(0);
-	}
-
-	# Record our start time
-	$data{'start'} = Time::HiRes::time();
 
 	# Do not pass GO, do not collect $200
 	return 1;
 }
 
-sub lsr_loop() {
+sub lsr_run($$$) {
+	my ($name, $exists, $params) = @_;
+	if ($DEBUG) {
+		print STDERR "lsr_run()\n";
+	}
+
+	# Play a short burst of silence to get all the audio devices in-sync
+	playAudio(undef());
+
+	# Play the sound in a child (i.e. in the background)
+	$PID = fork();
+	if (defined($PID) && $PID == 0) {
+		playAudio($name);
+		exit(0);
+	}
+
+	# Record our start time
+	$PID_DATA->{'start'} = Time::HiRes::time();
+
+	# Start the main loop
+	$NEXT = $params->{'loop'};
+
+	# Do not pass GO, do not collect $200
+	return 1;
+}
+
+sub lsr_loop($$$) {
+	my ($name, $exists, $params) = @_;
 	if ($DEBUG) {
 		print STDERR "lsr_loop()\n";
 	}
