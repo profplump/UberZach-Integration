@@ -48,6 +48,7 @@ my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
 my $DELAY        = $PULL_TIMEOUT / 2;
 my $AMP_DELAY    = 7;
+my $AMP_BOOTING  = 0;
 
 # Debug
 my $DEBUG = 0;
@@ -307,8 +308,17 @@ sub ampWait($$$) {
 			$NEXT = undef();
 		}
 
-		# Wait for the main amp power to come up
-		sleep($AMP_DELAY);
+		# Wait for the amp to boot if it wasn't running when we first checked
+		if ($AMP_BOOTING) {
+			sleep($AMP_DELAY);
+		}
+
+		# Reset the booting flag, now that the amp is up
+		$AMP_BOOTING = 0;
+	} else {
+
+		# Note that we had to wait for the amp, so we know to sleep for it later
+		$AMP_BOOTING = 1;
 	}
 
 	# Do not pass GO, do not collect $200
@@ -381,12 +391,8 @@ sub lsr_init($$$) {
 	}
 	DMX::applyDataset(\@data_set, 'RAVE', $OUTPUT_FILE);
 
-	# Wait for the amp to power up, if necessary
-	if (!$exists{'AMPLIFIER'}) {
-		$NEXT = \&ampWait;
-	} else {
-		$NEXT = $params->{'next'};
-	}
+	# Wait for the amp to power up
+	$NEXT = \&ampWait;
 
 	# Do not pass GO, do not collect $200
 	return 1;
