@@ -34,7 +34,7 @@ if (basename($0) =~ /PROJECTOR/i) {
 		'OFF'    => 'PWR OFF',
 		'STATUS' => 'PWR?'
 	);
-	%STATUS_CMDS = ('STATUS' => { 'EQUAL' => 'PWR=01' },);
+	%STATUS_CMDS = ('STATUS' => { 'MATCH' => [ qr/^PWR=/, qr/PWR=01/ ] },);
 } elsif (basename($0) =~ /AMPLIFIER/i) {
 	$DEV       = 'Amplifier';
 	$PORT      = '/dev/tty.usbserial-A5006x9u';
