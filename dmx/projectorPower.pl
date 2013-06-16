@@ -54,6 +54,7 @@ my $lastAnnounce = 0;
 my $lastUser     = time();
 my $shutdown     = 0;
 my $color        = $COLOR_LOW;
+my $wentLow      = 0;
 
 # Loop forever
 while (1) {
@@ -148,14 +149,19 @@ while (1) {
 	# Always LOW for playback
 	# HIGH when paused, after $COLOR_DELAY seconds
 	# LOW again when paused for half the timeout (to save the bulb)
+	# HIGH again when paused but there is new activity and we previously went LOW
 	if ($newState eq 'PLAY') {
-		$color = $COLOR_LOW;
+		$wentLow = 0;
+		$color   = $COLOR_LOW;
 	} elsif ($elapsed > $COLOR_DELAY && $newState eq 'PAUSE') {
 		if ($elapsed > $TIMEOUT / 2) {
-			$color = $COLOR_LOW;
+			$wentLow = 1;
+			$color   = $COLOR_LOW;
 		} else {
 			$color = $COLOR_HIGH;
 		}
+	} elsif ($newState eq 'PAUSE' && $wentLow) {
+		$color = $COLOR_HIGH;
 	}
 
 	# Force updates on a periodic basis
