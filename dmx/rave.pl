@@ -91,6 +91,8 @@ while (1) {
 	my $delay = $DELAY;
 	if (defined($PID)) {
 		$delay = 0.001;
+	} elsif (defined($NEXT)) {
+		$delay = 0.25;
 	}
 
 	# Wait for state updates
@@ -302,22 +304,36 @@ sub ampWait($$$) {
 
 	# Just loop until the amp is up, then set a new "next" handler
 	if ($exists{'AMPLIFIER'}) {
-		if ($params->{'next'}) {
-			$NEXT = $params->{'next'};
-		} else {
-			$NEXT = undef();
+		if ($DEBUG) {
+			print STDERR "\tAmplifier ready\n";
+		}
+
+		# Once the amp is up, be sure we've started "RAVE" mode for audio output
+		if ($exists{'AUDIO_STATE'} eq 'RAVE') {
+			if ($DEBUG) {
+				print STDERR "\tAudio device ready\n";
+			}
+
+			if ($params->{'next'}) {
+				$NEXT = $params->{'next'};
+			} else {
+				$NEXT = undef();
+			}
 		}
 
 		# Wait for the amp to boot if it wasn't running when we first checked
 		if ($AMP_BOOTING) {
+			if ($DEBUG) {
+				print STDERR "\tWaiting " . $AMP_DELAY . "seconds for amp to boot\n";
+			}
 			sleep($AMP_DELAY);
 		}
 
-		# Reset the booting flag, now that the amp is up
+		# Reset the amp boot delay, now that it's running
 		$AMP_BOOTING = 0;
 	} else {
 
-		# Note that we had to wait for the amp, so we know to sleep for it later
+		# The amp wasn't up when we checked, so it will need a boot delay
 		$AMP_BOOTING = 1;
 	}
 
