@@ -10,10 +10,13 @@ use lib dirname(abs_path($0));
 use DMX;
 
 # Config
-my $TIMEOUT   = 900;
-my $COUNTDOWN = 300;
-my $OFF_DELAY = 15;
-my $CMD_DELAY = 5;
+my $TIMEOUT     = 900;
+my $COUNTDOWN   = 300;
+my $OFF_DELAY   = 15;
+my $CMD_DELAY   = 5;
+my $COLOR_DELAY = $OFF_DELAY * 2;
+my $COLOR_HIGH  = 'DYNAMIC';
+my $COLOR_LOW   = 'THEATER_BLACK_1';
 
 # App config
 my $DATA_DIR     = DMX::dataDir();
@@ -50,6 +53,7 @@ my $update       = 0;
 my $lastAnnounce = 0;
 my $lastUser     = time();
 my $shutdown     = 0;
+my $color        = $COLOR_LOW;
 
 # Loop forever
 while (1) {
@@ -140,6 +144,20 @@ while (1) {
 		}
 	}
 
+	# Calculate the color mode
+	# Always LOW for playback
+	# HIGH when paused, after $COLOR_DELAY seconds
+	# LOW again when paused for half the timeout (to save the bulb)
+	if ($newState eq 'PLAY') {
+		$color = $COLOR_LOW;
+	} elsif ($elapsed > $COLOR_DELAY && $newState eq 'PAUSE') {
+		if ($elapsed > $TIMEOUT / 2) {
+			$color = $COLOR_LOW;
+		} else {
+			$color = $COLOR_HIGH;
+		}
+	}
+
 	# Force updates on a periodic basis
 	if (!$update && time() - $pushLast > $PUSH_TIMEOUT) {
 
@@ -166,6 +184,15 @@ while (1) {
 			}
 			$update = 1;
 		}
+	}
+
+	# Set the color mode as needed
+	if ($exists{'PROJECTOR'} && $exists{'PROJECTOR_COLOR'} ne $color) {
+		if ($DEBUG) {
+			print STDERR 'Setting color to: ' . $color . "\n";
+		}
+		$proj->send($color)
+		  or die('Unable to write command to projector socket: ' . $color . ": ${!}\n");
 	}
 
 	# Announce a pending shutdown
