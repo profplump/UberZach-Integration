@@ -19,6 +19,11 @@
 	<dict>
 		<key>NetworkState</key>
 		<true/>
+		<key>OtherJobEnabled</key>
+		<dict>
+			<key>com.uberzach.plexMonitor</key>
+			<true/>
+		</dict>
 	</dict>
 	<key>ProgramArguments</key>
 	<array>
