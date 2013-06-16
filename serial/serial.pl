@@ -29,12 +29,28 @@ if (basename($0) =~ /PROJECTOR/i) {
 	$CRLF      = "\r\n";
 	$DELIMITER = ':';
 	%CMDS      = (
-		'INIT'   => '',
-		'ON'     => 'PWR ON',
-		'OFF'    => 'PWR OFF',
-		'STATUS' => 'PWR?'
+		'INIT'                  => '',
+		'ON'                    => 'PWR ON',
+		'OFF'                   => 'PWR OFF',
+		'STATUS'                => 'PWR?',
+		'COLOR_DYNAMIC'         => 'CMODE 06',
+		'COLOR_LIVING_ROOM'     => 'CMODE 0C',
+		'COLOR_NATURAL'         => 'CMODE 07',
+		'COLOR_THEATER'         => 'CMODE 05',
+		'COLOR_THEATER_BLACK_1' => 'CMODE 09',
+		'COLOR_THEATER_BLACK_2' => 'CMODE 0A',
+		'COLOR_XV'              => 'CMODE 0B',
+		'COLOR'                 => 'CMODE?',
+		'HDMI_1'                => 'SOURCE 30',
+		'HDMI_2'                => 'SOURCE A0',
+		'VGA'                   => 'SOURCE 20',
+		'INPUT'                 => 'SOURCE?',
 	);
-	%STATUS_CMDS = ('STATUS' => { 'MATCH' => [ qr/^PWR=/, qr/PWR=01/ ] },);
+	%STATUS_CMDS = (
+		'STATUS' => { 'MATCH' => [ qr/^PWR=/,                 qr/PWR=01/ ] },
+		'COLOR'  => { 'EVAL'  => [ qr/^CMODE=[0-9A-Z]{2}$/i,  'if ($a =~ /06$/i) { $a = "DYNAMIC" } elsif ($a =~ /0C$/i) { $a = "LIVING_ROOM" } elsif ($a =~ /07$/i) { $a = "NATURAL" } elsif ($a =~ /05$/i) { $a = "THEATER" } elsif ($a =~ /09$/i) { $a = "THEATER_BLACK_1" } elsif ($a =~ /0A$/i) { $a = "THEATER_BLACK_2" } elsif ($a =~ /0B$/i) { $a = "XV" }' ] },
+		'INPUT'  => { 'EVAL'  => [ qr/^SOURCE=[0-9A-Z]{2}$/i, 'if ($a =~ /30$/i) { $a = "HDMI_1" } elsif ($a =~ /A0$/i) { $a = "HDMI_2" } elsif ($a =~ /20$/i) { $a = "VGA" }' ] },
+	);
 } elsif (basename($0) =~ /AMPLIFIER/i) {
 	$DEV       = 'Amplifier';
 	$PORT      = '/dev/tty.usbserial-A5006x9u';
