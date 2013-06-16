@@ -97,17 +97,6 @@ while (1) {
 		$state = 'DEFAULT';
 	}
 
-	# If the state has changed, save to disk
-	if ($stateLast ne $state) {
-		if ($DEBUG) {
-			print STDERR 'New output state: ' . $stateLast . ' => ' . $state . "\n";
-		}
-		my ($fh, $tmp) = tempfile($OUTPUT_STATE . '.XXXXXXXX', 'UNLINK' => 0);
-		print $fh $state . "\n";
-		close($fh);
-		rename($tmp, $OUTPUT_STATE);
-	}
-
 	# Force updates on a periodic basis
 	if (!$update && time() - $pushLast > $PUSH_TIMEOUT) {
 
@@ -140,5 +129,16 @@ while (1) {
 
 		# Clear the update flag
 		$update = 0;
+	}
+
+	# If the state has changed and the device has responded, save to disk
+	if (!$update && $stateLast ne $state) {
+		if ($DEBUG) {
+			print STDERR 'New output state: ' . $stateLast . ' => ' . $state . "\n";
+		}
+		my ($fh, $tmp) = tempfile($OUTPUT_STATE . '.XXXXXXXX', 'UNLINK' => 0);
+		print $fh $state . "\n";
+		close($fh);
+		rename($tmp, $OUTPUT_STATE);
 	}
 }
