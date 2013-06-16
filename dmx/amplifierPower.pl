@@ -69,7 +69,7 @@ while (1) {
 		$state = 'OFF';
 	}
 
-	# Cacluate the channel mode
+	# Calculate the channel mode
 	if ($exists{'STEREO_CMD'} || $state eq 'RAVE') {
 		$mode = 'STEREO';
 	} else {
@@ -105,16 +105,16 @@ while (1) {
 	}
 
 	# Set the channel mode as needed
-	if ($exists{'AMPLIFIER_MODE'} ne $mode) {
+	if ($exists{'AMPLIFIER'} && $exists{'AMPLIFIER_MODE'} ne $mode) {
 		if ($DEBUG) {
 			print STDERR 'Setting mode to: ' . $mode . "\n";
 		}
 		$amp->send($mode)
-		  or die('Unable to write command to amp socket: ' . $input . ": ${!}\n");
+		  or die('Unable to write command to amp socket: ' . $mode . ": ${!}\n");
 	}
 
 	# Set the amplifier input as needed
-	if ($exists{'AMPLIFIER_INPUT'} ne $input) {
+	if ($exists{'AMPLIFIER'} && $exists{'AMPLIFIER_INPUT'} ne $input) {
 		if ($DEBUG) {
 			print STDERR 'Setting input to: ' . $input . "\n";
 		}
