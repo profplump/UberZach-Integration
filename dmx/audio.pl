@@ -12,13 +12,16 @@ use lib dirname(abs_path($0));
 use DMX;
 
 # Config
-my $USB_DEV     = 'USB Audio CODEC ';
-my $AMP_DEV     = 'Built-in Output';
-my $DEFAULT_DEV = $USB_DEV;
+my %DEVS = (
+	'AMP'     => 'Built-in Output',
+	'RAVE'    => 'Built-in Output',
+	'DEFAULT' => 'USB Audio CODEC ',
+);
 
 # App config
 my $DATA_DIR     = DMX::dataDir();
 my $OUTPUT_FILE  = $DATA_DIR . 'AUDIO';
+my $OUTPUT_STATE = $OUTPUT_FILE . '_STATE';
 my $STATE_SOCK   = $OUTPUT_FILE . '.socket';
 my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
@@ -39,16 +42,16 @@ DMX::stateSubscribe($STATE_SOCK);
 
 # State
 my $state      = 'OFF';
-my $device     = '';
-my $deviceLast = '';
-my $cmdDevice  = $device;
+my $stateLast  = $state;
+my $device     = 'OFF';
+my $deviceLast = $device;
 my %exists     = ();
 my $pushLast   = 0;
 my $pullLast   = time();
 my $update     = 0;
 
 # Always force the output to default at launch
-system(@AUDIO_SET, $DEFAULT_DEV);
+system(@AUDIO_SET, $DEVS{'DEFAULT'});
 
 # Loop forever
 while (1) {
@@ -85,12 +88,24 @@ while (1) {
 	}
 
 	# Calculate the new state
+	$stateLast = $state;
 	if ($exists{'RAVE'}) {
-		$cmdDevice = $AMP_DEV;
+		$state = 'RAVE';
 	} elsif ($exists{'AUDIO_AMP'}) {
-		$cmdDevice = $AMP_DEV;
+		$state = 'AMP';
 	} else {
-		$cmdDevice = $DEFAULT_DEV;
+		$state = 'DEFAULT';
+	}
+
+	# If the state has changed, save to disk
+	if ($stateLast ne $state) {
+		if ($DEBUG) {
+			print STDERR 'New output state: ' . $stateLast . ' => ' . $state . "\n";
+		}
+		my ($fh, $tmp) = tempfile($OUTPUT_STATE . '.XXXXXXXX', 'UNLINK' => 0);
+		print $fh $state . "\n";
+		close($fh);
+		rename($tmp, $OUTPUT_STATE);
 	}
 
 	# Force updates on a periodic basis
@@ -104,9 +119,9 @@ while (1) {
 	}
 
 	# Force updates when there is a physical state mistmatch
-	if (!$update && $cmdDevice ne $device) {
+	if (!$update && $DEVS{$state} ne $device) {
 		if ($DEBUG) {
-			print STDERR 'State mismatch: ' . $device . ' => ' . $cmdDevice . "\n";
+			print STDERR 'State mismatch: ' . $device . ' => ' . $DEVS{$state} . "\n";
 		}
 		$update = 1;
 	}
@@ -116,9 +131,9 @@ while (1) {
 
 		# Update
 		if ($DEBUG) {
-			print STDERR 'Setting output to: ' . $cmdDevice . "\n";
+			print STDERR 'Setting output to: ' . $DEVS{$state} . "\n";
 		}
-		system(@AUDIO_SET, $cmdDevice);
+		system(@AUDIO_SET, $DEVS{$state});
 
 		# Update the push time
 		$pushLast = time();
