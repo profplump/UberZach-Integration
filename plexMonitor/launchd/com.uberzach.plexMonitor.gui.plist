@@ -28,7 +28,7 @@
 	<key>ProgramArguments</key>
 	<array>
 		<string>/Users/tv/bin/video/plexMonitor/plexMonitor-gui</string>
-		<string>0.5</string>
+		<string>0.25</string>
 	</array>
 </dict>
 </plist>
