@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use LWP::Simple;
 use File::Basename;
-use Time::HiRes qw( usleep );
+use Time::HiRes qw( sleep );
 use File::Temp qw( tempfile );
 
 # Prototypes
@@ -31,7 +31,6 @@ my ($DELAY) = @ARGV;
 if (!$DELAY) {
 	$DELAY = 0;
 }
-$DELAY *= 1000000;    # Microseconds;
 
 # Sanity check
 if (!-d $TEMP_DIR) {
@@ -76,7 +75,7 @@ do {
 	}
 
 	# Delay and loop
-	usleep($DELAY);
+	sleep($DELAY);
 } until ($DELAY == 0);
 
 # Exit cleanly
