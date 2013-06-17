@@ -19,10 +19,10 @@ sub mtime($);
 my $STATE_TIMEOUT = 180;
 my $MEDIA_PATH    = `~/bin/video/mediaPath`;
 my %MON_FILES     = (
-	'GUI'             => 'MTIME',
 	'MOTION'          => 'MTIME',
 	'PROJECTOR'       => 'STATUS',
 	'AMPLIFIER'       => 'STATUS',
+	'GUI'             => 'STATUS_GUI',
 	'PLAYING'         => 'STATUS_PLAYING',
 	'NO_MOTION'       => 'EXISTS',
 	'RAVE'            => 'EXISTS',
@@ -196,6 +196,10 @@ while (1) {
 
 			if ($file->{'type'} eq 'STATUS_PLAYING') {
 				if ($text =~ /PlayStatus\:Playing/) {
+					$file->{'status'} = 1;
+				}
+			} elsif ($file->{'type'} eq 'STATUS_GUI') {
+				if (!($text =~ /ActiveWindowName\:Fullscreen video/)) {
 					$file->{'status'} = 1;
 				}
 			} elsif ($file->{'type'} eq 'STATUS_VALUE') {
