@@ -17,6 +17,7 @@ my $CMD_DELAY   = 5;
 my $COLOR_DELAY = 60;
 my $COLOR_HIGH  = 'DYNAMIC';
 my $COLOR_LOW   = 'THEATER_BLACK_1';
+my $STATE_DELAY = 10;
 
 # App config
 my $DATA_DIR     = DMX::dataDir();
@@ -245,6 +246,15 @@ while (1) {
 
 		# Clear the update flag
 		$update = 0;
+
+		# If the command was 'OFF' wait a while for the projector to catch up
+		# The Epson UB6500 does not respond to queries while changing power states
+		if ($state eq 'OFF') {
+			if ($DEBUG) {
+				print STDERR 'Delaying ' . $STATE_DELAY . " seconds while projector changes state\n";
+			}
+			sleep($STATE_DELAY);
+		}
 	}
 }
 
