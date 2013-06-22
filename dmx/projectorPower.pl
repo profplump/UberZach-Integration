@@ -13,11 +13,10 @@ use DMX;
 my $TIMEOUT     = 900;
 my $COUNTDOWN   = 300;
 my $OFF_DELAY   = 15;
-my $CMD_DELAY   = 5;
+my $CMD_DELAY   = 15;
 my $COLOR_DELAY = 60;
 my $COLOR_HIGH  = 'DYNAMIC';
 my $COLOR_LOW   = 'THEATER_BLACK_1';
-my $STATE_DELAY = 15;
 
 # App config
 my $DATA_DIR     = DMX::dataDir();
@@ -213,7 +212,7 @@ while (1) {
 		$update = 0;
 	}
 
-	# Only allow updates every few seconds
+	# Only allow updates every few seconds -- the projector goes dumb during power state changes
 	if ($update && time() < $pushLast + $CMD_DELAY) {
 		if ($DEBUG) {
 			print STDERR 'Ignoring overrate update: ' . $state . "\n";
@@ -232,14 +231,6 @@ while (1) {
 		# Send master power state
 		$proj->send($state)
 		  or die('Unable to write command to proj socket: ' . $state . ": ${!}\n");
-
-		# Wait -- the Epson UB6500 does not respond to queries while changing power states
-		# This is pretty long, but we don't set the update clock until it returns so we won't timeout
-		# We should delay until a projector mtime update, but that's a lot of work for this simple script
-		if ($DEBUG) {
-			print STDERR 'Delaying ' . $STATE_DELAY . " seconds while projector changes state\n";
-		}
-		sleep($STATE_DELAY);
 
 		# Annouce the state change, after the fact
 		say('Projector ' . $state);
