@@ -42,6 +42,19 @@ my %MON_FILES     = (
 
 	$MEDIA_PATH . '/DMX/cmd/GARAGE_CMD' => 'EXISTS_CLEAR',
 );
+my %EXTRAS = (
+	'PLAYING' => {
+		'URL'      => qr/^\<li\>Filename\:(.+)$/m,
+		'YEAR'     => qr/^\<li\>Year\:(\d+)/m,
+		'SERIES'   => qr/^\<li\>Show Title\:(.+)$/m,
+		'SEASON'   => qr/^\<li\>Season\:(\d+)/m,
+		'EPISODE'  => qr/^\<li\>Episode\:(\d+)/m,
+		'TITLE'    => qr/^\<li\>Title\:(.+)$/m,
+		'LENGTH'   => qr/^\<li\>Duration\:([\d\:]+)/m,
+		'POSITION' => qr/^\<li\>Time\:([\d\:]+)/m,
+		'SIZE'     => qr/^\<li\>File size\:(\d+)/m,
+	}
+);
 
 # App config
 my $SOCK_TIMEOUT = 5;
@@ -79,6 +92,13 @@ my $status     = '';
 my $statusLast = $status;
 my $updateLast = 0;
 my $pushLast   = 0;
+
+# Add the extras to the main file list
+foreach my $file (keys(%EXTRAS)) {
+	foreach my $extra (keys(%{ $EXTRAS{$file} })) {
+		$MON_FILES{ $file . '_' . $extra } = 'NONE';
+	}
+}
 
 # Init the file tracking structure
 my %files = ();
@@ -170,6 +190,11 @@ while (1) {
 	# Monitor files of all types
 	foreach my $file (values(%files)) {
 
+		# Skip "NONE" files -- they are data stores handled in other actions
+		if ($file->{'type'} eq 'NONE') {
+			next;
+		}
+
 		# Always record the previous status and clear the new one
 		$file->{'last'}   = $file->{'status'};
 		$file->{'status'} = 0;
@@ -195,6 +220,7 @@ while (1) {
 				}
 			}
 
+			# Record the main status for the file
 			if ($file->{'type'} eq 'STATUS_PLAYING') {
 				if ($text =~ /PlayStatus\:Playing/) {
 					$file->{'status'} = 1;
@@ -213,6 +239,25 @@ while (1) {
 			}
 			if ($DEBUG) {
 				print STDERR 'Status: ' . $file->{'name'} . ': ' . $file->{'status'} . "\n";
+			}
+
+			# Handle extras, if any
+			if ($EXTRAS{ $file->{'name'} }) {
+				foreach my $extra (keys(%{ $EXTRAS{ $file->{'name'} } })) {
+
+					my $name = $file->{'name'} . '_' . $extra;
+					$files{$name}{'last'}   = $files{$name}{'status'};
+					$files{$name}{'status'} = '';
+					$files{$name}{'update'} = $file->{'update'};
+
+					if ($text =~ $EXTRAS{ $file->{'name'} }{$extra}) {
+						$files{$name}{'status'} = $1;
+					}
+
+					if ($DEBUG) {
+						print STDERR 'Status (extra): ' . $name . ': ' . $files{$name}{'status'} . "\n";
+					}
+				}
 			}
 		}
 
@@ -283,7 +328,11 @@ while (1) {
 	{
 		my @statTime = ();
 		foreach my $file (values(%files)) {
-			push(@statTime, $file->{'name'} . ':' . $file->{'status'} . ':' . $file->{'update'});
+			my $text = $file->{'status'};
+			$text =~ s/\s/ /g;
+			$text =~ s/\,/_/g;
+			$text =~ s/\:/-/g;
+			push(@statTime, $file->{'name'} . ':' . $text . ':' . $file->{'update'});
 		}
 		$status = ' (' . join(', ', @statTime) . ')';
 	}
