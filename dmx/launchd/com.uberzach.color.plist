@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>LimitLoadToSessionType</key>
+	<string>Aqua</string>
+	<key>LimitLoadToHosts</key>
+	<array>
+		<string>loki.uberzach.com</string>
+		<string>Loki.local</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>Label</key>
+	<string>com.uberzach.color</string>
+	<key>KeepAlive</key>
+	<dict>
+		<key>OtherJobEnabled</key>
+		<dict>
+			<key>com.uberzach.projector</key>
+			<true/>
+			<key>com.uberzach.state</key>
+			<true/>
+		</dict>
+	</dict>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/Users/tv/bin/video/dmx/color.pl</string>
+	</array>
+	<!--
+		<key>EnvironmentVariables</key>
+		<dict>
+			<key>DEBUG</key>
+			<string>1</string>
+		</dict>
+		<key>StandardErrorPath</key>
+		<string>/Users/tv/com.uberzach.color_errlog.txt</string>
+	-->
+</dict>
+</plist>

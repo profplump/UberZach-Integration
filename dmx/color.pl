@@ -12,8 +12,11 @@ use lib dirname(abs_path($0));
 use DMX;
 
 # Config
-my $LOW  = 'Epson-Low';
-my $HIGH = 'Epson-High';
+my $DISPLAY  = 1;
+my %PROFILES = (
+	'HIGH' => 'Epson-High',
+	'LOW'  => 'Epson-Low'
+);
 
 # App config
 my $DATA_DIR     = DMX::dataDir();
@@ -21,7 +24,13 @@ my $OUTPUT_FILE  = $DATA_DIR . 'COLOR';
 my $STATE_SOCK   = $OUTPUT_FILE . '.socket';
 my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
-my $DELAY        = 1;
+my $DELAY        = $PULL_TIMEOUT / 2;
+
+# Prototypes
+sub runApplescript($);
+sub getProfile($);
+sub setProfile($$);
+sub profileExists($$);
 
 # Debug
 my $DEBUG = 0;
@@ -36,26 +45,34 @@ DMX::stateSubscribe($STATE_SOCK);
 # State
 my $state     = 'OFF';
 my $stateLast = $state;
+my $color     = 'OFF';
+my $colorLast = $color;
 my %exists    = ();
 my $pushLast  = 0;
 my $pullLast  = time();
 my $update    = 0;
 
+# Validate our profiles
+foreach my $profile (keys(%PROFILES)) {
+	if (!profileExists($DISPLAY, $PROFILES{$profile})) {
+		die('Invalid profile: ' . $profile . ' => ' . $PROFILES{$profile} . "\n");
+	}
+}
+
 # Loop forever
 while (1) {
 
-	# Grab the current audio output device
-	$deviceLast = $device;
-	$device     = capture(@AUDIO_GET);
-	$device =~ s/\n$//;
+	# Grab the current color profile
+	$colorLast = $color;
+	$color     = getProfile($DISPLAY);
 
-	# If the device has changed, save the state to disk
-	if ($deviceLast ne $device) {
+	# If the color profile has changed, save the state to disk
+	if ($colorLast ne $color) {
 		if ($DEBUG) {
-			print STDERR 'New output device: ' . $deviceLast . ' => ' . $device . "\n";
+			print STDERR 'New color profile: ' . $colorLast . ' => ' . $color . "\n";
 		}
 		my ($fh, $tmp) = tempfile($OUTPUT_FILE . '.XXXXXXXX', 'UNLINK' => 0);
-		print $fh $device . "\n";
+		print $fh $color . "\n";
 		close($fh);
 		rename($tmp, $OUTPUT_FILE);
 	}
@@ -77,18 +94,16 @@ while (1) {
 
 	# Calculate the new state
 	$stateLast = $state;
-	if ($exists{'RAVE'}) {
-		$state = 'RAVE';
-	} elsif ($exists{'AUDIO_AMP'}) {
-		$state = 'AMP';
+	if ($exists{'PROJECTOR_COLOR'} eq 'DYNAMIC') {
+		$state = 'HIGH';
 	} else {
-		$state = 'DEFAULT';
+		$state = 'LOW';
 	}
 
 	# Force updates on a periodic basis
 	if (!$update && time() - $pushLast > $PUSH_TIMEOUT) {
 
-		# Not for the audio output device
+		# Not for the color profile
 		#if ($DEBUG) {
 		#	print STDERR "Forcing periodic update\n";
 		#}
@@ -96,21 +111,21 @@ while (1) {
 	}
 
 	# Force updates when there is a physical state mistmatch
-	if (!$update && $DEVS{$state} ne $device) {
+	if (!$update && $PROFILES{$state} ne $color) {
 		if ($DEBUG) {
-			print STDERR 'State mismatch: ' . $device . ' => ' . $DEVS{$state} . "\n";
+			print STDERR 'State mismatch: ' . $color . ' => ' . $PROFILES{$state} . "\n";
 		}
 		$update = 1;
 	}
 
-	# Update the audio output device
+	# Update the color profile
 	if ($update) {
 
 		# Update
 		if ($DEBUG) {
-			print STDERR 'Setting output to: ' . $DEVS{$state} . "\n";
+			print STDERR 'Setting output to: ' . $PROFILES{$state} . "\n";
 		}
-		system(@AUDIO_SET, $DEVS{$state});
+		setProfile($DISPLAY, $PROFILES{$state});
 
 		# Update the push time
 		$pushLast = time();
@@ -118,15 +133,90 @@ while (1) {
 		# Clear the update flag
 		$update = 0;
 	}
+}
 
-	# If the state has changed and the device has responded, save to disk
-	if (!$update && $stateLast ne $state) {
-		if ($DEBUG) {
-			print STDERR 'New output state: ' . $stateLast . ' => ' . $state . "\n";
-		}
-		my ($fh, $tmp) = tempfile($OUTPUT_STATE . '.XXXXXXXX', 'UNLINK' => 0);
-		print $fh $state . "\n";
-		close($fh);
-		rename($tmp, $OUTPUT_STATE);
+sub runApplescript($) {
+	my ($script) = @_;
+	if ($DEBUG) {
+		print STDERR 'Running AppleScript: ' . $script . "\n";
 	}
+
+	my $retval = capture('osascript', '-e', $script);
+	if ($DEBUG) {
+		print STDERR "\tAppleScript result: " . $retval . "\n";
+	}
+
+	return $retval;
+}
+
+sub getProfile($) {
+	my ($display) = @_;
+	if ($DEBUG) {
+		print STDERR "getProfile()\n";
+	}
+
+	# Validate the input
+	$display = int($display);
+	if (!$display) {
+		die('Invalid display ID: ' . $display . "\n");
+	}
+
+	# Ask SwitchResX what color profile is installed
+	my $profile = runApplescript('tell application "SwitchResX Daemon" to get display profile of display ' . $display);
+
+	# Cleanup the name
+	$profile =~ s/^\s*profile //;
+	$profile =~ s/\s+$//;
+
+	return $profile;
+}
+
+sub setProfile($$) {
+	my ($display, $profile) = @_;
+	if ($DEBUG) {
+		print STDERR "setProfile()\n";
+	}
+
+	# Validate the input
+	$profile =~ s/\"/\\\"/g;
+	$profile = '"' . $profile . '"';
+	$display = int($display);
+	if (!$display) {
+		die('Invalid display ID: ' . $display . "\n");
+	}
+
+	# Tell SwitchResX to change our color profile
+	my @cmd = ('tell application "SwitchResX Daemon"');
+	push(@cmd, 'set prof to profile ' . $profile . ' of display ' . $display);
+	push(@cmd, 'set display profile of display ' . $display . ' to prof');
+	push(@cmd, 'end tell');
+
+	return runApplescript(join("\n", @cmd));
+}
+
+sub profileExists($$) {
+	my ($display, $profile) = @_;
+	if ($DEBUG) {
+		print STDERR "profileExists()\n";
+	}
+
+	# Validate the input
+	$profile =~ s/\"/\\\"/g;
+	$profile = '"' . $profile . '"';
+	$display = int($display);
+	if (!$display) {
+		die('Invalid display ID: ' . $display . "\n");
+	}
+
+	# Ask SwitchResX if the named color profile exists
+	my @cmd = ('tell application "SwitchResX Daemon"');
+	push(@cmd, 'set profs to get name of every profile of display ' . $display);
+	push(@cmd, 'get profs contains ' . $profile);
+	push(@cmd, 'end tell');
+
+	my $result = runApplescript(join("\n", @cmd));
+	if ($result =~ /true/i) {
+		return 1;
+	}
+	return 0;
 }
