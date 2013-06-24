@@ -137,11 +137,7 @@ sub background($) {
 	}
 
 	# Start playback
-	my @cmd = ('tell application "QuickTime Player"');
-	push(@cmd, 'set current time of document ' . $FILES{$name}->{'name'} . ' to 0');
-	push(@cmd, 'play document ' . $FILES{$name}->{'name'});
-	push(@cmd, 'end tell');
-	runApplescript(join("\n", @cmd));
+	runApplescript('tell application "QuickTime Player" play document ' . $FILES{$name}->{'name'});
 }
 
 sub playing($) {
@@ -195,6 +191,19 @@ sub rate($$) {
 
 	# Get the current playback position from QT
 	return runApplescript('tell application "QuickTime Player" to get rate of document ' . $FILES{$name}->{'name'});
+}
+
+sub pause($) {
+	my ($name) = @_;
+	if ($DEBUG) {
+		print STDERR 'Audio::background(): ' . $name . "\n";
+	}
+	if (!loaded($name)) {
+		die('Invalid QT document: ' . $name . "\n");
+	}
+
+	# Pause playback
+	runApplescript('tell application "QuickTime Player" to pause document ' . $FILES{$name}->{'name'});
 }
 
 sub stop($) {
