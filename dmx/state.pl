@@ -54,6 +54,7 @@ my %EXTRAS = (
 		'LENGTH'   => qr/^\<li\>Duration\:([\d\:]+)/m,
 		'POSITION' => qr/^\<li\>Time\:([\d\:]+)/m,
 		'SIZE'     => qr/^\<li\>File size\:(\d+)/m,
+		'TYPE'     => qr/^\<li\>Type\:(.+)$/m,
 	}
 );
 
@@ -289,7 +290,8 @@ while (1) {
 	if ($files{'PROJECTOR'}->{'status'}) {
 
 		# We are always either playing or paused if the projector is on
-		if ($files{'PLAYING'}->{'status'}) {
+		# When we're playing "Audio" assume we are paused
+		if ($files{'PLAYING'}->{'status'} && $files{'PLAYING_TYPE'}->{'status'} ne 'Audio') {
 			$state = 'PLAY';
 		} else {
 			$state = 'PAUSE';
