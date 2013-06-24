@@ -24,7 +24,12 @@ my %RIFFS     = (
 		'file'   => 'Harry Potter/Harry Potter 2_ The Chamber of Secrets.mp3',
 		'offset' => 133,
 		'rate'   => 1.0,
-	}
+	},
+	'82474' => {
+		'file'   => 'Harry Potter/Harry Potter 3_ The Prisoner of Azkaban.mp3',
+		'offset' => 92.25,
+		'rate'   => 1.0,
+	},
 );
 
 # App config
