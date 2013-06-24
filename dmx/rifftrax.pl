@@ -17,7 +17,7 @@ my $RIFF_PATH = `~/bin/video/mediaPath` . '/iTunes/iTunes Music/RiffTrax';
 my %RIFFS     = (
 	'82481' => {
 		'file'   => 'Harry Potter/Harry Potter 1_ The Sorcerer\'s Stone.mp3',
-		'offset' => 100,
+		'offset' => 118,
 		'rate'   => 1.0,
 	},
 	'82469' => {
