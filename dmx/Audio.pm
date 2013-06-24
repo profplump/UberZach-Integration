@@ -5,7 +5,7 @@ use POSIX;
 use File::Touch;
 use File::Basename;
 use Time::HiRes qw( usleep sleep time );
-use IPC::System::Simple qw( system capture );
+use IPC::System::Simple;
 
 # Package name
 package Audio;
@@ -20,16 +20,13 @@ if ($ENV{'DEBUG'}) {
 	$DEBUG = 1;
 }
 
-# Always load the SILENCE file (also serves as a sanity check)
-audioLoad('SILENCE', 'DMX/Silence.wav');
-
 sub runApplescript($) {
 	my ($script) = @_;
 	if ($DEBUG) {
 		print STDERR 'AppleScript: ' . $script . "\n";
 	}
 
-	my $retval = capture('osascript', '-e', $script);
+	my $retval = IPC::System::Simple::capture('osascript', '-e', $script);
 	if ($DEBUG) {
 		print STDERR "\tAppleScript result: " . $retval . "\n";
 	}
@@ -37,10 +34,10 @@ sub runApplescript($) {
 	return $retval;
 }
 
-sub audioAdd($$) {
+sub add($$) {
 	my ($name, $path) = @_;
 	if ($DEBUG) {
-		print STDERR 'AppleScript::audioAdd(): ' . $name . "\n";
+		print STDERR 'Audio::add(): ' . $name . "\n";
 	}
 
 	# Construct an absolute file path
@@ -54,47 +51,47 @@ sub audioAdd($$) {
 	}
 
 	# We only support one document per name
-	audioDrop($name);
+	drop($name);
 
 	# Append the array
 	my %tmp = ('path' => $path);
 	$FILES{$name} = \%tmp;
 }
 
-sub audioDrop($) {
+sub drop($) {
 	my ($name) = @_;
 	if ($DEBUG) {
-		print STDERR 'AppleScript::dropAudio(): ' . $name . "\n";
+		print STDERR 'Audio::drop(): ' . $name . "\n";
 	}
 
 	# Unload as necessary
-	if (audioLoaded($name)) {
-		audioStop($name);
-		audioUnload($name);
+	if (loaded($name)) {
+		stop($name);
+		unload($name);
 	}
 
 	# Drop as necessary
-	if (audioExists($name)) {
+	if (available($name)) {
 		delete($FILES{$name});
 	}
 }
 
-sub audioLoaded($) {
+sub loaded($) {
 	my ($name) = @_;
 	if ($DEBUG) {
-		print STDERR 'AppleScript::audioLoaded(): ' . $name . "\n";
+		print STDERR 'Audio::loaded(): ' . $name . "\n";
 	}
 
-	if (audioExists($name) && defined($FILES{$name}->{'name'})) {
+	if (available($name) && defined($FILES{$name}->{'name'})) {
 		return 1;
 	}
 	return 0;
 }
 
-sub audioExists($) {
+sub available($) {
 	my ($name) = @_;
 	if ($DEBUG) {
-		print STDERR 'AppleScript::audioExists(): ' . $name . "\n";
+		print STDERR 'Audio::available(): ' . $name . "\n";
 	}
 
 	if (defined($name) && defined($FILES{$name})) {
@@ -103,30 +100,30 @@ sub audioExists($) {
 	return 0;
 }
 
-sub audioPlay($) {
+sub play($) {
 	my ($name) = @_;
 	if ($DEBUG) {
-		print STDERR 'AppleScript::playAudio(): ' . $name . "\n";
+		print STDERR 'Audio::play(): ' . $name . "\n";
 	}
 
 	# Start playback
-	audioBackground($name);
+	background($name);
 
 	# Wait for it to complete
 	my @cmd = ('tell application "QuickTime Player"');
 	push(@cmd, 'repeat while playing of document ' . $FILES{$name}->{'name'} . ' = true');
-	push(@cmd, 'delay 0.05');
+	push(@cmd, 'delay 0.1');
 	push(@cmd, 'end repeat');
 	push(@cmd, 'end tell');
 	runApplescript(join("\n", @cmd));
 }
 
-sub audioBackground($) {
+sub background($) {
 	my ($name) = @_;
 	if ($DEBUG) {
-		print STDERR 'AppleScript::playAudio(): ' . $name . "\n";
+		print STDERR 'Audio::background(): ' . $name . "\n";
 	}
-	if (!audioLoaded($name)) {
+	if (!loaded($name)) {
 		die('Invalid QT document: ' . $name . "\n");
 	}
 
@@ -138,12 +135,12 @@ sub audioBackground($) {
 	runApplescript(join("\n", @cmd));
 }
 
-sub audioPlaying($) {
+sub playing($) {
 	my ($name) = @_;
 	if ($DEBUG) {
-		print STDERR 'AppleScript::audioPlaying(): ' . $name . "\n";
+		print STDERR 'Audio::playing(): ' . $name . "\n";
 	}
-	if (!audioLoaded($name)) {
+	if (!loaded($name)) {
 		die('Invalid QT document: ' . $name . "\n");
 	}
 
@@ -155,12 +152,12 @@ sub audioPlaying($) {
 	return 0;
 }
 
-sub audioPosition($$) {
+sub position($$) {
 	my ($name, $new) = @_;
 	if ($DEBUG) {
-		print STDERR 'AppleScript::audioPosition(): ' . $name . "\n";
+		print STDERR 'Audio::position(): ' . $name . "\n";
 	}
-	if (!audioLoaded($name)) {
+	if (!loaded($name)) {
 		die('Invalid QT document: ' . $name . "\n");
 	}
 
@@ -173,12 +170,12 @@ sub audioPosition($$) {
 	return runApplescript('tell application "QuickTime Player" to get current time of document ' . $FILES{$name}->{'name'});
 }
 
-sub audioRate($$) {
+sub rate($$) {
 	my ($name, $new) = @_;
 	if ($DEBUG) {
-		print STDERR 'AppleScript::audioRate(): ' . $name . "\n";
+		print STDERR 'Audio::rate(): ' . $name . "\n";
 	}
-	if (!audioLoaded($name)) {
+	if (!loaded($name)) {
 		die('Invalid QT document: ' . $name . "\n");
 	}
 
@@ -191,15 +188,15 @@ sub audioRate($$) {
 	return runApplescript('tell application "QuickTime Player" to get rate of document ' . $FILES{$name}->{'name'});
 }
 
-sub audioStop($) {
+sub stop($) {
 	my ($name) = @_;
 	if ($DEBUG) {
-		print STDERR "AppleScript::stopAudio()\n";
+		print STDERR "Audio::stopAudio()\n";
 	}
 
 	# Allow control of all documents or a specific document
 	my $doc = 'every document';
-	if (!audioLoaded($name)) {
+	if (!loaded($name)) {
 		$doc = 'document ' . $FILES{$name}->{'name'};
 	}
 
@@ -211,48 +208,51 @@ sub audioStop($) {
 	runApplescript('tell application "Plex" to activate');
 }
 
-sub audioUnload($) {
+sub unload($) {
 	my ($name) = @_;
 	if ($DEBUG) {
-		print STDERR 'AppleScript::loadAudio(): ' . $name . "\n";
+		print STDERR 'Audio::loadAudio(): ' . $name . "\n";
 	}
-	if (!audioExists($name)) {
+	if (!available($name)) {
 		die('Invalid QT document: ' . $name . "\n");
 	}
 
 	# Nothing to do if the file isn't loaded
-	if (!audioLoaded($name)) {
+	if (!loaded($name)) {
 		return;
 	}
 
 	# Close to document
 	runApplescript('tell application "QuickTime Player" to close document ' . $FILES{$name}->{'name'});
+
+	# Delete our local handle
+	delete($FILES{$name}->{'name'});
 }
 
-sub audioLoad($) {
+sub load($) {
 	my ($name) = @_;
-	if (!audioExists($name)) {
-		die('Invalid QT document: ' . $name . "\n");
-	}
 	if ($DEBUG) {
-		print STDERR 'AppleScript::loadAudio(): ' . $name . "\n";
+		print STDERR 'Audio::loadAudio(): ' . $name . "\n";
+	}
+	if (!available($name)) {
+		die('Invalid QT document: ' . $name . "\n");
 	}
 
 	# Unload first, if we're already loaded
-	if (audioLoaded($name)) {
-		audioUnload($name);
+	if (loaded($name)) {
+		unload($name);
 	}
 
 	# Find out how many files are already open
 	my $count = runApplescript('tell application "QuickTime Player" to count items of every document');
 
 	# Open the file
-	system('open', '-a', 'QuickTime Player', $file);
+	IPC::System::Simple::system('open', '-a', 'QuickTime Player', $FILES{$name}->{'path'});
 
 	# Wait for QT to load the new file
 	my @cmd = ('tell application "QuickTime Player"');
 	push(@cmd, 'repeat while (count items of every document) <= ' . $count);
-	push(@cmd, 'delay 0.05');
+	push(@cmd, 'delay 0.1');
 	push(@cmd, 'end repeat');
 	push(@cmd, 'get document 1');
 	push(@cmd, 'end tell');
@@ -263,7 +263,29 @@ sub audioLoad($) {
 	$doc =~ s/\s+$//;
 	$doc =~ s/\"/\\\"/g;
 	$doc = '"' . $doc . '"';
-	return $doc;
+
+	# Save the document handle
+	$FILES{$name}->{'name'} = $doc;
+
+	# Bring Plex back to the front
+	runApplescript('tell application "Plex" to activate');
+}
+
+sub init() {
+	if ($DEBUG) {
+		print STDERR "Audio::init()\n";
+	}
+
+	# Close all QT documents and relaunch QT Player
+	runApplescript('tell application "QuickTime Player" to close every document');
+	runApplescript('tell application "QuickTime Player" to quit');
+	sleep(1);
+	IPC::System::Simple::system('open', '-a', 'QuickTime Player');
+
+	# Always load and play the SILENCE file (for sanity and general init)
+	add('SILENCE', 'DMX/Silence.wav');
+	load('SILENCE');
+	play('SILENCE');
 }
 
 # Always return true

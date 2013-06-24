@@ -12,6 +12,7 @@ use Cwd qw(abs_path);
 use File::Basename qw(dirname);
 use lib dirname(abs_path($0));
 use DMX;
+use Audio;
 
 # Effect Prototypes
 sub red_alert($$$);
@@ -27,15 +28,11 @@ my %EFFECTS    = (
 	'LSR'       => { 'cmd' => \&lsr_init, 'next' => \&lsr_run, 'loop' => \&lsr_loop },
 );
 my %FILES = (
-	'SILENCE'   => { 'file' => 'Silence.wav' },
-	'RED_ALERT' => { 'file' => 'Red Alert.mp3' },
-	'LSR'       => { 'file' => 'Rave.mp3' },
+	'RED_ALERT' => 'DMX/Red Alert.mp3',
+	'LSR'       => 'DMX/Rave.mp3',
 );
 
 # Utility prototypes
-sub openQT($);
-sub playAudio($);
-sub stopAudio();
 sub ampWait($$$);
 
 # App config
@@ -54,6 +51,13 @@ my $AMP_BOOTING  = 0;
 my $DEBUG = 0;
 if ($ENV{'DEBUG'}) {
 	$DEBUG = 1;
+}
+
+# Load all our audio files
+Audio::init();
+foreach my $file (keys(%FILES)) {
+	Audio::add($file, $FILES{$file});
+	Audio::load($file);
 }
 
 # Sockets
@@ -76,9 +80,6 @@ if (-e $RAVE_FILE) {
 if (-e $EFFECT_FILE) {
 	unlink($EFFECT_FILE);
 }
-
-# Load all our audio files
-openQT(\%FILES);
 
 # Loop forever
 while (1) {
@@ -121,7 +122,7 @@ while (1) {
 			if ($DEBUG) {
 				print STDERR "Ending background processing\n";
 			}
-			stopAudio();
+			Audio::stop(undef());
 			kill(SIGTERM, $PID);
 		}
 
@@ -208,94 +209,6 @@ sub runApplescript($) {
 	return $retval;
 }
 
-sub playAudio($) {
-	my ($name) = @_;
-	if (!defined($name)) {
-		$name = 'SILENCE';
-	}
-	if (!defined($FILES{$name}) || !defined($FILES{$name}->{'name'})) {
-		die('Invalid QT document: ' . $name . "\n");
-	}
-	if ($DEBUG) {
-		print STDERR 'Playing QT document: ' . $FILES{$name}->{'name'} . "\n";
-	}
-
-	my @cmd = ('tell application "QuickTime Player"');
-	push(@cmd, 'set current time of document ' . $FILES{$name}->{'name'} . ' to 0');
-	push(@cmd, 'play document ' . $FILES{$name}->{'name'});
-	push(@cmd, 'repeat while playing of document ' . $FILES{$name}->{'name'} . ' = true');
-	push(@cmd, 'delay 0.05');
-	push(@cmd, 'end repeat');
-	push(@cmd, 'end tell');
-
-	runApplescript(join("\n", @cmd));
-}
-
-sub stopAudio() {
-	if ($DEBUG) {
-		print STDERR "Stopping QT audio\n";
-	}
-
-	# Stop and rewind all QT documents
-	runApplescript('tell application "QuickTime Player" to stop every document');
-	runApplescript('tell application "QuickTime Player" to set current time of every document to 0');
-
-	# Bring Plex back to the front
-	runApplescript('tell application "Plex" to activate');
-}
-
-sub openQT($) {
-	my ($files) = @_;
-
-	# Open QT Player and close all documents, so we know what we're getting
-	system('open', '-a', 'QuickTime Player');
-	runApplescript('tell application "QuickTime Player" to close every document');
-
-	# Keep track of our document numbers
-	my $docIndex = 0;
-
-	# Load all the audio files
-	foreach my $key (keys(%{$files})) {
-		if ($DEBUG) {
-			print STDERR 'Loading QT document: ' . $key . "\n";
-		}
-
-		# Increment the index
-		$docIndex++;
-
-		# Record the document number
-		$files->{$key}->{'index'} = $docIndex;
-
-		# Construct a relative or absolute file path
-		my $file = $files->{$key}->{'file'};
-		if (!($file =~ /^\//)) {
-			$file = $MEDIA_PATH . '/' . $file;
-		}
-
-		# Open the file
-		system('open', '-a', 'QuickTime Player', $file);
-
-		# Wait for QT to load the new file (it's always document 1 -- we just brought it forward)
-		my @cmd = ('tell application "QuickTime Player"');
-		push(@cmd, 'repeat while (count items of every document) < ' . $docIndex);
-		push(@cmd, 'delay 0.05');
-		push(@cmd, 'end repeat');
-		push(@cmd, 'get document 1');
-		push(@cmd, 'end tell');
-		my $doc = runApplescript(join("\n", @cmd));
-
-		# Clean up and store the document name for later use
-		$doc =~ s/^\s*document //;
-		$doc =~ s/\s+$//;
-		$doc =~ s/\"/\\\"/g;
-		$doc = '"' . $doc . '"';
-		$files->{$key}->{'name'} = $doc;
-	}
-
-	# Bring Plex back to the front
-	runApplescript('tell application "Plex" to activate');
-}
-
 sub ampWait($$$) {
 	my ($name, $exists, $params) = @_;
 	if ($DEBUG) {
@@ -369,7 +282,7 @@ sub red_alert($$$) {
 	# Three blasts
 	for (my $i = 0 ; $i < 3 ; $i++) {
 		DMX::dim(\%high);
-		playAudio($name);
+		Audio::play($name);
 		DMX::dim(\%low);
 		usleep($sleep * 1000);
 	}
@@ -421,12 +334,12 @@ sub lsr_run($$$) {
 	}
 
 	# Play a short burst of silence to get all the audio devices in-sync
-	playAudio(undef());
+	Audio::play('SILENCE');
 
 	# Play the sound in a child (i.e. in the background)
 	$PID = fork();
 	if (defined($PID) && $PID == 0) {
-		playAudio($name);
+		Audio::play($name);
 		exit(0);
 	}
 
