@@ -22,7 +22,7 @@ my %RIFFS     = (
 	},
 	'82469' => {
 		'file'   => 'Harry Potter/Harry Potter 2_ The Chamber of Secrets.mp3',
-		'offset' => 100,
+		'offset' => 133,
 		'rate'   => 1.0,
 	}
 );
@@ -45,13 +45,15 @@ DMX::stateSocket($STATE_SOCK);
 DMX::stateSubscribe($STATE_SOCK);
 
 # State
-my $newState = 'OFF';
-my $riff     = 0;
-my $riffLast = $riff;
-my $url      = '';
-my $urlLast  = $url;
-my %exists   = ();
-my $pullLast = time();
+my $state     = 'OFF';
+my $stateLast = $state;
+my $riff      = 0;
+my $riffLast  = $riff;
+my $url       = '';
+my $urlLast   = $url;
+my $nudge     = 0;
+my %exists    = ();
+my $pullLast  = time();
 
 # Validate the path for all our riff files at launch
 foreach my $id (keys(%RIFFS)) {
@@ -75,13 +77,14 @@ foreach my $id (keys(%RIFFS)) {
 # Loop forever
 while (1) {
 
-	# Save the last RIFF
-	$riffLast = $riff;
+	# Save the last RIFF and state
+	$stateLast = $state;
+	$riffLast  = $riff;
 
 	# Wait for state updates
 	my $cmdState = DMX::readState($DELAY, \%exists, undef(), undef());
 	if (defined($cmdState)) {
-		$newState = $cmdState;
+		$state    = $cmdState;
 		$pullLast = time();
 	}
 
@@ -103,18 +106,24 @@ while (1) {
 		# If a RIFF was active, clear it
 		if ($riff) {
 			if ($DEBUG) {
-				print STDERR "RIFF cleared\n";
+				print STDERR "RIFF complete\n";
 			}
-			$riff = 0;
+			Audio::drop('RIFF');
+			$riff  = 0;
+			$nudge = 0;
 		}
 
 		# Activate a new RIFF, if applicable
 		if ($url =~ /\/library\/parts\/(\d+)\//) {
 			if (exists($RIFFS{$1})) {
 				if ($DEBUG) {
-					print STDERR 'Matched RIFF: ' . $1 . ' => ' . $RIFFS{$riff}{'path'};
+					print STDERR 'Matched RIFF: ' . $1 . ' => ' . $RIFFS{$1}{'path'};
 				}
 				$riff = $1;
+
+				Audio::addLoad('RIFF', $RIFFS{$riff}{'path'});
+				Audio::rate('RIFF', $RIFFS{$riff}{'rate'});
+				Audio::background('RIFF');
 			}
 		}
 	}
@@ -138,5 +147,70 @@ while (1) {
 		print $fh $new . "\n";
 		close($fh);
 		rename($tmp, $OUTPUT_FILE);
+	}
+
+	# Sync
+	if ($riff) {
+		if ($DEBUG) {
+			print STDERR "Syncing\n";
+		}
+
+		# Play/pause to match the video
+		if ($stateLast ne $state) {
+			if ($state eq 'PAUSE') {
+				Audio::pause('RIFF');
+			} elsif ($state eq 'PLAY') {
+				Audio::background('RIFF');
+			}
+		}
+
+		# Get the video and riff playback positions
+		my $riffTime = Audio::position('RIFF', undef());
+		my $videoTime = $exists{'PLAYING_POSITION'};
+
+		# Convert to seconds
+		my @parts = split(/\-/, $videoTime);
+		$videoTime = 0;
+		if (scalar(@parts) == 3) {
+			$videoTime = ($parts[0] * 3600) + ($parts[1] * 60) + $parts[2];
+		} elsif (scalar(@parts) == 2) {
+			$videoTime = ($parts[0] * 60) + $parts[1];
+		} else {
+			$videoTime = $parts[0];
+		}
+
+		# Calculate the adjusted riff time and the error between the riff and video times
+		my $riffAdjTime = ($riffTime * $RIFFS{$riff}{'rate'}) - $RIFFS{$riff}{'offset'} + $nudge;
+		my $error       = $videoTime - $riffAdjTime;
+
+		# Debug
+		if ($DEBUG) {
+			print STDERR "\tRiff time: " . $riffTime . "\n";
+			print STDERR "\tVideo time: " . $videoTime . "\n";
+			print STDERR "\tAdjusted riff time: " . $riffAdjTime . "\n";
+			print STDERR "\tError: " . $error . "\n";
+		}
+
+		# Adjust the riff position if we're off by 1 second or more
+		if (abs($error) >= 1) {
+			my $newPos = $riffTime + $error;
+			if ($newPos < 0) {
+				Audio::pause('RIFF');
+			} else {
+
+				# Play/pause as needed, before we adjust
+				# The state-change detection should handle most of this
+				# But double-check while adjusting in case things get out-of-sync
+				my $playing = Audio::playing('RIFF');
+				if ($state eq 'PLAY' && !$playing) {
+					Audio::background('RIFF');
+				} elsif ($state ne 'PLAY' && $playing) {
+					Audio::pause('RIFF');
+				}
+
+				# Always adjust
+				Audio::position('RIFF', $newPos);
+			}
+		}
 	}
 }
