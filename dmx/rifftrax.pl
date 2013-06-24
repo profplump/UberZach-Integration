@@ -93,6 +93,15 @@ while (1) {
 		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
 	}
 
+	# Record nudges
+	if ($state eq 'NUDGE_FORWARD') {
+		$nudge += 0.1;
+		next;
+	} elsif ($state eq 'NUDGE_BACK') {
+		$nudge -= 0.1;
+		next;
+	}
+
 	# Save the last URL, so we can find changes
 	# Do not delete the last URL if no new one is provided
 	if ($exists{'PLAYING_URL'}) {
@@ -187,6 +196,9 @@ while (1) {
 		if ($DEBUG) {
 			print STDERR "\tRiff time: " . $riffTime . "\n";
 			print STDERR "\tVideo time: " . $videoTime . "\n";
+			print STDERR "\tOffset: " . $RIFFS{$riff}{'offset'} . "\n";
+			print STDERR "\tRate: " . $RIFFS{$riff}{'rate'} . "\n";
+			print STDERR "\tNudge: " . $nudge . "\n";
 			print STDERR "\tAdjusted riff time: " . $riffAdjTime . "\n";
 			print STDERR "\tError: " . $error . "\n";
 		}
