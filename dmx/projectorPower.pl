@@ -159,6 +159,8 @@ while (1) {
 		$color = $COLOR_LOW;
 	} elsif ($elapsed > $TIMEOUT / 2) {
 		$color = $COLOR_LOW;
+	} elsif ($exists{'PLAYING_TYPE'} eq 'Audio') {
+		$COLOR_LOW;
 	} else {
 		$color = $COLOR_HIGH;
 	}
