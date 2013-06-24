@@ -39,6 +39,7 @@ my %MON_FILES     = (
 	'PROJECTOR_COLOR' => 'STATUS_VALUE',
 	'PROJECTOR_INPUT' => 'STATUS_VALUE',
 	'COLOR'           => 'STATUS_VALUE',
+	'RIFF'            => 'STATUS_VALUE',
 
 	$MEDIA_PATH . '/DMX/cmd/GARAGE_CMD' => 'EXISTS_CLEAR',
 );
