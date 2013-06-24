@@ -30,6 +30,11 @@ my %RIFFS     = (
 		'offset' => 92.25,
 		'rate'   => 1.0,
 	},
+	'82471' => {
+		'file'   => 'Harry Potter/Harry Potter 4_ The Goblet of Fire.mp3',
+		'offset' => 153,
+		'rate'   => 1.0,
+	},
 );
 
 # App config
