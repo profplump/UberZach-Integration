@@ -34,6 +34,15 @@ sub runApplescript($) {
 	return $retval;
 }
 
+sub addLoad($$) {
+	my ($name, $path) = @_;
+	if ($DEBUG) {
+		print STDERR 'Audio::addLoad(): ' . $name . "\n";
+	}
+	add($name, $path);
+	load($name);
+}
+
 sub add($$) {
 	my ($name, $path) = @_;
 	if ($DEBUG) {
@@ -64,7 +73,7 @@ sub drop($) {
 		print STDERR 'Audio::drop(): ' . $name . "\n";
 	}
 
-	# Unload as necessary
+	# Stop and unload as necessary
 	if (loaded($name)) {
 		stop($name);
 		unload($name);
