@@ -270,7 +270,7 @@ sub load($) {
 
 	# Wait for QT to load the new file
 	my @cmd = ('tell application "QuickTime Player"');
-	push(@cmd, 'set endDate to current date - (0.5 * minutes)');
+	push(@cmd, 'set endDate to current date + (0.5 * minutes)');
 	push(@cmd, 'repeat while (count items of every document) <= ' . $count . ' and current date < endDate');
 	push(@cmd, 'delay 0.1');
 	push(@cmd, 'end repeat');
