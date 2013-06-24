@@ -27,6 +27,7 @@ sub runApplescript($) {
 	}
 
 	my $retval = IPC::System::Simple::capture('osascript', '-e', $script);
+	$retval =~ s/[\r\n]$//;
 	if ($DEBUG) {
 		print STDERR "\tAppleScript result: " . $retval . "\n";
 	}
@@ -137,7 +138,7 @@ sub background($) {
 	}
 
 	# Start playback
-	runApplescript('tell application "QuickTime Player" play document ' . $FILES{$name}->{'name'});
+	runApplescript('tell application "QuickTime Player" to play document ' . $FILES{$name}->{'name'});
 }
 
 sub playing($) {
@@ -196,7 +197,7 @@ sub rate($$) {
 sub pause($) {
 	my ($name) = @_;
 	if ($DEBUG) {
-		print STDERR 'Audio::background(): ' . $name . "\n";
+		print STDERR 'Audio::pause(): ' . $name . "\n";
 	}
 	if (!loaded($name)) {
 		die('Invalid QT document: ' . $name . "\n");
@@ -269,7 +270,8 @@ sub load($) {
 
 	# Wait for QT to load the new file
 	my @cmd = ('tell application "QuickTime Player"');
-	push(@cmd, 'repeat while (count items of every document) <= ' . $count);
+	push(@cmd, 'set endDate to current date - (0.5 * minutes)');
+	push(@cmd, 'repeat while (count items of every document) <= ' . $count . ' and current date < endDate');
 	push(@cmd, 'delay 0.1');
 	push(@cmd, 'end repeat');
 	push(@cmd, 'get document 1');
