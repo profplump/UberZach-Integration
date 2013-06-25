@@ -236,7 +236,7 @@ sub ampWait($$$) {
 		# Wait for the amp to boot if it wasn't running when we first checked
 		if ($AMP_BOOTING) {
 			if ($DEBUG) {
-				print STDERR "\tWaiting " . $AMP_DELAY . "seconds for amp to boot\n";
+				print STDERR "\tWaiting " . $AMP_DELAY . " seconds for amp to boot\n";
 			}
 			sleep($AMP_DELAY);
 		}
