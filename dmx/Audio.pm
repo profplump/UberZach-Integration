@@ -215,7 +215,7 @@ sub stop($) {
 
 	# Allow control of all documents or a specific document
 	my $doc = 'every document';
-	if (!loaded($name)) {
+	if (loaded($name)) {
 		$doc = 'document ' . $FILES{$name}->{'name'};
 	}
 
