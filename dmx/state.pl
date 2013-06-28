@@ -5,6 +5,7 @@ use IO::Select;
 use IO::Socket::UNIX;
 use File::Basename;
 use File::Temp qw( tempfile );
+use Sys::Hostname;
 
 # Local modules
 use Cwd qw(abs_path);
@@ -19,31 +20,69 @@ sub mtime($);
 my $STATE_TIMEOUT = 180;
 my $MEDIA_PATH    = `~/bin/video/mediaPath`;
 my %MON_FILES     = (
-	'MOTION'          => 'MTIME',
-	'PROJECTOR'       => 'STATUS',
-	'AMPLIFIER'       => 'STATUS',
-	'GUI'             => 'STATUS_GUI',
-	'PLAYING'         => 'STATUS_PLAYING',
-	'NO_MOTION'       => 'EXISTS',
-	'RAVE'            => 'EXISTS',
-	'EFFECT'          => 'EXISTS',
-	'FAN_CMD'         => 'EXISTS_ON',
-	'LIGHTS'          => 'EXISTS_ON',
-	'STEREO_CMD'      => 'EXISTS_ON',
-	'AUDIO_AMP'       => 'EXISTS_ON',
-	'AMPLIFIER_VOL'   => 'STATUS_VALUE',
-	'AMPLIFIER_MODE'  => 'STATUS_VALUE',
-	'AMPLIFIER_INPUT' => 'STATUS_VALUE',
-	'AUDIO'           => 'STATUS_VALUE',
-	'AUDIO_STATE'     => 'STATUS_VALUE',
-	'PROJECTOR_COLOR' => 'STATUS_VALUE',
-	'PROJECTOR_INPUT' => 'STATUS_VALUE',
-	'COLOR'           => 'STATUS_VALUE',
-	'RIFF'            => 'STATUS_VALUE',
-
-	$MEDIA_PATH . '/DMX/cmd/GARAGE_CMD' => 'EXISTS_CLEAR',
+	'GUI'     => 'STATUS_GUI',
+	'PLAYING' => 'STATUS_PLAYING',
+	'RIFF'    => 'STATUS_VALUE',
 );
-my %EXTRAS = (
+my $DISPLAY = '<NONE>';
+
+# Host-specific config
+my $HOST = Sys::Hostname::hostname();
+if ($HOST =~ /loki/i) {
+
+	# Display device
+	$DISPLAY = 'PROJECTOR';
+
+	# Motion detection
+	$MON_FILES{'MOTION'}    = 'MTIME';
+	$MON_FILES{'NO_MOTION'} = 'EXISTS';
+
+	# Projector
+	$MON_FILES{'PROJECTOR'}       = 'STATUS';
+	$MON_FILES{'PROJECTOR_COLOR'} = 'STATUS_VALUE';
+	$MON_FILES{'PROJECTOR_INPUT'} = 'STATUS_VALUE';
+
+	# Amplifier
+	$MON_FILES{'AMPLIFIER'}       = 'STATUS';
+	$MON_FILES{'AMPLIFIER_VOL'}   = 'STATUS_VALUE';
+	$MON_FILES{'AMPLIFIER_MODE'}  = 'STATUS_VALUE';
+	$MON_FILES{'AMPLIFIER_INPUT'} = 'STATUS_VALUE';
+	$MON_FILES{'AUDIO_AMP'}       = 'EXISTS_ON';
+	$MON_FILES{'STEREO_CMD'}      = 'EXISTS_ON';
+
+	# A/V Effects
+	$MON_FILES{'LIGHTS'} = 'EXISTS_ON';
+	$MON_FILES{'RAVE'}   = 'EXISTS';
+	$MON_FILES{'EFFECT'} = 'EXISTS';
+
+	# Equipment
+	$MON_FILES{'FAN_CMD'} = 'EXISTS_ON';
+	$MON_FILES{ $MEDIA_PATH . '/DMX/cmd/GARAGE_CMD' } = 'EXISTS_CLEAR';
+
+	# OS State
+	$MON_FILES{'COLOR'}       = 'STATUS_VALUE';
+	$MON_FILES{'AUDIO'}       = 'STATUS_VALUE';
+	$MON_FILES{'AUDIO_STATE'} = 'STATUS_VALUE';
+
+} elsif ($HOST =~ /beddy/i) {
+
+	# Display device
+	$DISPLAY = 'TV';
+
+	# TV
+	#$MON_FILES{'TV'}       = 'STATUS';
+	#$MON_FILES{'TV_VOL'}   = 'STATUS_VALUE';
+	#$MON_FILES{'TV_INPUT'} = 'STATUS_VALUE';
+}
+
+# App config
+my $SOCK_TIMEOUT = 5;
+my $DATA_DIR     = DMX::dataDir();
+my $CMD_FILE     = $DATA_DIR . 'STATE.socket';
+my $MAX_CMD_LEN  = 4096;
+my $RESET_CMD    = $ENV{'HOME'} . '/bin/video/dmx/reset.sh';
+my $PUSH_TIMEOUT = 20;
+my %EXTRAS       = (
 	'PLAYING' => {
 		'URL'      => qr/^\<li\>Filename\:(.+)$/m,
 		'YEAR'     => qr/^\<li\>Year\:(\d+)/m,
@@ -57,14 +96,6 @@ my %EXTRAS = (
 		'TYPE'     => qr/^\<li\>Type\:(.+)$/m,
 	}
 );
-
-# App config
-my $SOCK_TIMEOUT = 5;
-my $DATA_DIR     = DMX::dataDir();
-my $CMD_FILE     = $DATA_DIR . 'STATE.socket';
-my $MAX_CMD_LEN  = 4096;
-my $RESET_CMD    = $ENV{'HOME'} . '/bin/video/dmx/reset.sh';
-my $PUSH_TIMEOUT = 20;
 
 # Debug
 my $DEBUG = 0;
@@ -97,8 +128,10 @@ my $pushLast   = 0;
 
 # Add the extras to the main file list
 foreach my $file (keys(%EXTRAS)) {
-	foreach my $extra (keys(%{ $EXTRAS{$file} })) {
-		$MON_FILES{ $file . '_' . $extra } = 'NONE';
+	if (exists($MON_FILES{$file})) {
+		foreach my $extra (keys(%{ $EXTRAS{$file} })) {
+			$MON_FILES{ $file . '_' . $extra } = 'NONE';
+		}
 	}
 }
 
@@ -287,9 +320,9 @@ while (1) {
 
 	# Calculate the new state
 	$stateLast = $state;
-	if ($files{'PROJECTOR'}->{'status'}) {
+	if (exists($files{$DISPLAY}) && $files{$DISPLAY}->{'status'}) {
 
-		# We are always either playing or paused if the projector is on
+		# We are always either playing or paused if the display is on
 		# When we're playing "Audio" assume we are paused
 		if ($files{'PLAYING'}->{'status'} && $files{'PLAYING_TYPE'}->{'status'} ne 'Audio') {
 			$state = 'PLAY';
@@ -299,7 +332,7 @@ while (1) {
 
 	} else {
 
-		# If the projector is off, check the timeouts
+		# If the display is off, check the timeouts
 		my $timeSinceUpdate = time() - $updateLast;
 		if ($timeSinceUpdate > $STATE_TIMEOUT) {
 			$state = 'OFF';
