@@ -106,7 +106,7 @@ DMX::stateSubscribe($STATE_SOCK);
 # State
 my $state     = 'OFF';
 my $stateLast = $state;
-my $riff      = 0;
+my $riff      = -1;
 my $riffLast  = $riff;
 my $url       = '';
 my $urlLast   = $url;
@@ -120,6 +120,11 @@ while (1) {
 	# Save the last RIFF and state
 	$stateLast = $state;
 	$riffLast  = $riff;
+
+	# Force a change if our riff is clearly invalid (first loop, reset, etc.)
+	if ($riff < 0) {
+		$riff = 0;
+	}
 
 	# Wait for state updates
 	my $cmdState = DMX::readState($DELAY, \%exists, undef(), undef());
@@ -166,7 +171,7 @@ while (1) {
 		if ($url =~ /\/library\/parts\/(\d+)\//) {
 			if (exists($RIFFS{$1})) {
 				if ($DEBUG) {
-					print STDERR 'Matched RIFF: ' . $1 . ' => ' . $RIFFS{$1}->{'file'};
+					print STDERR 'Matched RIFF: ' . $1 . ' => ' . $RIFFS{$1}->{'file'} . "\n";
 				}
 				$riff = $1;
 
@@ -180,11 +185,11 @@ while (1) {
 	# If the RIFF has changed, save the state to disk
 	if ($riff ne $riffLast) {
 		my $new = '<none>';
-		if ($riff) {
+		if ($riff > 0) {
 			$new = $RIFFS{$riff}->{'id'};
 		}
 		my $old = $new;
-		if ($riffLast) {
+		if ($riffLast > 0) {
 			$old = $RIFFS{$riffLast}->{'id'};
 		}
 
@@ -286,10 +291,12 @@ while (1) {
 				# Play/pause as needed, before we adjust
 				# The state-change detection should handle most of this
 				# But double-check while adjusting in case things get out-of-sync
-				if ($state eq 'PLAY' && !$playing) {
-					Audio::background('RIFF');
-				} elsif ($state ne 'PLAY' && $playing) {
-					Audio::pause('RIFF');
+				if (exists($exists{'PLAYING'})) {
+					if ($exists{'PLAYING'} && !$playing) {
+						Audio::background('RIFF');
+					} elsif (!$exists{'PLAYING'} && $playing) {
+						Audio::pause('RIFF');
+					}
 				}
 			}
 		} else {
