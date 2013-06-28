@@ -30,12 +30,22 @@ while (1) {
 	my $state = DMX::readState($DELAY, \%exists, \%mtime, undef());
 
 	if ($state) {
+
+		# Find the latest modification timestamp
 		my $file = undef();
 		foreach my $key (keys(%mtime)) {
 			if (!defined($file) || $mtime{$key} > $mtime{$file}) {
 				$file = $key;
 			}
 		}
-		print STDERR "\tLast update: " . $file . ': ' . localtime($mtime{$file}) . "\n";
+
+		# Pretty print
+		my $time = 0;
+		if (defined($file)) {
+			$time = $mtime{$file};
+		} else {
+			$file = '<NO MTIME DATA>';
+		}
+		print STDERR "\tLast update: " . $file . ': ' . localtime($time) . "\n";
 	}
 }

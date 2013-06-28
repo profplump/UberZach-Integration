@@ -122,8 +122,7 @@ sub stateSocket($) {
 # Parse the state->client comm string
 sub parseState($$$) {
 	my ($text, $exists, $mtime) = @_;
-	my $cmdState    = undef();
-	my $exists_text = undef();
+	my $cmdState = undef();
 	if (!defined($exists)) {
 		my %tmp = ();
 		$exists = \%tmp;
@@ -136,14 +135,15 @@ sub parseState($$$) {
 	# Parse the string
 	%{$exists} = ();
 	%{$mtime}  = ();
-	($cmdState, $exists_text) = $text =~ /^(\w+)(?:\s+\(([^\)]+)\))?/;
+	my @lines = split("\n", $text);
+	$cmdState = shift(@lines);
 	if (!defined($cmdState)) {
 		print STDERR 'State parse error: ' . $text . "\n";
 		next;
 	}
-	if (defined($exists_text)) {
-		foreach my $exists_val (split(/\s*,\s*/, $exists_text)) {
-			my ($name, $value, $time) = $exists_val =~ /(\w+)\:([^\,\:]*)\:(\d*)/;
+	if (scalar(@lines)) {
+		foreach my $line (@lines) {
+			my ($name, $value, $time) = $line =~ /(\w+)\|([^|]*)\|(\d*)/;
 			if (!defined($name) || !defined($value) || !defined($time)) {
 				print STDERR 'State parse error (exists): ' . $text . "\n";
 				next;
@@ -154,10 +154,10 @@ sub parseState($$$) {
 	}
 	if ($DEBUG) {
 		my @exists_tmp = ();
-		foreach my $key (keys(%{$exists})) {
-			push(@exists_tmp, $key . ':' . $exists->{$key} . ':' . $mtime->{$key});
+		foreach my $key (sort(keys(%{$exists}))) {
+			push(@exists_tmp, $key . ":\t" . $exists->{$key} . ' @ ' . $mtime->{$key});
 		}
-		print STDERR 'Got state: ' . $cmdState . ' (' . join(', ', @exists_tmp) . ")\n";
+		print STDERR 'Got state: ' . $cmdState . "\n" . join("\n", @exists_tmp) . "\n";
 	}
 
 	# Translate INIT to OFF

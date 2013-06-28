@@ -333,11 +333,10 @@ while (1) {
 		foreach my $file (values(%files)) {
 			my $text = $file->{'status'};
 			$text =~ s/\s/ /g;
-			$text =~ s/[\,\(\)]/_/g;
-			$text =~ s/\:/-/g;
-			push(@statTime, $file->{'name'} . ':' . $text . ':' . $file->{'update'});
+			$text =~ s/\|/-/g;
+			push(@statTime, $file->{'name'} . '|' . $text . '|' . $file->{'update'});
 		}
-		$status = ' (' . join(', ', @statTime) . ')';
+		$status = "\n" . join("\n", @statTime);
 	}
 
 	# Clear EXISTS_CLEAR files immediately (but after we append their status)

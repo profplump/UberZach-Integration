@@ -219,7 +219,7 @@ while (1) {
 		my $videoTime = $exists{'PLAYING_POSITION'};
 
 		# Convert to seconds
-		my @parts = split(/\-/, $videoTime);
+		my @parts = split(/\:/, $videoTime);
 		$videoTime = 0;
 		if (scalar(@parts) == 3) {
 			$videoTime = ($parts[0] * 3600) + ($parts[1] * 60) + $parts[2];
