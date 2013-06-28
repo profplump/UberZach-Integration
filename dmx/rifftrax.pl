@@ -13,39 +13,11 @@ use DMX;
 use Audio;
 
 # Config
-my $RIFF_PATH = `~/bin/video/mediaPath` . '/iTunes/iTunes Music/RiffTrax';
-my %RIFFS     = (
-	'82481' => {
-		'file'   => 'Harry Potter/Harry Potter 1_ The Sorcerer\'s Stone.mp3',
-		'offset' => 100,
-		'rate'   => 1.0,
-	},
-	'82469' => {
-		'file'   => 'Harry Potter/Harry Potter 2_ The Chamber of Secrets.mp3',
-		'offset' => 133,
-		'rate'   => 1.0,
-	},
-	'82474' => {
-		'file'   => 'Harry Potter/Harry Potter 3_ The Prisoner of Azkaban.mp3',
-		'offset' => 92.25,
-		'rate'   => 1.0,
-	},
-	'82471' => {
-		'file'   => 'Harry Potter/Harry Potter 4_ The Goblet of Fire.mp3',
-		'offset' => 153,
-		'rate'   => 1.0,
-	},
-	'82473' => {
-		'file'   => 'Harry Potter/Harry Potter 5_ The Order of the Phoenix.mp3',
-		'offset' => 97,
-		'rate'   => 1.0,
-	},
-	'82472' => {
-		'file'   => 'Harry Potter/Harry Potter 6_ The Half Blood Prince.mp3',
-		'offset' => 160.5,
-		'rate'   => 1.0,
-	},
-);
+my $MEDIA_PATH     = `~/bin/video/mediaPath`;
+my $CONFIG_PATH    = $MEDIA_PATH . '/DMX/RiffTrax';
+my $RIFF_PATH      = $MEDIA_PATH . '/iTunes/iTunes Music/RiffTrax';
+my $ACTION_DELAY   = 0.1;
+my $JUMP_THRESHOLD = 5;
 
 # App config
 my $DATA_DIR     = DMX::dataDir();
@@ -53,12 +25,79 @@ my $OUTPUT_FILE  = $DATA_DIR . 'RIFF';
 my $STATE_SOCK   = $OUTPUT_FILE . '.socket';
 my $PULL_TIMEOUT = 60;
 my $DELAY        = $PULL_TIMEOUT / 2;
+my %RIFFS        = ();
 
 # Debug
 my $DEBUG = 0;
 if ($ENV{'DEBUG'}) {
 	$DEBUG = 1;
 }
+
+# Read the config
+opendir(CONF, $CONFIG_PATH)
+  or die('Unable to open config directory: ' . $! . "\n");
+foreach my $file (readdir(CONF)) {
+
+	# Skip silly files
+	if ($file =~ /^\._/) {
+		next;
+	}
+
+	if ($file =~ /\.riff$/) {
+		my $path = $CONFIG_PATH . '/' . $file;
+
+		# Slurp the contents
+		my $text = '';
+		if (!open(my $fh, $path)) {
+			warn('Unable to open ' . $path . "\n");
+		} else {
+			local $/;
+			$text = <$fh>;
+			close($fh);
+		}
+
+		# Parse out the data we care about
+		my %data = ();
+		if ($text =~ /^\s*ID:\s*(\d+)\s*$/mi) {
+			$data{'id'} = $1;
+		}
+		if ($text =~ /^\s*File:\s*(\S.*\S)\s*$/mi) {
+			$data{'file'} = $1;
+		}
+		if ($text =~ /^\s*Offset:\s*([\-\+]?\d+(?:\.\d+)?)\s*$/mi) {
+			$data{'offset'} = $1;
+		}
+		if ($text =~ /^\s*Rate:\s*(\d+(?:\.\d+)?)\s*$/mi) {
+			$data{'rate'} = $1;
+		}
+
+		# Ensure we have a valid record
+		if (!$data{'id'} || !$data{'file'}) {
+			die('Invalid riff file: ' . $file . ' => ' . $data{'path'} . "\n");
+		}
+
+		# Construct an absolute path
+		if ($data{'file'} =~ /^\//) {
+			$data{'path'} = $data{'file'};
+		} else {
+			$data{'path'} = $RIFF_PATH . '/' . $data{'file'};
+		}
+
+		# Ensure the path is valid
+		if (!-r $data{'path'}) {
+			die('Invalid riff path: ' . $file . ' => ' . $data{'path'} . "\n");
+		}
+
+		# Debug
+		if ($DEBUG) {
+			print STDERR 'Added RiffTrax: ' . $data{'id'} . "\n\tFile: " . $data{'file'} . "\n\tOffset: " . $data{'offset'} . "\n\tRate: " . $data{'rate'} . "\n";
+		}
+
+		# Push the data up the chain
+		$RIFFS{ $data{'id'} } = \%data;
+	}
+}
+closedir(CONF);
 
 # Sockets
 DMX::stateSocket($STATE_SOCK);
@@ -74,25 +113,6 @@ my $urlLast   = $url;
 my $nudge     = 0;
 my %exists    = ();
 my $pullLast  = time();
-
-# Validate the path for all our riff files at launch
-foreach my $id (keys(%RIFFS)) {
-
-	# Store the ID internally
-	$RIFFS{$id}{'id'} = $id;
-
-	# Construct an absolute path
-	if ($RIFFS{$id}{'file'} =~ /^\//) {
-		$RIFFS{$id}{'path'} = $RIFFS{$riff}{'file'};
-	} else {
-		$RIFFS{$id}{'path'} = $RIFF_PATH . '/' . $RIFFS{$id}{'file'};
-	}
-
-	# Ensure the path is valid
-	if (!-r $RIFFS{$id}{'path'}) {
-		die('Invalid riff file: ' . $id . ' => ' . $RIFFS{$id}{'path'} . "\n");
-	}
-}
 
 # Loop forever
 while (1) {
@@ -115,10 +135,10 @@ while (1) {
 
 	# Record nudges
 	if ($state eq 'NUDGE_FORWARD') {
-		$nudge += 0.1;
+		$nudge -= 0.1;
 		next;
 	} elsif ($state eq 'NUDGE_BACK') {
-		$nudge -= 0.1;
+		$nudge += 0.1;
 		next;
 	}
 
@@ -146,12 +166,12 @@ while (1) {
 		if ($url =~ /\/library\/parts\/(\d+)\//) {
 			if (exists($RIFFS{$1})) {
 				if ($DEBUG) {
-					print STDERR 'Matched RIFF: ' . $1 . ' => ' . $RIFFS{$1}{'path'};
+					print STDERR 'Matched RIFF: ' . $1 . ' => ' . $RIFFS{$1}->{'file'};
 				}
 				$riff = $1;
 
-				Audio::addLoad('RIFF', $RIFFS{$riff}{'path'});
-				Audio::rate('RIFF', $RIFFS{$riff}{'rate'});
+				Audio::addLoad('RIFF', $RIFFS{$riff}->{'path'});
+				Audio::rate('RIFF', $RIFFS{$riff}->{'rate'});
 				Audio::background('RIFF');
 			}
 		}
@@ -161,11 +181,11 @@ while (1) {
 	if ($riff ne $riffLast) {
 		my $new = '<none>';
 		if ($riff) {
-			$new = $RIFFS{$riff}{'id'};
+			$new = $RIFFS{$riff}->{'id'};
 		}
 		my $old = $new;
 		if ($riffLast) {
-			$old = $RIFFS{$riffLast}{'id'};
+			$old = $RIFFS{$riffLast}->{'id'};
 		}
 
 		if ($DEBUG) {
@@ -194,6 +214,7 @@ while (1) {
 		}
 
 		# Get the video and riff playback positions
+		my $rate = Audio::rate('RIFF', undef());
 		my $riffTime = Audio::position('RIFF', undef());
 		my $videoTime = $exists{'PLAYING_POSITION'};
 
@@ -209,39 +230,73 @@ while (1) {
 		}
 
 		# Calculate the adjusted riff time and the error between the riff and video times
-		my $riffAdjTime = ($riffTime * $RIFFS{$riff}{'rate'}) - $RIFFS{$riff}{'offset'} + $nudge;
+		my $riffAdjTime = ($riffTime * $RIFFS{$riff}->{'rate'}) - $RIFFS{$riff}->{'offset'} + $nudge;
 		my $error       = $videoTime - $riffAdjTime;
+		my $errorAbs    = abs($error);
 
 		# Debug
 		if ($DEBUG) {
+			print STDERR "\tRate: " . $RIFFS{$riff}->{'rate'} . "\n";
+			print STDERR "\tAdjusted Rate: " . $rate . "\n";
+			print STDERR "\tNudge: " . $nudge . "\n";
+			print STDERR "\tOffset: " . $RIFFS{$riff}->{'offset'} . "\n";
 			print STDERR "\tRiff time: " . $riffTime . "\n";
 			print STDERR "\tVideo time: " . $videoTime . "\n";
-			print STDERR "\tOffset: " . $RIFFS{$riff}{'offset'} . "\n";
-			print STDERR "\tRate: " . $RIFFS{$riff}{'rate'} . "\n";
-			print STDERR "\tNudge: " . $nudge . "\n";
 			print STDERR "\tAdjusted riff time: " . $riffAdjTime . "\n";
 			print STDERR "\tError: " . $error . "\n";
 		}
 
-		# Adjust the riff position if we're off by 1 second or more
-		if (abs($error) >= 1) {
-			my $newPos = $riffTime + $error;
+		# Adjust the riff position if we're off by 0.5 seconds or more
+		if ($errorAbs > 0.5) {
+
+			# Calculate the new position, including an ACTION_DELAY adjustment to compensate for time elapsed in this process
+			my $newPos = $riffTime + $error + $ACTION_DELAY;
+
 			if ($newPos < 0) {
 				Audio::pause('RIFF');
 			} else {
 
+				# See if we're playing
+				my $playing = Audio::playing('RIFF');
+
+				# Jump if we're off by more than a few seconds
+				if ($errorAbs > $JUMP_THRESHOLD) {
+					if ($DEBUG) {
+						print STDERR 'Jumping to: ' . $newPos . "\n";
+					}
+					Audio::position('RIFF', $newPos);
+					$nudge    = 0;
+					$error    = 0;
+					$errorAbs = 0;
+				}
+
+				# Set the rate when we adjust, unless we're paused
+				if ($playing) {
+					my $rateDiff = $errorAbs / $JUMP_THRESHOLD;
+					if ($error < 0) {
+						$rateDiff *= -1;
+					}
+					my $newRate = $RIFFS{$riff}->{'rate'} + $rateDiff;
+					if ($DEBUG) {
+						print STDERR 'Setting rate to: ' . $newRate . "\n";
+					}
+					Audio::rate('RIFF', $newRate);
+				}
+
 				# Play/pause as needed, before we adjust
 				# The state-change detection should handle most of this
 				# But double-check while adjusting in case things get out-of-sync
-				my $playing = Audio::playing('RIFF');
 				if ($state eq 'PLAY' && !$playing) {
 					Audio::background('RIFF');
 				} elsif ($state ne 'PLAY' && $playing) {
 					Audio::pause('RIFF');
 				}
+			}
+		} else {
 
-				# Always adjust
-				Audio::position('RIFF', $newPos);
+			# Reset the rate to standard if we're inside sync the window
+			if ($rate != $RIFFS{$riff}->{'rate'}) {
+				Audio::rate('RIFF', $RIFFS{$riff}->{'rate'});
 			}
 		}
 	}
