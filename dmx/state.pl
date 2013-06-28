@@ -333,7 +333,7 @@ while (1) {
 		foreach my $file (values(%files)) {
 			my $text = $file->{'status'};
 			$text =~ s/\s/ /g;
-			$text =~ s/\,/_/g;
+			$text =~ s/[\,\(\)]/_/g;
 			$text =~ s/\:/-/g;
 			push(@statTime, $file->{'name'} . ':' . $text . ':' . $file->{'update'});
 		}
