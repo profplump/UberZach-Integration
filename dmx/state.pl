@@ -324,7 +324,9 @@ while (1) {
 
 		# We are always either playing or paused if the display is on
 		# When we're playing "Audio" assume we are paused
-		if ($files{'PLAYING'}->{'status'} && $files{'PLAYING_TYPE'}->{'status'} ne 'Audio') {
+		if (   (exists($files{'PLAYING'}) && $files{'PLAYING'}->{'status'})
+			&& ((exists($files{'PLAYING_TYPE'}) && $files{'PLAYING_TYPE'}->{'status'} ne 'Audio') || !exists($files{'PLAYING_TYPE'})))
+		{
 			$state = 'PLAY';
 		} else {
 			$state = 'PAUSE';
@@ -337,7 +339,7 @@ while (1) {
 		if ($timeSinceUpdate > $STATE_TIMEOUT) {
 			$state = 'OFF';
 		} elsif ($timeSinceUpdate < $STATE_TIMEOUT) {
-			if ($files{'NO_MOTION'}->{'status'}) {
+			if (exists($files{'NO_MOTION'}) && $files{'NO_MOTION'}->{'status'}) {
 				$state = 'OFF';
 			} else {
 				$state = 'MOTION';
