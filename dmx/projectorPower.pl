@@ -145,7 +145,7 @@ while (1) {
 	}
 
 	# Calculate the color mode
-	# LOW for playback
+	# LOW for playback, including audio
 	# HIGH when playing and LIGHTS
 	# HIGH when the GUI is up
 	# LOW again when the GUI is up for half the timeout (to save the bulb)
@@ -155,12 +155,12 @@ while (1) {
 		} else {
 			$color = $COLOR_LOW;
 		}
+	} elsif ($exists{'PLAYING_TYPE'} eq 'Audio') {
+		$color = $COLOR_LOW;
 	} elsif (!$exists{'GUI'}) {
 		$color = $COLOR_LOW;
 	} elsif ($elapsed > $TIMEOUT / 2) {
 		$color = $COLOR_LOW;
-	} elsif ($exists{'PLAYING_TYPE'} eq 'Audio') {
-		$COLOR_LOW;
 	} else {
 		$color = $COLOR_HIGH;
 	}
