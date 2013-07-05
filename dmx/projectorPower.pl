@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-use POSIX qw(ceil floor);
+use POSIX;
 
 # Local modules
 use Cwd qw(abs_path);
@@ -57,6 +57,9 @@ my $color        = $COLOR_LOW;
 
 # Loop forever
 while (1) {
+
+	# Reap zombie children
+	while (waitpid(-1, WNOHANG) > 0) { }
 
 	# State is calculated; use newState to gather data
 	my $newState = $state;
@@ -264,7 +267,14 @@ sub say($) {
 	if ($DEBUG) {
 		print STDERR 'Say: ' . $str . "\n";
 	}
-	system('say', $str);
+
+	my $pid = fork();
+	if (!defined($pid)) {
+		die('Unable to fork: ' . $! . "\n");
+	}
+	if (!$pid) {
+		exec('say', $str);
+	}
 }
 
 sub sayShutdown($) {
