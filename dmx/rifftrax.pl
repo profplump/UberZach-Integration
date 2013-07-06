@@ -58,8 +58,8 @@ foreach my $file (readdir(CONF)) {
 
 		# Parse out the data we care about
 		my %data = ();
-		if ($text =~ /^\s*ID:\s*(\d+)\s*$/mi) {
-			$data{'id'} = $1;
+		if ($text =~ /^\s*Name:\s*(\S.*\S)\s*$/mi) {
+			$data{'name'} = $1;
 		}
 		if ($text =~ /^\s*File:\s*(\S.*\S)\s*$/mi) {
 			$data{'file'} = $1;
@@ -72,8 +72,8 @@ foreach my $file (readdir(CONF)) {
 		}
 
 		# Ensure we have a valid record
-		if (!$data{'id'} || !$data{'file'}) {
-			die('Invalid riff file: ' . $file . ' => ' . $data{'path'} . "\n");
+		if (!$data{'name'} || !$data{'file'}) {
+			die('Invalid riff file: ' . $file . ' => ' . $data{'name'} . "\n");
 		}
 
 		# Construct an absolute path
@@ -90,11 +90,11 @@ foreach my $file (readdir(CONF)) {
 
 		# Debug
 		if ($DEBUG) {
-			print STDERR 'Added RiffTrax: ' . $data{'id'} . "\n\tFile: " . $data{'file'} . "\n\tOffset: " . $data{'offset'} . "\n\tRate: " . $data{'rate'} . "\n";
+			print STDERR 'Added RiffTrax: ' . $data{'name'} . "\n\tFile: " . $data{'file'} . "\n\tOffset: " . $data{'offset'} . "\n\tRate: " . $data{'rate'} . "\n";
 		}
 
 		# Push the data up the chain
-		$RIFFS{ $data{'id'} } = \%data;
+		$RIFFS{ $data{'name'} } = \%data;
 	}
 }
 closedir(CONF);
@@ -167,34 +167,32 @@ while (1) {
 			Audio::drop('RIFF');
 			$riff  = 0;
 			$nudge = 0;
-			say('RiffTrax complete');
+			DMX::say('RiffTrax complete');
 		}
 
 		# Activate a new RIFF, if applicable
-		if ($url =~ /\/library\/parts\/(\d+)\//) {
-			if (exists($RIFFS{$1})) {
-				if ($DEBUG) {
-					print STDERR 'Matched RIFF: ' . $1 . ' => ' . $RIFFS{$1}->{'file'} . "\n";
-				}
-				$riff = $1;
-
-				Audio::addLoad('RIFF', $RIFFS{$riff}->{'path'});
-				Audio::rate('RIFF', $RIFFS{$riff}->{'rate'});
-				Audio::background('RIFF');
-				say('RiffTrax initiated');
+		if ($exists{'PLAYING_TITLE'} && exists($RIFFS{ $exists{'PLAYING_TITLE'} })) {
+			$riff = $exists{'PLAYING_TITLE'};
+			if ($DEBUG) {
+				print STDERR 'Matched RIFF: ' . $riff . ' => ' . $RIFFS{$riff}->{'file'} . "\n";
 			}
+
+			Audio::addLoad('RIFF', $RIFFS{$riff}->{'path'});
+			Audio::background('RIFF');
+			Audio::rate('RIFF', $RIFFS{$riff}->{'rate'});
+			DMX::say('RiffTrax initiated');
 		}
 	}
 
 	# If the RIFF has changed, save the state to disk
 	if ($riff ne $riffLast) {
 		my $new = '<none>';
-		if ($riff > 0) {
-			$new = $RIFFS{$riff}->{'id'};
+		if ($riff) {
+			$new = $RIFFS{$riff}->{'name'};
 		}
 		my $old = $new;
 		if ($riffLast > 0) {
-			$old = $RIFFS{$riffLast}->{'id'};
+			$old = $RIFFS{$riffLast}->{'name'};
 		}
 
 		if ($DEBUG) {
