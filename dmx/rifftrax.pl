@@ -112,6 +112,7 @@ my $url       = '';
 my $urlLast   = $url;
 my $nudge     = 0;
 my %exists    = ();
+my %last      = ();
 my $pullLast  = time();
 
 # Loop forever
@@ -120,6 +121,7 @@ while (1) {
 	# Save the last RIFF and state
 	$stateLast = $state;
 	$riffLast  = $riff;
+	%last      = %exists;
 
 	# Force a change if our riff is clearly invalid (first loop, reset, etc.)
 	if ($riff < 0) {
@@ -165,6 +167,7 @@ while (1) {
 			Audio::drop('RIFF');
 			$riff  = 0;
 			$nudge = 0;
+			say('RiffTrax complete');
 		}
 
 		# Activate a new RIFF, if applicable
@@ -178,6 +181,7 @@ while (1) {
 				Audio::addLoad('RIFF', $RIFFS{$riff}->{'path'});
 				Audio::rate('RIFF', $RIFFS{$riff}->{'rate'});
 				Audio::background('RIFF');
+				say('RiffTrax initiated');
 			}
 		}
 	}

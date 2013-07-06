@@ -1,7 +1,6 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-use POSIX;
 
 # Local modules
 use Cwd qw(abs_path);
@@ -57,26 +56,15 @@ my $color        = $COLOR_LOW;
 # Loop forever
 while (1) {
 
-	# Reap zombie children (from say)
-	while (waitpid(-1, WNOHANG) > 0) { }
-
 	# State is calculated; use newState to gather data
 	my $newState = $state;
 
 	# Wait for state updates
 	{
-		my %mtimeTmp  = ();
-		my %existsTmp = ();
-		my $cmdState  = DMX::readState($DELAY, \%existsTmp, \%mtimeTmp, undef());
+		my $cmdState = DMX::readState($DELAY, \%exists, \%mtime, undef());
 		if (defined($cmdState)) {
 			$newState = $cmdState;
 			$pullLast = time();
-		}
-
-		# Only record valid exists/mtime hashes
-		if (scalar(keys(%existsTmp)) > 0) {
-			%mtime  = %mtimeTmp;
-			%exists = %existsTmp;
 		}
 	}
 

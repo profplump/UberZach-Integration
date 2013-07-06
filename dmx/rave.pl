@@ -25,7 +25,7 @@ my $MEDIA_PATH = `~/bin/video/mediaPath` . '/DMX';
 my @CHANNELS   = (1, 2, 4, 5, 6, 7, 8, 9, 13, 14, 15);
 my %EFFECTS    = (
 	'RED_ALERT' => { 'cmd' => \&red_alert },
-	'LSR'       => { 'cmd' => \&lsr_init, 'next' => \&lsr_run, 'loop' => \&lsr_loop },
+	'LSR'       => { 'cmd' => \&lsr_init, 'next' => \&lsr_run, 'loop' => \&lsr_loop, 'done' => \&lsr_done },
 );
 my %FILES = (
 	'RED_ALERT' => 'DMX/Red Alert.mp3',
@@ -65,6 +65,7 @@ DMX::stateSubscribe($STATE_SOCK);
 
 # State
 my %exists   = ();
+my %last     = ();
 my $pullLast = time();
 my $update   = 0;
 my $PID      = undef();
@@ -85,6 +86,7 @@ while (1) {
 
 	# State is transient during a RAVE
 	my $newState = 'OFF';
+	%last = %exists;
 
 	# Reduce the select delay when we're processing background effects
 	# We don't want to hang waiting for event updates while we're running the show
@@ -97,16 +99,10 @@ while (1) {
 
 	# Wait for state updates
 	{
-		my %existsTmp = ();
-		my $cmdState = DMX::readState($delay, \%existsTmp, undef(), undef());
+		my $cmdState = DMX::readState($delay, \%exists, undef(), undef());
 		if (defined($cmdState)) {
 			$newState = $cmdState;
 			$pullLast = time();
-		}
-
-		# Only record valid exists hashes
-		if (scalar(keys(%existsTmp)) > 0) {
-			%exists = %existsTmp;
 		}
 	}
 
@@ -134,6 +130,11 @@ while (1) {
 		if ($kid > 0) {
 			if ($DEBUG) {
 				print STDERR 'Reaped child: ' . $PID . "\n";
+			}
+
+			# Run the cleanup routine (if any)
+			if ($EFFECTS{$NAME}{'done'}) {
+				$EFFECTS{$NAME}{'done'}($NAME, \%exists, $EFFECTS{$NAME});
 			}
 
 			# Forget our local bypass state
@@ -297,6 +298,7 @@ sub lsr_init($$$) {
 	}
 
 	# Initiate the RAVE state
+	DMX::say('Light switch rave: initiated');
 	touch($RAVE_FILE);
 
 	# Save data for future runs
@@ -426,4 +428,12 @@ sub lsr_loop($$$) {
 
 	# Wait for the fade interval
 	usleep($wait * 1000);
+}
+
+sub lsr_done($$$) {
+	my ($name, $exists, $params) = @_;
+	if ($DEBUG) {
+		print STDERR "lsr_done()\n";
+	}
+	DMX::say('Light switch rave: terminated');
 }
