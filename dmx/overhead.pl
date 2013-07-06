@@ -45,6 +45,7 @@ DMX::stateSubscribe($STATE_SOCK);
 my $state     = 'OFF';
 my $stateLast = $state;
 my %exists    = ();
+my %last      = ();
 my $pushLast  = 0;
 my $pullLast  = time();
 my $update    = 0;
@@ -57,6 +58,7 @@ while (1) {
 
 	# State is calculated; use newState to gather data
 	my $newState = $state;
+	%last = %exists;
 
 	# Wait for state updates
 	my $cmdState = DMX::readState($DELAY, \%exists, undef(), \%VALID);
@@ -91,6 +93,15 @@ while (1) {
 		}
 	}
 	$state = $newState;
+
+	# Speak when LIGHTS changes
+	if (exists($exists{'LIGHTS'}) && exists($last{'LIGHTS'}) && $exists{'LIGHTS'} ne $last{'LIGHTS'}) {
+		if ($exists{'LIGHTS'}) {
+			DMX::say('Lights up');
+		} else {
+			DMX::say('Lights down');
+		}
+	}
 
 	# Force updates on a periodic basis
 	if (!$update && time() - $pushLast > $PUSH_TIMEOUT) {

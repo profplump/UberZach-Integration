@@ -1,7 +1,6 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-use POSIX;
 
 # Local modules
 use Cwd qw(abs_path);
@@ -37,6 +36,7 @@ DMX::stateSubscribe($STATE_SOCK);
 my $state     = 'OFF';
 my $stateLast = $state;
 my %exists    = ();
+my %last      = ();
 my $pushLast  = 0;
 my $pullLast  = time();
 my $update    = 0;
@@ -47,11 +47,9 @@ DMX::dim({ 'channel' => 11, 'value' => 0, 'time' => 0 });
 # Loop forever
 while (1) {
 
-	# Reap zombie children (from say)
-	while (waitpid(-1, WNOHANG) > 0) { }
-
 	# State is calculated; use newState to gather data
 	my $newState = $state;
+	%last = %exists;
 
 	# Wait for state updates
 	my $cmdState = DMX::readState($DELAY, \%exists, undef(), undef());
@@ -73,6 +71,11 @@ while (1) {
 		$state = 'OFF';
 	}
 
+	# Speak when FAN_CMD changes
+	if (exists($exists{'FAN_CMD'}) && exists($last{'FAN_CMD'}) && $exists{'FAN_CMD'} ne $last{'FAN_CMD'}) {
+		DMX::say('Fan ' . $state);
+	}
+
 	# Force updates on a periodic basis
 	if (!$update && time() - $pushLast > $PUSH_TIMEOUT) {
 		if ($DEBUG) {
@@ -87,7 +90,6 @@ while (1) {
 			print STDERR 'State change: ' . $stateLast . ' => ' . $state . "\n";
 		}
 		$update = 1;
-		DMX::say('Fan ' . $state);
 	}
 
 	# Update the fan
