@@ -46,6 +46,9 @@ DMX::dim({ 'channel' => 11, 'value' => 0, 'time' => 0 });
 # Loop forever
 while (1) {
 
+	# Reap zombie children (from say)
+	while (waitpid(-1, WNOHANG) > 0) { }
+
 	# State is calculated; use newState to gather data
 	my $newState = $state;
 
@@ -83,6 +86,7 @@ while (1) {
 			print STDERR 'State change: ' . $stateLast . ' => ' . $state . "\n";
 		}
 		$update = 1;
+		DMX::say('Fan ' . $state);
 	}
 
 	# Update the fan

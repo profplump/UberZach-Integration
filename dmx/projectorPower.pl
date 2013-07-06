@@ -28,7 +28,6 @@ my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
 my $DELAY        = $PULL_TIMEOUT / 2;
 
 # Prototypes
-sub say($);
 sub sayShutdown($);
 
 # Debug
@@ -58,7 +57,7 @@ my $color        = $COLOR_LOW;
 # Loop forever
 while (1) {
 
-	# Reap zombie children
+	# Reap zombie children (from say)
 	while (waitpid(-1, WNOHANG) > 0) { }
 
 	# State is calculated; use newState to gather data
@@ -245,7 +244,7 @@ while (1) {
 		  or die('Unable to write command to proj socket: ' . $state . ": ${!}\n");
 
 		# Annouce the state change, after the fact
-		say('Projector ' . $state);
+		DMX::say('Projector ' . $state);
 
 		# No output file
 
@@ -258,24 +257,7 @@ while (1) {
 		# Clear the update flag
 		$update = 0;
 	}
-}
 
-# Speak
-sub say($) {
-	my ($str) = @_;
-
-	if ($DEBUG) {
-		print STDERR 'Say: ' . $str . "\n";
-	}
-
-	my $pid = fork();
-	if (!defined($pid)) {
-		die('Unable to fork: ' . $! . "\n");
-	}
-	if (!$pid) {
-		exec('say', $str);
-	}
-}
 
 sub sayShutdown($) {
 	my ($minutesLeft) = @_;
@@ -305,5 +287,5 @@ sub sayShutdown($) {
 	$unit .= $plural;
 
 	# Speak
-	say('Projector shutdown in about ' . $timeLeft . ' ' . $unit);
+	DMX::say('Projector shutdown in about ' . $timeLeft . ' ' . $unit);
 }

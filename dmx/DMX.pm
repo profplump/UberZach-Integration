@@ -293,5 +293,22 @@ sub readState($$$$) {
 	return $cmdState;
 }
 
+# Speak
+sub say($) {
+	my ($str) = @_;
+
+	if ($DEBUG) {
+		print STDERR 'Say: ' . $str . "\n";
+	}
+
+	my $pid = fork();
+	if (!defined($pid)) {
+		die('Unable to fork: ' . $! . "\n");
+	}
+	if (!$pid) {
+		exec('say', $str);
+	}
+}
+
 # Always return true
 1;
