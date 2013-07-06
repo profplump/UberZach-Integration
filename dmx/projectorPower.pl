@@ -257,7 +257,7 @@ while (1) {
 		# Clear the update flag
 		$update = 0;
 	}
-
+}
 
 sub sayShutdown($) {
 	my ($minutesLeft) = @_;
