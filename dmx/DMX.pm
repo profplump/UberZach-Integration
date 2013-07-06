@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
+use POSIX;
 use File::Temp;
 use IO::Select;
 use IO::Socket::UNIX;
@@ -45,6 +46,7 @@ if (!-d $DATA_DIR) {
 # State
 my $DMX_FH = undef();
 my $SELECT = undef();
+my %SAY    = ();
 
 # Data directory
 sub dataDir() {
@@ -259,6 +261,9 @@ sub readState($$$$) {
 	my ($delay, $exists, $mtime, $valid) = @_;
 	my $cmdState = undef();
 
+	# Cleanup previous say calls
+	sayCleanup();
+
 	# Wait for state updates
 	my @ready_clients = $SELECT->can_read($delay);
 	foreach my $fh (@ready_clients) {
@@ -268,6 +273,16 @@ sub readState($$$$) {
 
 		# Grab the inbound text
 		while (defined($fh->recv(my $text, $MAX_CMD_LEN))) {
+
+			# Save the old data, in case the new stuff is bad
+			my %existsOld = ();
+			my %mtimeOld  = ();
+			if ($exists) {
+				%existsOld = %{$exists};
+			}
+			if ($mtime) {
+				%mtimeOld = %{$mtime};
+			}
 
 			# Parse the string
 			my $state = parseState($text, $exists, $mtime);
@@ -282,6 +297,18 @@ sub readState($$$$) {
 				}
 			}
 
+			# Restore the old data, if the new stuff is bad
+			if (scalar(keys(%{$exists})) < 1) {
+				%{$exists} = ();
+				%{$mtime}  = ();
+				foreach my $key (keys(%existsOld)) {
+					$exists->{$key} = $existsOld{$key};
+				}
+				foreach my $key (keys(%mtimeOld)) {
+					$mtime->{$key} = $mtimeOld{$key};
+				}
+			}
+
 			# Propogate valid states
 			if ($state) {
 				$cmdState = $state;
@@ -293,20 +320,33 @@ sub readState($$$$) {
 	return $cmdState;
 }
 
+# Reap zombie children
+sub sayCleanup() {
+	foreach my $pid (keys(%SAY)) {
+		waitpid($pid, POSIX::WNOHANG);
+		delete($SAY{$pid});
+	}
+}
+
 # Speak
 sub say($) {
 	my ($str) = @_;
-
 	if ($DEBUG) {
 		print STDERR 'Say: ' . $str . "\n";
 	}
 
+	# Cleanup previous say calls
+	sayCleanup();
+
+	# Fork and speak in the background
 	my $pid = fork();
 	if (!defined($pid)) {
 		die('Unable to fork: ' . $! . "\n");
 	}
 	if (!$pid) {
 		exec('say', $str);
+	} else {
+		$SAY{$pid} = 1;
 	}
 }
 
