@@ -18,6 +18,8 @@ my $CONFIG_PATH    = $MEDIA_PATH . '/DMX/RiffTrax';
 my $RIFF_PATH      = $MEDIA_PATH . '/iTunes/iTunes Music/RiffTrax';
 my $ACTION_DELAY   = 0.1;
 my $JUMP_THRESHOLD = 5;
+my $VOLUME_RIFF    = 65;
+my $VOLUME_STD     = 40;
 
 # Prototypes
 sub playRiff();
@@ -112,10 +114,21 @@ while (1) {
 			if ($DEBUG) {
 				print STDERR "RIFF complete\n";
 			}
+
+			# Increase the delay while nothing is happening
 			$delay = $DELAY;
+
+			# Reset the volume when we unload -- normal system sounds should be quieter than riffs
+			Audio::setVolume($VOLUME_STD);
+
+			# Close the audio file
 			Audio::drop('RIFF');
+
+			# Cleanup
 			$riff  = 0;
 			$nudge = 0;
+
+			# Warm fuzzies
 			DMX::say('RiffTrax complete');
 		}
 
@@ -124,11 +137,21 @@ while (1) {
 			if ($DEBUG) {
 				print STDERR 'Matched RIFF: ' . $title . ' => ' . $RIFFS{$title}->{'file'} . "\n";
 			}
-			$riff  = $title;
-			$delay = 1;
-			Audio::addLoad('RIFF', $RIFFS{$riff}->{'path'});
-			setRiffRate($RIFFS{$riff}->{'rate'});
+			$riff = $title;
+
+			# Warm fuzzies
 			DMX::say('RiffTrax initiated');
+
+			# Reduce the delay while playing so we sync faster
+			$delay = 1;
+
+			# Set volume when we load -- riffs should be louder than normal system sounds
+			Audio::setVolume($VOLUME_RIFF);
+
+			# Load and start the audio file
+			Audio::addLoad('RIFF', $RIFFS{$riff}->{'path'});
+			playRiff();
+			setRiffRate($RIFFS{$riff}->{'rate'});
 		}
 	}
 

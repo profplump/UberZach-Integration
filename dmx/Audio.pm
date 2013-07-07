@@ -35,6 +35,14 @@ sub runApplescript($) {
 	return $retval;
 }
 
+sub setVolume($) {
+	my ($vol) = @_;
+	if ($DEBUG) {
+		print STDERR 'Audio::setVolume(): ' . $vol . "\n";
+	}
+	runApplescript('set volume output volume ' . $vol);
+}
+
 sub addLoad($$) {
 	my ($name, $path) = @_;
 	if ($DEBUG) {
@@ -170,7 +178,7 @@ sub position($$) {
 	# Set or get the audio position
 	if ($new) {
 		runApplescript('tell application "QuickTime Player" to set current time of document ' . $FILES{$name}->{'name'} . ' to ' . $new);
-	} else {		
+	} else {
 		return runApplescript('tell application "QuickTime Player" to get current time of document ' . $FILES{$name}->{'name'});
 	}
 }
@@ -188,7 +196,7 @@ sub rate($$) {
 	if ($new) {
 		runApplescript('tell application "QuickTime Player" to set rate of document ' . $FILES{$name}->{'name'} . ' to ' . $new);
 	} else {
-		return runApplescript('tell application "QuickTime Player" to get rate of document ' . $FILES{$name}->{'name'});		
+		return runApplescript('tell application "QuickTime Player" to get rate of document ' . $FILES{$name}->{'name'});
 	}
 }
 
