@@ -163,7 +163,11 @@ while (1) {
 		}
 
 		# Activate a new RIFF, if applicable
-		if ($RIFFS{$title}) {
+		# Always match on title, validate year if provided
+		if ($RIFFS{$title}
+			&& (!exists($RIFFS{$title}{'year'}) || $RIFFS{$title}{'year'} eq $exists{'PLAYING_YEAR'}))
+		{
+
 			if ($DEBUG) {
 				print STDERR 'Matched RIFF: ' . $title . ' => ' . $RIFFS{$title}->{'file'} . "\n";
 			}
@@ -382,6 +386,9 @@ sub parseConfig($$) {
 			my %data = ();
 			if ($text =~ /^\s*Name:\s*(\S.*\S)\s*$/mi) {
 				$data{'name'} = $1;
+			}
+			if ($text =~ /^\s*Year:\s*(\d{4})\s*$/mi) {
+				$data{'year'} = $1;
 			}
 			if ($text =~ /^\s*File:\s*(\S.*\S)\s*$/mi) {
 				$data{'file'} = $1;
