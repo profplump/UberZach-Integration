@@ -42,6 +42,7 @@ if ($HOST =~ /loki/i) {
 	$EFFECTS{'LSR'} = { 'cmd' => \&lsr_init, 'next' => \&lsr_run, 'loop' => \&lsr_loop, 'done' => \&lsr_done };
 	$FILES{'LSR'} = 'DMX/Rave.mp3';
 } elsif ($HOST =~ /beddy/i) {
+} elsif ($HOST =~ /heady/i) {
 }
 
 # Utility prototypes

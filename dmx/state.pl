@@ -73,6 +73,11 @@ if ($HOST =~ /loki/i) {
 	#$MON_FILES{'TV'}       = 'STATUS';
 	#$MON_FILES{'TV_VOL'}   = 'STATUS_VALUE';
 	#$MON_FILES{'TV_INPUT'} = 'STATUS_VALUE';
+
+} elsif ($HOST =~ /heady/i) {
+
+	# Display device
+	$DISPLAY = '<NONE>';
 }
 
 # App config
