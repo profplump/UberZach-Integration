@@ -19,12 +19,16 @@ my $RIFF_PATH      = $MEDIA_PATH . '/iTunes/iTunes Music/RiffTrax';
 my $ACTION_DELAY   = 0.1;
 my $JUMP_THRESHOLD = 5;
 
+# Prototypes
+sub playRiff();
+sub pauseRiff();
+
 # App config
 my $DATA_DIR     = DMX::dataDir();
 my $OUTPUT_FILE  = $DATA_DIR . 'RIFF';
 my $STATE_SOCK   = $OUTPUT_FILE . '.socket';
 my $PULL_TIMEOUT = 60;
-my $DELAY        = $PULL_TIMEOUT / 2;
+my $DELAY        = 1;
 my %RIFFS        = ();
 
 # Debug
@@ -106,14 +110,16 @@ DMX::stateSubscribe($STATE_SOCK);
 # State
 my $state     = 'OFF';
 my $stateLast = $state;
-my $riff      = -1;
+my $riff      = '';
 my $riffLast  = $riff;
-my $url       = '';
-my $urlLast   = $url;
+my $title     = '';
+my $titleLast = $title;
 my $nudge     = 0;
 my %exists    = ();
 my %last      = ();
 my $pullLast  = time();
+my $lastSync  = time();
+my $playing   = 0;
 
 # Loop forever
 while (1) {
@@ -123,9 +129,10 @@ while (1) {
 	$riffLast  = $riff;
 	%last      = %exists;
 
-	# Force a change if our riff is clearly invalid (first loop, reset, etc.)
-	if ($riff < 0) {
-		$riff = 0;
+	# Reconnect if we're playing and haven't seen an update for $JUMP_THRESHOLD seconds
+	if ($playing && time() - $pullLast > $JUMP_THRESHOLD) {
+		print STDERR "Attempting to reconnect state socket...\n";
+		DMX::stateSubscribe($STATE_SOCK);
 	}
 
 	# Wait for state updates
@@ -151,13 +158,13 @@ while (1) {
 
 	# Save the last URL, so we can find changes
 	# Do not delete the last URL if no new one is provided
-	if ($exists{'PLAYING_URL'}) {
-		$urlLast = $url;
-		$url     = $exists{'PLAYING_URL'};
+	if (exists($exists{'PLAYING_TITLE'})) {
+		$titleLast = $title;
+		$title     = $exists{'PLAYING_TITLE'};
 	}
 
-	# Update our state when the PLAYING_URL changes
-	if ($url ne $urlLast) {
+	# Update our state when the PLAYING_TITLE changes
+	if ($title ne $titleLast) {
 
 		# If a RIFF was active, clear it
 		if ($riff) {
@@ -171,15 +178,15 @@ while (1) {
 		}
 
 		# Activate a new RIFF, if applicable
-		if ($exists{'PLAYING_TITLE'} && exists($RIFFS{ $exists{'PLAYING_TITLE'} })) {
-			$riff = $exists{'PLAYING_TITLE'};
+		if ($RIFFS{$title}) {
+			$riff = $title;
 			if ($DEBUG) {
 				print STDERR 'Matched RIFF: ' . $riff . ' => ' . $RIFFS{$riff}->{'file'} . "\n";
 			}
 
 			Audio::addLoad('RIFF', $RIFFS{$riff}->{'path'});
-			Audio::background('RIFF');
 			Audio::rate('RIFF', $RIFFS{$riff}->{'rate'});
+			playRiff();
 			DMX::say('RiffTrax initiated');
 		}
 	}
@@ -205,20 +212,22 @@ while (1) {
 		rename($tmp, $OUTPUT_FILE);
 	}
 
-	# Sync
+	# Play/pause to match the video
+	# This assumes our local state is valid. We double-check that state tracking if the sync error is large enough to trigger a jump
 	if ($riff) {
+		if ($state eq 'PAUSE' && $playing) {
+			pauseRiff();
+		} elsif ($state eq 'PLAY' && !$playing) {
+			playRiff();
+		}
+	}
+
+	# Sync at most once per second
+	if ($riff && $lastSync < time()) {
 		if ($DEBUG) {
 			print STDERR "Syncing\n";
 		}
-
-		# Play/pause to match the video
-		if ($stateLast ne $state) {
-			if ($state eq 'PAUSE') {
-				Audio::pause('RIFF');
-			} elsif ($state eq 'PLAY') {
-				Audio::background('RIFF');
-			}
-		}
+		$lastSync = time();
 
 		# Get the video and riff playback positions
 		my $rate = Audio::rate('RIFF', undef());
@@ -260,11 +269,11 @@ while (1) {
 			my $newPos = $riffTime + $error + $ACTION_DELAY;
 
 			if ($newPos < 0) {
-				Audio::pause('RIFF');
+				pauseRiff();
 			} else {
 
-				# See if we're playing
-				my $playing = Audio::playing('RIFF');
+				# Ensure our local playing state tracking is accurate
+				$playing = Audio::playing('RIFF');
 
 				# Jump if we're off by more than a few seconds
 				if ($errorAbs > $JUMP_THRESHOLD) {
@@ -295,9 +304,9 @@ while (1) {
 				# But double-check while adjusting in case things get out-of-sync
 				if (exists($exists{'PLAYING'})) {
 					if ($exists{'PLAYING'} && !$playing) {
-						Audio::background('RIFF');
+						playRiff();
 					} elsif (!$exists{'PLAYING'} && $playing) {
-						Audio::pause('RIFF');
+						pauseRiff();
 					}
 				}
 			}
@@ -309,4 +318,14 @@ while (1) {
 			}
 		}
 	}
+}
+
+sub playRiff() {
+	$playing = 1;
+	Audio::background('RIFF');
+}
+
+sub pauseRiff() {
+	$playing = 0;
+	Audio::pause('RIFF');
 }
