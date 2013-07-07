@@ -376,6 +376,7 @@ sub parseConfig($$) {
 			my $text = '';
 			if (!open(my $fh, $path)) {
 				warn('Unable to open ' . $path . "\n");
+				next;
 			} else {
 				local $/;
 				$text = <$fh>;
@@ -402,7 +403,8 @@ sub parseConfig($$) {
 
 			# Ensure we have a valid record
 			if (!$data{'name'} || !$data{'file'}) {
-				die('Invalid riff file: ' . $file . ' => ' . $data{'name'} . "\n");
+				warn('Invalid riff file: ' . $file . ' => ' . $data{'name'} . "\n");
+				next;
 			}
 
 			# Construct an absolute path
@@ -414,7 +416,8 @@ sub parseConfig($$) {
 
 			# Ensure the path is valid
 			if (!-r $data{'path'}) {
-				die('Invalid riff path: ' . $file . ' => ' . $data{'path'} . "\n");
+				warn('Invalid riff path: ' . $file . ' => ' . $data{'path'} . "\n");
+				next;
 			}
 
 			# Debug
