@@ -21,6 +21,7 @@ my $JUMP_THRESHOLD = 5;
 my $VOLUME_RIFF    = 65;
 my $VOLUME_STD     = 40;
 my $VOL_STEP       = 1 / 20;
+my $CONFIG_DELAY   = 300;
 
 # Prototypes
 sub playRiff();
@@ -88,6 +89,19 @@ while (1) {
 	# Die if we don't see regular updates
 	if (time() - $pullLast > $PULL_TIMEOUT) {
 		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
+	}
+
+	# Re-read the config on-demand
+	if ($state eq 'HUP') {
+		parseConfig($CONFIG_PATH, \%RIFFS);
+
+		# Skip further processing this loop -- the exists hash is useless
+		next;
+	}
+
+	# Re-read the config periodically (unless we are currently playing)
+	if (!$riff && time() > $RIFFS{'_LAST_CONFIG_UPDATE'} + $CONFIG_DELAY) {
+		parseConfig($CONFIG_PATH, \%RIFFS);
 	}
 
 	# Handle volume changes
@@ -406,4 +420,7 @@ sub parseConfig($$) {
 		}
 	}
 	closedir(CONF);
+
+	# Record the last update time
+	$riffs->{'_LAST_CONFIG_UPDATE'} = time();
 }
