@@ -20,6 +20,7 @@ if ($ENV{'DEBUG'}) {
 	$DEBUG = 1;
 }
 
+# Execute the provided string with osascript
 sub runApplescript($) {
 	my ($script) = @_;
 	if ($DEBUG) {
@@ -35,14 +36,38 @@ sub runApplescript($) {
 	return $retval;
 }
 
-sub setVolume($) {
-	my ($vol) = @_;
+# Set or get the system output volume
+sub systemVolume($) {
+	my ($new) = @_;
 	if ($DEBUG) {
-		print STDERR 'Audio::setVolume(): ' . $vol . "\n";
+		print STDERR "Audio::systemVolume()\n";
 	}
-	runApplescript('set volume output volume ' . $vol);
+
+	if ($new) {
+		runApplescript('set volume output volume ' . $new);
+	} else {
+		return runApplescript('get output volume of (get volume settings)');
+	}
 }
 
+# Set or get a document's volume
+sub volume($$) {
+	my ($name, $new) = @_;
+	if ($DEBUG) {
+		print STDERR 'Audio::volume(): ' . $name . ', ' . $vol . "\n";
+	}
+	if (!loaded($name)) {
+		die('Invalid QT document: ' . $name . "\n");
+	}
+
+	if ($new) {
+		runApplescript('tell application "QuickTime Player" to set audio volume of document ' . $FILES{$name}->{'name'} . ' to ' . $new);
+	} else {
+		return runApplescript('tell application "QuickTime Player" to get audio volume of document ' . $FILES{$name}->{'name'});
+	}
+}
+
+# Add an load a document
 sub addLoad($$) {
 	my ($name, $path) = @_;
 	if ($DEBUG) {
@@ -52,6 +77,7 @@ sub addLoad($$) {
 	load($name);
 }
 
+# Add a document to the available list
 sub add($$) {
 	my ($name, $path) = @_;
 	if ($DEBUG) {
@@ -76,6 +102,7 @@ sub add($$) {
 	$FILES{$name} = \%tmp;
 }
 
+# Drop a document from the available list, unloaded as necessary
 sub drop($) {
 	my ($name) = @_;
 	if ($DEBUG) {
@@ -94,6 +121,7 @@ sub drop($) {
 	}
 }
 
+# Is the named document loaded?
 sub loaded($) {
 	my ($name) = @_;
 	if ($DEBUG) {
@@ -106,6 +134,7 @@ sub loaded($) {
 	return 0;
 }
 
+# Is the named document configured?
 sub available($) {
 	my ($name) = @_;
 	if ($DEBUG) {
@@ -118,6 +147,7 @@ sub available($) {
 	return 0;
 }
 
+# Play the named document, waiting for completion
 sub play($) {
 	my ($name) = @_;
 	if ($DEBUG) {
@@ -136,6 +166,7 @@ sub play($) {
 	runApplescript(join("\n", @cmd));
 }
 
+# Play the named document and immediately return
 sub background($) {
 	my ($name) = @_;
 	if ($DEBUG) {
@@ -149,6 +180,7 @@ sub background($) {
 	runApplescript('tell application "QuickTime Player" to play document ' . $FILES{$name}->{'name'});
 }
 
+# Is the named document playing?
 sub playing($) {
 	my ($name) = @_;
 	if ($DEBUG) {
@@ -166,6 +198,7 @@ sub playing($) {
 	return 0;
 }
 
+# Set or get the audio position
 sub position($$) {
 	my ($name, $new) = @_;
 	if ($DEBUG) {
@@ -175,7 +208,6 @@ sub position($$) {
 		die('Invalid QT document: ' . $name . "\n");
 	}
 
-	# Set or get the audio position
 	if ($new) {
 		runApplescript('tell application "QuickTime Player" to set current time of document ' . $FILES{$name}->{'name'} . ' to ' . $new);
 	} else {
@@ -183,6 +215,7 @@ sub position($$) {
 	}
 }
 
+# Set or get the playback rate
 sub rate($$) {
 	my ($name, $new) = @_;
 	if ($DEBUG) {
@@ -192,7 +225,6 @@ sub rate($$) {
 		die('Invalid QT document: ' . $name . "\n");
 	}
 
-	# Set or get the playback rate
 	if ($new) {
 		runApplescript('tell application "QuickTime Player" to set rate of document ' . $FILES{$name}->{'name'} . ' to ' . $new);
 	} else {
@@ -200,6 +232,7 @@ sub rate($$) {
 	}
 }
 
+# Pause the named document
 sub pause($) {
 	my ($name) = @_;
 	if ($DEBUG) {
@@ -213,6 +246,7 @@ sub pause($) {
 	runApplescript('tell application "QuickTime Player" to pause document ' . $FILES{$name}->{'name'});
 }
 
+# Stop playback of the named document or all documents
 sub stop($) {
 	my ($name) = @_;
 	if ($DEBUG) {
@@ -233,6 +267,7 @@ sub stop($) {
 	runApplescript('tell application "Plex" to activate');
 }
 
+# Unload the named document
 sub unload($) {
 	my ($name) = @_;
 	if ($DEBUG) {
@@ -254,6 +289,7 @@ sub unload($) {
 	delete($FILES{$name}->{'name'});
 }
 
+# Load the named document
 sub load($) {
 	my ($name) = @_;
 	if ($DEBUG) {
@@ -297,6 +333,7 @@ sub load($) {
 	runApplescript('tell application "Plex" to activate');
 }
 
+# Get things into a reasonable state
 sub init() {
 	if ($DEBUG) {
 		print STDERR "Audio::init()\n";

@@ -119,7 +119,7 @@ while (1) {
 			$delay = $DELAY;
 
 			# Reset the volume when we unload -- normal system sounds should be quieter than riffs
-			Audio::setVolume($VOLUME_STD);
+			Audio::systemVolume($VOLUME_STD);
 
 			# Close the audio file
 			Audio::drop('RIFF');
@@ -146,7 +146,7 @@ while (1) {
 			$delay = 1;
 
 			# Set volume when we load -- riffs should be louder than normal system sounds
-			Audio::setVolume($VOLUME_RIFF);
+			Audio::systemVolume($VOLUME_RIFF);
 
 			# Load and start the audio file
 			Audio::addLoad('RIFF', $RIFFS{$riff}->{'path'});
