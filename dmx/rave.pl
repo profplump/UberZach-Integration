@@ -6,6 +6,7 @@ use File::Touch;
 use File::Basename;
 use Time::HiRes qw( usleep sleep time );
 use IPC::System::Simple qw( system capture );
+use Sys::Hostname;
 
 # Local modules
 use Cwd qw(abs_path);
@@ -22,15 +23,26 @@ sub lsr_loop($$$);
 
 # User config
 my $MEDIA_PATH = `~/bin/video/mediaPath` . '/DMX';
-my @CHANNELS   = (1, 2, 4, 5, 6, 7, 8, 9, 13, 14, 15);
-my %EFFECTS    = (
-	'RED_ALERT' => { 'cmd' => \&red_alert },
-	'LSR'       => { 'cmd' => \&lsr_init, 'next' => \&lsr_run, 'loop' => \&lsr_loop, 'done' => \&lsr_done },
-);
-my %FILES = (
-	'RED_ALERT' => 'DMX/Red Alert.mp3',
-	'LSR'       => 'DMX/Rave.mp3',
-);
+my @CHANNELS   = ();
+my %EFFECTS    = ();
+my %FILES      = ();
+
+# Host-specific config
+my $HOST = Sys::Hostname::hostname();
+if ($HOST =~ /loki/i) {
+
+	# Rave-controlled channels
+	push(@CHANNELS, 1, 2, 4, 5, 6, 7, 8, 9, 13, 14, 15);
+
+	# Red Alert
+	$FILES{'RED_ALERT'} = 'DMX/Red Alert.mp3';
+	$EFFECTS{'RED_ALERT'} = { 'cmd' => \&red_alert };
+
+	# Light-switch rave
+	$EFFECTS{'LSR'} = { 'cmd' => \&lsr_init, 'next' => \&lsr_run, 'loop' => \&lsr_loop, 'done' => \&lsr_done };
+	$FILES{'LSR'} = 'DMX/Rave.mp3';
+} elsif ($HOST =~ /beddy/i) {
+}
 
 # Utility prototypes
 sub ampWait($$$);
