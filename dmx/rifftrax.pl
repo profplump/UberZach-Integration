@@ -22,6 +22,9 @@ my $JUMP_THRESHOLD = 5;
 # Prototypes
 sub playRiff();
 sub pauseRiff();
+sub getRiffRate();
+sub setRiffRate($);
+sub parseConfig($$);
 
 # App config
 my $DATA_DIR     = DMX::dataDir();
@@ -36,72 +39,6 @@ my $DEBUG = 0;
 if ($ENV{'DEBUG'}) {
 	$DEBUG = 1;
 }
-
-# Read the config
-opendir(CONF, $CONFIG_PATH)
-  or die('Unable to open config directory: ' . $! . "\n");
-foreach my $file (readdir(CONF)) {
-
-	# Skip silly files
-	if ($file =~ /^\._/) {
-		next;
-	}
-
-	if ($file =~ /\.riff$/) {
-		my $path = $CONFIG_PATH . '/' . $file;
-
-		# Slurp the contents
-		my $text = '';
-		if (!open(my $fh, $path)) {
-			warn('Unable to open ' . $path . "\n");
-		} else {
-			local $/;
-			$text = <$fh>;
-			close($fh);
-		}
-
-		# Parse out the data we care about
-		my %data = ();
-		if ($text =~ /^\s*Name:\s*(\S.*\S)\s*$/mi) {
-			$data{'name'} = $1;
-		}
-		if ($text =~ /^\s*File:\s*(\S.*\S)\s*$/mi) {
-			$data{'file'} = $1;
-		}
-		if ($text =~ /^\s*Offset:\s*([\-\+]?\d+(?:\.\d+)?)\s*$/mi) {
-			$data{'offset'} = $1;
-		}
-		if ($text =~ /^\s*Rate:\s*(\d+(?:\.\d+)?)\s*$/mi) {
-			$data{'rate'} = $1;
-		}
-
-		# Ensure we have a valid record
-		if (!$data{'name'} || !$data{'file'}) {
-			die('Invalid riff file: ' . $file . ' => ' . $data{'name'} . "\n");
-		}
-
-		# Construct an absolute path
-		if ($data{'file'} =~ /^\//) {
-			$data{'path'} = $data{'file'};
-		} else {
-			$data{'path'} = $RIFF_PATH . '/' . $data{'file'};
-		}
-
-		# Ensure the path is valid
-		if (!-r $data{'path'}) {
-			die('Invalid riff path: ' . $file . ' => ' . $data{'path'} . "\n");
-		}
-
-		# Debug
-		if ($DEBUG) {
-			print STDERR 'Added RiffTrax: ' . $data{'name'} . "\n\tFile: " . $data{'file'} . "\n\tOffset: " . $data{'offset'} . "\n\tRate: " . $data{'rate'} . "\n";
-		}
-
-		# Push the data up the chain
-		$RIFFS{ $data{'name'} } = \%data;
-	}
-}
-closedir(CONF);
 
 # Sockets
 DMX::stateSocket($STATE_SOCK);
@@ -121,6 +58,9 @@ my $pullLast  = time();
 my $lastSync  = time();
 my $playing   = 0;
 my $delay     = $DELAY;
+
+# Read the config
+parseConfig($CONFIG_PATH, \%RIFFS);
 
 # Loop forever
 while (1) {
@@ -187,8 +127,7 @@ while (1) {
 			$riff  = $title;
 			$delay = 1;
 			Audio::addLoad('RIFF', $RIFFS{$riff}->{'path'});
-			Audio::rate('RIFF', $RIFFS{$riff}->{'rate'});
-			playRiff();
+			setRiffRate($RIFFS{$riff}->{'rate'});
 			DMX::say('RiffTrax initiated');
 		}
 	}
@@ -232,8 +171,8 @@ while (1) {
 		$lastSync = time();
 
 		# Get the video and riff playback positions
-		my $rate = Audio::rate('RIFF', undef());
-		my $riffTime = Audio::position('RIFF', undef());
+		my $rate      = getRiffRate();
+		my $riffTime  = Audio::position('RIFF', undef());
 		my $videoTime = $exists{'PLAYING_POSITION'};
 
 		# Convert to seconds
@@ -298,7 +237,7 @@ while (1) {
 					if ($DEBUG) {
 						print STDERR 'Setting rate to: ' . $newRate . "\n";
 					}
-					Audio::rate('RIFF', $newRate);
+					setRiffRate($newRate);
 				}
 
 				# Play/pause as needed, before we adjust
@@ -316,18 +255,117 @@ while (1) {
 
 			# Reset the rate to standard if we're inside sync the window
 			if ($rate != $RIFFS{$riff}->{'rate'}) {
-				Audio::rate('RIFF', $RIFFS{$riff}->{'rate'});
+				setRiffRate($RIFFS{$riff}->{'rate'});
 			}
 		}
 	}
 }
 
 sub playRiff() {
+	if ($DEBUG) {
+		print STDERR "playRiff()\n";
+	}
 	$playing = 1;
 	Audio::background('RIFF');
 }
 
 sub pauseRiff() {
+	if ($DEBUG) {
+		print STDERR "pauseRiff()\n";
+	}
 	$playing = 0;
 	Audio::pause('RIFF');
+}
+
+sub getRiffRate() {
+	if ($DEBUG) {
+		print STDERR "getRiffRate()\n";
+	}
+	my $rate = 0;
+	if ($playing) {
+		$rate = Audio::rate('RIFF', undef());
+	}
+	return $rate;
+}
+
+sub setRiffRate($) {
+	my ($rate) = @_;
+	if ($DEBUG) {
+		print STDERR 'setRiffRate(): ' . $rate . "\n";
+	}
+	if ($playing) {
+		Audio::rate('RIFF', $rate);
+	}
+}
+
+sub parseConfig($$) {
+	my ($conf_path, $riffs) = @_;
+	if ($DEBUG) {
+		print STDERR "parseConfig()\n";
+	}
+
+	opendir(CONF, $conf_path)
+	  or die('Unable to open config directory: ' . $! . "\n");
+	foreach my $file (readdir(CONF)) {
+
+		# Skip silly files
+		if ($file =~ /^\._/) {
+			next;
+		}
+
+		if ($file =~ /\.riff$/) {
+			my $path = $conf_path . '/' . $file;
+
+			# Slurp the contents
+			my $text = '';
+			if (!open(my $fh, $path)) {
+				warn('Unable to open ' . $path . "\n");
+			} else {
+				local $/;
+				$text = <$fh>;
+				close($fh);
+			}
+
+			# Parse out the data we care about
+			my %data = ();
+			if ($text =~ /^\s*Name:\s*(\S.*\S)\s*$/mi) {
+				$data{'name'} = $1;
+			}
+			if ($text =~ /^\s*File:\s*(\S.*\S)\s*$/mi) {
+				$data{'file'} = $1;
+			}
+			if ($text =~ /^\s*Offset:\s*([\-\+]?\d+(?:\.\d+)?)\s*$/mi) {
+				$data{'offset'} = $1;
+			}
+			if ($text =~ /^\s*Rate:\s*(\d+(?:\.\d+)?)\s*$/mi) {
+				$data{'rate'} = $1;
+			}
+
+			# Ensure we have a valid record
+			if (!$data{'name'} || !$data{'file'}) {
+				die('Invalid riff file: ' . $file . ' => ' . $data{'name'} . "\n");
+			}
+
+			# Construct an absolute path
+			if ($data{'file'} =~ /^\//) {
+				$data{'path'} = $data{'file'};
+			} else {
+				$data{'path'} = $RIFF_PATH . '/' . $data{'file'};
+			}
+
+			# Ensure the path is valid
+			if (!-r $data{'path'}) {
+				die('Invalid riff path: ' . $file . ' => ' . $data{'path'} . "\n");
+			}
+
+			# Debug
+			if ($DEBUG) {
+				print STDERR 'Added RiffTrax: ' . $data{'name'} . "\n\tFile: " . $data{'file'} . "\n\tOffset: " . $data{'offset'} . "\n\tRate: " . $data{'rate'} . "\n";
+			}
+
+			# Push the data up the chain
+			$riffs->{ $data{'name'} } = \%data;
+		}
+	}
+	closedir(CONF);
 }
