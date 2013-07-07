@@ -28,7 +28,7 @@ my $DATA_DIR     = DMX::dataDir();
 my $OUTPUT_FILE  = $DATA_DIR . 'RIFF';
 my $STATE_SOCK   = $OUTPUT_FILE . '.socket';
 my $PULL_TIMEOUT = 60;
-my $DELAY        = 1;
+my $DELAY        = $PULL_TIMEOUT / 3;
 my %RIFFS        = ();
 
 # Debug
@@ -120,6 +120,7 @@ my %last      = ();
 my $pullLast  = time();
 my $lastSync  = time();
 my $playing   = 0;
+my $delay     = $DELAY;
 
 # Loop forever
 while (1) {
@@ -136,7 +137,7 @@ while (1) {
 	}
 
 	# Wait for state updates
-	my $cmdState = DMX::readState($DELAY, \%exists, undef(), undef());
+	my $cmdState = DMX::readState($delay, \%exists, undef(), undef());
 	if (defined($cmdState)) {
 		$state    = $cmdState;
 		$pullLast = time();
@@ -171,6 +172,7 @@ while (1) {
 			if ($DEBUG) {
 				print STDERR "RIFF complete\n";
 			}
+			$delay = $DELAY;
 			Audio::drop('RIFF');
 			$riff  = 0;
 			$nudge = 0;
@@ -179,11 +181,11 @@ while (1) {
 
 		# Activate a new RIFF, if applicable
 		if ($RIFFS{$title}) {
-			$riff = $title;
 			if ($DEBUG) {
-				print STDERR 'Matched RIFF: ' . $riff . ' => ' . $RIFFS{$riff}->{'file'} . "\n";
+				print STDERR 'Matched RIFF: ' . $title . ' => ' . $RIFFS{$title}->{'file'} . "\n";
 			}
-
+			$riff  = $title;
+			$delay = 1;
 			Audio::addLoad('RIFF', $RIFFS{$riff}->{'path'});
 			Audio::rate('RIFF', $RIFFS{$riff}->{'rate'});
 			playRiff();
