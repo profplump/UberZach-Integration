@@ -54,7 +54,7 @@ sub systemVolume($) {
 sub volume($$) {
 	my ($name, $new) = @_;
 	if ($DEBUG) {
-		print STDERR 'Audio::volume(): ' . $name . ', ' . $vol . "\n";
+		print STDERR 'Audio::volume(): ' . $name . "\n";
 	}
 	if (!loaded($name)) {
 		die('Invalid QT document: ' . $name . "\n");

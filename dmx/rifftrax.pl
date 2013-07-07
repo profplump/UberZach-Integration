@@ -20,6 +20,7 @@ my $ACTION_DELAY   = 0.1;
 my $JUMP_THRESHOLD = 5;
 my $VOLUME_RIFF    = 65;
 my $VOLUME_STD     = 40;
+my $VOL_STEP       = 1 / 20;
 
 # Prototypes
 sub playRiff();
@@ -53,7 +54,6 @@ my $riff      = '';
 my $riffLast  = $riff;
 my $title     = '';
 my $titleLast = $title;
-my $nudge     = 0;
 my %exists    = ();
 my %last      = ();
 my $pullLast  = time();
@@ -90,13 +90,32 @@ while (1) {
 		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
 	}
 
-	# Record nudges
-	if ($state eq 'NUDGE_FORWARD') {
-		$nudge -= 0.1;
-		next;
-	} elsif ($state eq 'NUDGE_BACK') {
-		$nudge += 0.1;
-		next;
+	# Handle volume changes
+	if ($riff) {
+		if ($state eq 'VOL+' || $state eq 'VOL-') {
+
+			# Calculate a relative volume
+			my $vol = Audio::volume('RIFF', undef());
+			if ($state eq 'VOL+') {
+				$vol += $VOL_STEP;
+			} else {
+				$vol -= $VOL_STEP;
+			}
+
+			# Limit the range to 0.0 - 1.0
+			if ($vol < 0) {
+				$vol = 0;
+			}
+			if ($vol > 1) {
+				$vol = 1;
+			}
+
+			# Set the document volume
+			Audio::volume('RIFF', $vol);
+
+			# Skip further processing this loop -- the exists hash is useless
+			next;
+		}
 	}
 
 	# Save the last URL, so we can find changes
@@ -123,10 +142,7 @@ while (1) {
 
 			# Close the audio file
 			Audio::drop('RIFF');
-
-			# Cleanup
-			$riff  = 0;
-			$nudge = 0;
+			$riff = 0;
 
 			# Warm fuzzies
 			DMX::say('RiffTrax complete');
@@ -142,16 +158,17 @@ while (1) {
 			# Warm fuzzies
 			DMX::say('RiffTrax initiated');
 
-			# Reduce the delay while playing so we sync faster
-			$delay = 1;
-
-			# Set volume when we load -- riffs should be louder than normal system sounds
-			Audio::systemVolume($VOLUME_RIFF);
-
 			# Load and start the audio file
 			Audio::addLoad('RIFF', $RIFFS{$riff}->{'path'});
 			playRiff();
 			setRiffRate($RIFFS{$riff}->{'rate'});
+
+			# Set volume when we load -- riffs should be louder than normal system sounds
+			Audio::systemVolume($VOLUME_RIFF);
+			Audio::volume('RIFF', 1.0);
+
+			# Reduce the delay while playing so we sync faster
+			$delay = 1;
 		}
 	}
 
@@ -210,7 +227,7 @@ while (1) {
 		}
 
 		# Calculate the adjusted riff time and the error between the riff and video times
-		my $riffAdjTime = ($riffTime * $RIFFS{$riff}->{'rate'}) - $RIFFS{$riff}->{'offset'} + $nudge;
+		my $riffAdjTime = ($riffTime * $RIFFS{$riff}->{'rate'}) - $RIFFS{$riff}->{'offset'};
 		my $error       = $videoTime - $riffAdjTime;
 		my $errorAbs    = abs($error);
 
@@ -218,7 +235,6 @@ while (1) {
 		if ($DEBUG) {
 			print STDERR "\tRate: " . $RIFFS{$riff}->{'rate'} . "\n";
 			print STDERR "\tAdjusted Rate: " . $rate . "\n";
-			print STDERR "\tNudge: " . $nudge . "\n";
 			print STDERR "\tOffset: " . $RIFFS{$riff}->{'offset'} . "\n";
 			print STDERR "\tRiff time: " . $riffTime . "\n";
 			print STDERR "\tVideo time: " . $videoTime . "\n";
@@ -245,7 +261,6 @@ while (1) {
 						print STDERR 'Jumping to: ' . $newPos . "\n";
 					}
 					Audio::position('RIFF', $newPos);
-					$nudge    = 0;
 					$error    = 0;
 					$errorAbs = 0;
 				}
