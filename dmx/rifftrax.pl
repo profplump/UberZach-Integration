@@ -176,7 +176,7 @@ while (1) {
 			DMX::say('RiffTrax initiated');
 
 			# Load and start the audio file
-			Audio::addLoad('RIFF', $RIFFS{$riff}->{'path'});
+			Audio::addLoad('RIFF', $RIFFS{$riff}->{'file'});
 			playRiff();
 			setRiffRate($RIFFS{$riff}->{'rate'});
 

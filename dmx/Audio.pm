@@ -186,13 +186,11 @@ sub playing($) {
 	if ($DEBUG) {
 		print STDERR 'Audio::playing(): ' . $name . "\n";
 	}
-	if (!loaded($name)) {
-		die('Invalid QT document: ' . $name . "\n");
-	}
 
 	# Ask QT if the document is playing
-	my $result = runApplescript('tell application "QuickTime Player" to get playing of document ' . $FILES{$name}->{'name'});
-	if ($result =~ /true/i) {
+	# Note that while QT has a "playing" property it is only true when rate == 1.0
+	my $rate = rate($name);
+	if ($rate > 0) {
 		return 1;
 	}
 	return 0;
