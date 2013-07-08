@@ -57,7 +57,7 @@ my $EFFECT_FILE  = $DATA_DIR . 'EFFECT';
 my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
 my $DELAY        = $PULL_TIMEOUT / 2;
-my $AMP_DELAY    = 7;
+my $AMP_DELAY    = 6;
 my $AMP_BOOTING  = 0;
 
 # Debug
@@ -240,11 +240,15 @@ sub ampWait($$$) {
 				print STDERR "\tAudio device ready\n";
 			}
 
+			# Select the next function
 			if ($params->{'next'}) {
 				$NEXT = $params->{'next'};
 			} else {
 				$NEXT = undef();
 			}
+
+			# Always wait just a bit for good luck
+			sleep($AMP_DELAY / 4);
 		}
 
 		# Wait for the amp to boot if it wasn't running when we first checked
