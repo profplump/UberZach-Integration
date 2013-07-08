@@ -15,7 +15,6 @@ use Audio;
 # Config
 my $MEDIA_PATH     = `~/bin/video/mediaPath`;
 my $CONFIG_PATH    = $MEDIA_PATH . '/DMX/RiffTrax';
-my $RIFF_PATH      = $MEDIA_PATH . '/iTunes/iTunes Music/RiffTrax';
 my $ACTION_DELAY   = 0.1;
 my $JUMP_THRESHOLD = 5;
 my $VOLUME_RIFF    = 65;
@@ -402,21 +401,21 @@ sub parseConfig($$) {
 			}
 
 			# Ensure we have a valid record
-			if (!$data{'name'} || !$data{'file'}) {
-				warn('Invalid riff file: ' . $file . ' => ' . $data{'name'} . "\n");
+			if (!$data{'name'}) {
+				warn('Invalid riff file: ' . $file . "\n");
 				next;
 			}
 
-			# Construct an absolute path
-			if ($data{'file'} =~ /^\//) {
-				$data{'path'} = $data{'file'};
-			} else {
-				$data{'path'} = $RIFF_PATH . '/' . $data{'file'};
+			# Try to find a related file
+			if (!$data{'file'}) {
+				$data{'file'} = $file;
+				$data{'file'} =~ s/\.riff$/\.mp3/i;
+				$data{'file'} = $conf_path . '/' . $data{'file'};
 			}
 
 			# Ensure the path is valid
-			if (!-r $data{'path'}) {
-				warn('Invalid riff path: ' . $file . ' => ' . $data{'path'} . "\n");
+			if (!-r $data{'file'}) {
+				warn('Invalid MP3 file in riff ' . $file . ' => ' . $data{'file'} . "\n");
 				next;
 			}
 
