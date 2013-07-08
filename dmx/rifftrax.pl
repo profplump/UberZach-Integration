@@ -178,7 +178,6 @@ while (1) {
 			# Load and start the audio file
 			Audio::addLoad('RIFF', $RIFFS{$riff}->{'file'});
 			playRiff();
-			setRiffRate($RIFFS{$riff}->{'rate'});
 
 			# Set volume when we load -- riffs should be louder than normal system sounds
 			Audio::systemVolume($VOLUME_RIFF);
@@ -232,7 +231,15 @@ while (1) {
 		my $riffTime  = Audio::position('RIFF', undef());
 		my $videoTime = $exists{'PLAYING_POSITION'};
 
-		# Convert to seconds
+		# Update our local playing state tracker
+		# The rate is always 0 when paused (Audio::playing uses this same methodology)
+		if ($rate > 0) {
+			$playing = 1;
+		} else {
+			$playing = 0;
+		}
+
+		# Convert the timestamp to seconds
 		my @parts = split(/\:/, $videoTime);
 		$videoTime = 0;
 		if (scalar(@parts) == 3) {
@@ -244,14 +251,13 @@ while (1) {
 		}
 
 		# Calculate the adjusted riff time and the error between the riff and video times
-		my $riffAdjTime = ($riffTime * $RIFFS{$riff}->{'rate'}) - $RIFFS{$riff}->{'offset'};
+		my $riffAdjTime = $riffTime - $RIFFS{$riff}->{'offset'};
 		my $error       = $videoTime - $riffAdjTime;
 		my $errorAbs    = abs($error);
 
 		# Debug
 		if ($DEBUG) {
-			print STDERR "\tRate: " . $RIFFS{$riff}->{'rate'} . "\n";
-			print STDERR "\tAdjusted Rate: " . $rate . "\n";
+			print STDERR "\tRate: " . $rate . "\n";
 			print STDERR "\tOffset: " . $RIFFS{$riff}->{'offset'} . "\n";
 			print STDERR "\tRiff time: " . $riffTime . "\n";
 			print STDERR "\tVideo time: " . $videoTime . "\n";
@@ -269,9 +275,6 @@ while (1) {
 				pauseRiff();
 			} else {
 
-				# Ensure our local playing state tracking is accurate
-				$playing = Audio::playing('RIFF');
-
 				# Jump if we're off by more than a few seconds
 				if ($errorAbs > $JUMP_THRESHOLD) {
 					if ($DEBUG) {
@@ -285,10 +288,14 @@ while (1) {
 				# Set the rate when we adjust, unless we're paused
 				if ($playing) {
 					my $rateDiff = $errorAbs / $JUMP_THRESHOLD;
+
+					my $newRate = 1.0;
 					if ($error < 0) {
-						$rateDiff *= -1;
+						$newRate -= $rateDiff;
+					} else {
+						$newRate += $rateDiff;
 					}
-					my $newRate = $RIFFS{$riff}->{'rate'} + $rateDiff;
+
 					if ($DEBUG) {
 						print STDERR 'Setting rate to: ' . $newRate . "\n";
 					}
@@ -309,8 +316,8 @@ while (1) {
 		} else {
 
 			# Reset the rate to standard if we're inside sync the window
-			if ($rate != $RIFFS{$riff}->{'rate'}) {
-				setRiffRate($RIFFS{$riff}->{'rate'});
+			if ($rate != 1.0) {
+				setRiffRate(1.0);
 			}
 		}
 	}
@@ -396,9 +403,6 @@ sub parseConfig($$) {
 			if ($text =~ /^\s*Offset:\s*([\-\+]?\d+(?:\.\d+)?)\s*$/mi) {
 				$data{'offset'} = $1;
 			}
-			if ($text =~ /^\s*Rate:\s*(\d+(?:\.\d+)?)\s*$/mi) {
-				$data{'rate'} = $1;
-			}
 
 			# Ensure we have a valid record
 			if (!$data{'name'}) {
@@ -421,7 +425,7 @@ sub parseConfig($$) {
 
 			# Debug
 			if ($DEBUG) {
-				print STDERR 'Added RiffTrax: ' . $data{'name'} . "\n\tFile: " . $data{'file'} . "\n\tOffset: " . $data{'offset'} . "\n\tRate: " . $data{'rate'} . "\n";
+				print STDERR 'Added RiffTrax: ' . $data{'name'} . "\n\tFile: " . $data{'file'} . "\n\tOffset: " . $data{'offset'} . "\n";
 			}
 
 			# Push the data up the chain
