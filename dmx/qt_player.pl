@@ -20,14 +20,14 @@ sub init();
 sub load($$);
 sub unload($);
 sub stop();
-sub filesMatch($$);
+sub printFiles();
 sub dieUnloaded($);
 
 # App config
 my $DATA_DIR    = DMX::dataDir();
 my $OUTPUT_FILE = $DATA_DIR . 'QT_PLAYER';
 my $STATE_SOCK  = $OUTPUT_FILE . '.socket';
-my $DELAY       = 10;
+my $DELAY       = 1;
 my $MAX_CMD_LEN = 16384;
 
 # Debug
@@ -36,22 +36,19 @@ if ($ENV{'DEBUG'}) {
 	$DEBUG = 1;
 }
 
-# Reset QT Player
-init();
-
 # Clear our output file
 if (-e $OUTPUT_FILE) {
 	unlink($OUTPUT_FILE);
 }
+
+# Reset QT Player
+init();
 
 # Sockets
 my $SELECT = DMX::selectSock($STATE_SOCK);
 
 # Loop forever
 while (1) {
-
-	# Save the last file list
-	my %lastFiles = %FILES;
 
 	# Wait for commands
 	{
@@ -88,20 +85,20 @@ while (1) {
 			}
 		}
 	}
-	
-	# Ensure "silence" is always available
-	if (!exists($FILES{'SILENCE'})) {
-		init();
+
+	# Keep our list of files in-sync with reality
+	foreach my $name (keys(%FILES)) {
+		eval { Audio::runApplescript('tell application "QuickTime Player" to get document ' . $FILES{$name}); };
+		if ($@) {
+			warn('File went missing: ' . $name . "\n");
+			delete($FILES{$name});
+			printFiles();
+		}
 	}
 
-	# Publish the file list whenever it changes, or if the output file does not exist
-	if (filesMatch(\%lastFiles, \%FILES) || !-r $OUTPUT_FILE) {
-		my ($fh, $tmp) = File::Temp::tempfile($OUTPUT_FILE . '.XXXXXXXX', 'UNLINK' => 0);
-		foreach my $file (keys(%FILES)) {
-			print $fh $file . '|' . $FILES{$file} . "\n";
-		}
-		close($fh);
-		rename($tmp, $OUTPUT_FILE);
+	# Ensure "silence" is always available -- reset if it goes away
+	if (!exists($FILES{'SILENCE'})) {
+		init();
 	}
 }
 
@@ -176,6 +173,7 @@ sub load($$) {
 
 	# Save the document handle
 	$FILES{$name} = $doc;
+	printFiles();
 
 	# Bring Plex back to the front
 	Audio::runApplescript('tell application "Plex" to activate');
@@ -199,6 +197,7 @@ sub unload($) {
 
 	# Delete our handle
 	delete($FILES{$name});
+	printFiles();
 }
 
 # Stop and rewind all QT documents
@@ -207,19 +206,12 @@ sub stop() {
 	Audio::runApplescript('tell application "QuickTime Player" to set current time of every document to 0');
 }
 
-# Determine if anything has changed
-sub filesMatch($$) {
-	my ($old, $new) = @_;
-	if (scalar(keys(%{$old})) != scalar(keys(%{$new}))) {
-		return 0;
+# Update the output file list
+sub printFiles() {
+	my ($fh, $tmp) = File::Temp::tempfile($OUTPUT_FILE . '.XXXXXXXX', 'UNLINK' => 0);
+	foreach my $file (keys(%FILES)) {
+		print $fh $file . '|' . $FILES{$file} . "\n";
 	}
-	foreach my $name (keys(%{$old})) {
-		if (!exists($new->{$name})) {
-			return 0;
-		}
-		if ($old->{$name} ne $new->{$name}) {
-			return 0;
-		}
-	}
-	return 1;
+	close($fh);
+	rename($tmp, $OUTPUT_FILE);
 }
