@@ -2,7 +2,6 @@
 use strict;
 use warnings;
 use IO::Select;
-use IO::Socket::UNIX;
 use File::Basename;
 use File::Temp qw( tempfile );
 
@@ -189,11 +188,7 @@ while (1) {
 		}
 
 		# Open the new socket
-		my $sub = IO::Socket::UNIX->new(
-			'Peer'    => $path,
-			'Type'    => SOCK_DGRAM,
-			'Timeout' => $SOCK_TIMEOUT
-		);
+		my $sub = eval { DMX::clientSock($path); };
 		if (!$sub) {
 			print STDERR 'Unable to open socket: ' . $path . ": ${@}\n";
 			next;
