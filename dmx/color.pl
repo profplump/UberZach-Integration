@@ -15,7 +15,8 @@ use DMX;
 my $DISPLAY  = 1;
 my %PROFILES = (
 	'HIGH' => 'Epson-High',
-	'LOW'  => 'Epson-Low'
+	'PLAY' => 'Epson-Theater',
+	'LOW'  => 'Epson-Theater_Black',
 );
 
 # App config
@@ -96,6 +97,8 @@ while (1) {
 	$stateLast = $state;
 	if ($exists{'PROJECTOR_COLOR'} eq 'DYNAMIC') {
 		$state = 'HIGH';
+	} elsif ($exists{'PROJECTOR_COLOR'} eq 'THEATER') {
+		$state = 'PLAY';
 	} else {
 		$state = 'LOW';
 	}

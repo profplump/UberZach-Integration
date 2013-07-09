@@ -15,6 +15,7 @@ my $OFF_DELAY   = 15;
 my $CMD_DELAY   = 20;
 my $COLOR_DELAY = 60;
 my $COLOR_HIGH  = 'DYNAMIC';
+my $COLOR_PLAY  = 'THEATER';
 my $COLOR_LOW   = 'THEATER_BLACK_1';
 
 # App config
@@ -135,24 +136,25 @@ while (1) {
 	}
 
 	# Calculate the color mode
-	# LOW for playback, including audio
+	# PLAY for playback
 	# HIGH when playing and LIGHTS
+	# LOW for audio, and when we're half way to the timeout (to save the bulb)
 	# HIGH when the GUI is up
-	# LOW again when the GUI is up for half the timeout (to save the bulb)
+	# LOW if we haven't figured out what else to do
 	if ($newState eq 'PLAY') {
 		if ($exists{'LIGHTS'}) {
 			$color = $COLOR_HIGH;
 		} else {
-			$color = $COLOR_LOW;
+			$color = $COLOR_PLAY;
 		}
 	} elsif ($exists{'PLAYING_TYPE'} eq 'Audio') {
 		$color = $COLOR_LOW;
-	} elsif (!$exists{'GUI'}) {
-		$color = $COLOR_LOW;
 	} elsif ($elapsed > $TIMEOUT / 2) {
 		$color = $COLOR_LOW;
-	} else {
+	} elsif ($exists{'GUI'}) {
 		$color = $COLOR_HIGH;
+	} else {
+		$color = $COLOR_LOW;
 	}
 
 	# Force updates on a periodic basis
