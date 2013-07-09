@@ -5,7 +5,6 @@ use IO::Select;
 use IO::Socket::UNIX;
 use File::Basename;
 use File::Temp qw( tempfile );
-use Sys::Hostname;
 
 # Local modules
 use Cwd qw(abs_path);
@@ -17,21 +16,21 @@ use DMX;
 sub mtime($);
 
 # User config
-my $STATE_TIMEOUT = 180;
 my $MEDIA_PATH    = `~/bin/video/mediaPath`;
-my %MON_FILES     = (
-	'GUI'     => 'STATUS_GUI',
-	'PLAYING' => 'STATUS_PLAYING',
-	'RIFF'    => 'STATUS_VALUE',
-);
-my $DISPLAY = '<NONE>';
+my %DISPLAY_DEVS  = ('TV' => 1, 'PROJECTOR' => 1);
+my $DISPLAY       = '<NONE>';
+my $STATE_TIMEOUT = 180;
+my %MON_FILES     = ();
 
-# Host-specific config
-my $HOST = Sys::Hostname::hostname();
-if ($HOST =~ /loki/i) {
+# Available state files
+{
 
-	# Display device
-	$DISPLAY = 'PROJECTOR';
+	# Plex
+	$MON_FILES{'GUI'}     = 'STATUS_GUI';
+	$MON_FILES{'PLAYING'} = 'STATUS_PLAYING';
+
+	# RiffTrax
+	$MON_FILES{'RIFF'} = 'STATUS_VALUE';
 
 	# Motion detection
 	$MON_FILES{'MOTION'}    = 'MTIME';
@@ -64,30 +63,11 @@ if ($HOST =~ /loki/i) {
 	$MON_FILES{'AUDIO'}       = 'STATUS_VALUE';
 	$MON_FILES{'AUDIO_STATE'} = 'STATUS_VALUE';
 
-} elsif ($HOST =~ /beddy/i) {
-
-	# Display device
-	$DISPLAY = 'TV';
-
 	# TV
-	#$MON_FILES{'TV'}       = 'STATUS';
-	#$MON_FILES{'TV_VOL'}   = 'STATUS_VALUE';
-	#$MON_FILES{'TV_INPUT'} = 'STATUS_VALUE';
-
-} elsif ($HOST =~ /heady/i) {
-
-	# Display device
-	$DISPLAY = '<NONE>';
+	$MON_FILES{'TV'}     = 'STATUS';
+	$MON_FILES{'TV_VOL'} = 'STATUS_VALUE';
 }
-
-# App config
-my $SOCK_TIMEOUT = 5;
-my $DATA_DIR     = DMX::dataDir();
-my $CMD_FILE     = $DATA_DIR . 'STATE.socket';
-my $MAX_CMD_LEN  = 4096;
-my $RESET_CMD    = $ENV{'HOME'} . '/bin/video/dmx/reset.sh';
-my $PUSH_TIMEOUT = 20;
-my %EXTRAS       = (
+my %EXTRAS = (
 	'PLAYING' => {
 		'URL'      => qr/^\<li\>Filename\:(.+)$/m,
 		'YEAR'     => qr/^\<li\>Year\:(\d+)/m,
@@ -101,6 +81,14 @@ my %EXTRAS       = (
 		'TYPE'     => qr/^\<li\>Type\:(.+)$/m,
 	}
 );
+
+# App config
+my $SOCK_TIMEOUT = 5;
+my $DATA_DIR     = DMX::dataDir();
+my $CMD_FILE     = $DATA_DIR . 'STATE.socket';
+my $MAX_CMD_LEN  = 4096;
+my $RESET_CMD    = $ENV{'HOME'} . '/bin/video/dmx/reset.sh';
+my $PUSH_TIMEOUT = 20;
 
 # Debug
 my $DEBUG = 0;
@@ -117,20 +105,6 @@ if (!$DELAY) {
 # Socket init
 my $select = DMX::stateSocket($CMD_FILE);
 
-# Reset all dependents at starts
-system($RESET_CMD);
-
-# Subscribers
-my @subscribers = ();
-
-# State
-my $state      = 'INIT';
-my $stateLast  = $state;
-my $status     = '';
-my $statusLast = $status;
-my $updateLast = 0;
-my $pushLast   = 0;
-
 # Add the extras to the main file list
 foreach my $file (keys(%EXTRAS)) {
 	if (exists($MON_FILES{$file})) {
@@ -144,12 +118,13 @@ foreach my $file (keys(%EXTRAS)) {
 my %files = ();
 foreach my $file (keys(%MON_FILES)) {
 	my %tmp = (
-		'name'   => basename($file),
-		'type'   => $MON_FILES{$file},
-		'path'   => $DATA_DIR . $file,
-		'update' => 0,
-		'status' => 0,
-		'last'   => 0,
+		'name'      => basename($file),
+		'type'      => $MON_FILES{$file},
+		'path'      => $DATA_DIR . $file,
+		'update'    => 0,
+		'status'    => 0,
+		'last'      => 0,
+		'available' => 0,
 	);
 
 	# Allow absolute paths to override the $DATA_DIR path
@@ -163,6 +138,30 @@ foreach my $file (keys(%MON_FILES)) {
 	# Push a hash ref
 	$files{$file} = \%tmp;
 }
+
+# Delete any existing input files, to ensure our state is reset
+foreach my $file (values(%files)) {
+	if (-e $file->{'path'}) {
+		if ($DEBUG) {
+			print STDERR 'Deleting ' . $file->{'name'} . ': ' . $file->{'path'} . "\n";
+		}
+		unlink($file->{'path'});
+	}
+}
+
+# Reset all dependents at starts
+system($RESET_CMD);
+
+# Subscribers
+my @subscribers = ();
+
+# State
+my $state      = 'INIT';
+my $stateLast  = $state;
+my $status     = '';
+my $statusLast = $status;
+my $updateLast = 0;
+my $pushLast   = 0;
 
 # Loop forever
 while (1) {
@@ -232,6 +231,33 @@ while (1) {
 
 		# Skip "NONE" files -- they are data stores handled in other actions
 		if ($file->{'type'} eq 'NONE') {
+			next;
+		}
+
+		# Track available/unavailable files
+		{
+			my $wasAvailable = $file->{'available'};
+			$file->{'available'} = -r $file->{'path'} ? 1 : 0;
+			if ($wasAvailable != $file->{'available'}) {
+
+				# Determine which display device we have (if any)
+				if (exists($DISPLAY_DEVS{ $file->{'name'} })) {
+					$DISPLAY = $file->{'name'};
+				}
+
+				if ($DEBUG) {
+					if ($file->{'available'}) {
+						print STDERR 'Added file ' . $file->{'name'} . ': ' . $file->{'path'} . "\n";
+					} else {
+						print STDERR 'Dropped file ' . $file->{'name'} . ': ' . $file->{'path'} . "\n";
+
+					}
+				}
+			}
+		}
+
+		# Skip unavailable files
+		if (!$file->{'available'}) {
 			next;
 		}
 
