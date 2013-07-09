@@ -48,6 +48,9 @@ if (!-d $DATA_DIR) {
 	mkdir($DATA_DIR);
 }
 
+# Build our file name
+my $OUT_FILE = $DATA_DIR . '/' . $MODE;
+
 # Loop forever (unless no delay is set)
 my $data     = '';
 my $dataLast = '';
@@ -66,12 +69,17 @@ do {
 		}
 	}
 
+	# Ensure the output file exists
+	if (!-r $OUT_FILE) {
+		$changed = 1;
+	}
+
 	# If anything changed, save the data to disk
 	if ($changed) {
-		my ($fh, $tmp) = tempfile($DATA_DIR . '/' . $MODE . '.XXXXXXXX', 'UNLINK' => 0);
+		my ($fh, $tmp) = tempfile($OUT_FILE . '.XXXXXXXX', 'UNLINK' => 0);
 		print $fh $data;
 		close($fh);
-		rename($tmp, $DATA_DIR . '/' . $MODE);
+		rename($tmp, $OUT_FILE);
 	}
 
 	# Delay and loop
