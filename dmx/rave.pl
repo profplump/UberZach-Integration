@@ -208,20 +208,6 @@ while (1) {
 # ======================================
 # Utility routines
 # ======================================
-sub runApplescript($) {
-	my ($script) = @_;
-	if ($DEBUG) {
-		print STDERR 'Running AppleScript: ' . $script . "\n";
-	}
-
-	my $retval = capture('osascript', '-e', $script);
-	if ($DEBUG) {
-		print STDERR "\tAppleScript result: " . $retval . "\n";
-	}
-
-	return $retval;
-}
-
 sub ampWait($$$) {
 	my ($name, $exists, $params) = @_;
 	if ($DEBUG) {
