@@ -275,7 +275,8 @@ while (1) {
 			$STATUS{$cmd}->{'status'} =~ s/[^\w\.\-]/_/g;
 
 			# If something has changed, save the state to disk
-			if ($STATUS{$cmd}->{'status'} ne $STATUS{$cmd}->{'last'}) {
+			# (if the output file does not exist, something has changed)
+			if ($STATUS{$cmd}->{'status'} ne $STATUS{$cmd}->{'last'} || !-r $STATUS{$cmd}->{'path'}) {
 				if ($DEBUG) {
 					print STDERR 'New ' . uc($DEV) . ' status: ' . $cmd . ' => ' . $STATUS{$cmd}->{'status'} . "\n";
 				}
