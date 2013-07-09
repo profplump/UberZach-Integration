@@ -79,7 +79,7 @@ sub load($$) {
 	# Wait for the file to load
 	my $count = 0;
 	while (!loaded($name)) {
-		sleep($WAIT_DELAY);
+		Time::HiRes::sleep($WAIT_DELAY);
 		$count++;
 		if ($count > $MAX_WAIT) {
 			die('Unable to open file: ' . $name . "\n");

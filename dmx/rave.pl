@@ -68,7 +68,7 @@ if ($ENV{'DEBUG'}) {
 
 # Load all our audio files
 foreach my $file (keys(%FILES)) {
-	Audio::addLoad($file, $FILES{$file});
+	Audio::load($file, $FILES{$file});
 }
 
 # Sockets
