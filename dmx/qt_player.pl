@@ -27,7 +27,7 @@ sub dieUnloaded($);
 my $DATA_DIR    = DMX::dataDir();
 my $OUTPUT_FILE = $DATA_DIR . 'QT_PLAYER';
 my $STATE_SOCK  = $OUTPUT_FILE . '.socket';
-my $DELAY       = 1;
+my $DELAY       = 5;
 my $MAX_CMD_LEN = 16384;
 
 # Debug
