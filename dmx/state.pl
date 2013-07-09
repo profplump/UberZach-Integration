@@ -234,11 +234,24 @@ while (1) {
 			next;
 		}
 
+		# Always record the previous status and clear the new one
+		$file->{'last'}   = $file->{'status'};
+		$file->{'status'} = 0;
+
 		# Track available/unavailable files
 		{
 			my $wasAvailable = $file->{'available'};
 			$file->{'available'} = -r $file->{'path'} ? 1 : 0;
 			if ($wasAvailable != $file->{'available'}) {
+
+				# Reset and extras for this file
+				if (exists($EXTRAS{ $file->{'name'} })) {
+					foreach my $extra (keys(%{ $EXTRAS{ $file->{'name'} } })) {
+						my $name = $file->{'name'} . '_' . $extra;
+						$files{$name}{'last'}   = $files{$name}{'status'};
+						$files{$name}{'status'} = 0;
+					}
+				}
 
 				# Determine which display device we have (if any)
 				if (exists($DISPLAY_DEVS{ $file->{'name'} })) {
@@ -260,10 +273,6 @@ while (1) {
 		if (!$file->{'available'}) {
 			next;
 		}
-
-		# Always record the previous status and clear the new one
-		$file->{'last'}   = $file->{'status'};
-		$file->{'status'} = 0;
 
 		# Record the last update for STATUS and MTIME files
 		if ($file->{'type'} =~ /^STATUS/ || $file->{'type'} =~ /^MTIME/) {
@@ -308,12 +317,12 @@ while (1) {
 			}
 
 			# Handle extras, if any
-			if ($EXTRAS{ $file->{'name'} }) {
+			if (exists($EXTRAS{ $file->{'name'} })) {
 				foreach my $extra (keys(%{ $EXTRAS{ $file->{'name'} } })) {
 
 					my $name = $file->{'name'} . '_' . $extra;
 					$files{$name}{'last'}   = $files{$name}{'status'};
-					$files{$name}{'status'} = '';
+					$files{$name}{'status'} = 0;
 					$files{$name}{'update'} = $file->{'update'};
 
 					if ($text =~ $EXTRAS{ $file->{'name'} }{$extra}) {
