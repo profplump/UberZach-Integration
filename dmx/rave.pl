@@ -67,7 +67,6 @@ if ($ENV{'DEBUG'}) {
 }
 
 # Load all our audio files
-Audio::init();
 foreach my $file (keys(%FILES)) {
 	Audio::addLoad($file, $FILES{$file});
 }
@@ -130,7 +129,7 @@ while (1) {
 			if ($DEBUG) {
 				print STDERR "Ending background processing\n";
 			}
-			Audio::stop(undef());
+			Audio::stopAll();
 			kill(SIGTERM, $PID);
 		}
 

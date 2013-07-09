@@ -23,7 +23,7 @@
 		<dict>
 			<key>com.uberzach.state</key>
 			<true/>
-			<key>com.uberzach.ola.rave</key>
+			<key>com.uberzach.qt_player</key>
 			<true/>
 		</dict>
 	</dict>
