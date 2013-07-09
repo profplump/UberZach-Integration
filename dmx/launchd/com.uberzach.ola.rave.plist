@@ -21,8 +21,6 @@
 	<dict>
 		<key>OtherJobEnabled</key>
 		<dict>
-			<key>com.uberzach.ola.dmx</key>
-			<true/>
 			<key>com.uberzach.state</key>
 			<true/>
 		</dict>
