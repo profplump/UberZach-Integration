@@ -136,11 +136,11 @@ while (1) {
 	}
 
 	# Calculate the color mode
-	# PLAY for playback
+	# PLAY for normal playback
 	# HIGH when playing and LIGHTS
 	# LOW for audio, and when we're half way to the timeout (to save the bulb)
 	# HIGH when the GUI is up
-	# LOW if we haven't figured out what else to do
+	# PLAY if we haven't figured out what else to do
 	if ($newState eq 'PLAY') {
 		if ($exists{'LIGHTS'}) {
 			$color = $COLOR_HIGH;
@@ -154,7 +154,7 @@ while (1) {
 	} elsif ($exists{'GUI'}) {
 		$color = $COLOR_HIGH;
 	} else {
-		$color = $COLOR_LOW;
+		$color = $COLOR_PLAY;
 	}
 
 	# Force updates on a periodic basis
