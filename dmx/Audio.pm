@@ -71,12 +71,26 @@ sub runApplescript($) {
 	return $retval;
 }
 
+# Is the named document loaded?
+sub loaded($) {
+	my ($name) = @_;
+	parseList();
+	return exists($FILES{$name});
+}
+
 # Load a document
 sub load($$) {
 	my ($name, $path) = @_;
+
+	# Unload as needed
+	if (loaded($name)) {
+		unload($name);
+	}
+
+	# Request load
 	sendCmd('LOAD', $name, $path);
 
-	# Wait for the file to load
+	# Wait for the load to register
 	my $count = 0;
 	while (!loaded($name)) {
 		Time::HiRes::sleep($WAIT_DELAY);
@@ -87,20 +101,25 @@ sub load($$) {
 	}
 }
 
-# Is the named document loaded?
-sub loaded($) {
-	my ($name) = @_;
-	parseList();
-	return exists($FILES{$name});
-}
-
 # Unload the named document
 sub unload($) {
 	my ($name) = @_;
 	if ($DEBUG) {
 		print STDERR 'Audio::loadAudio(): ' . $name . "\n";
 	}
+
+	# Request unload
 	sendCmd('UNLOAD', $name);
+
+	# Wait for the unload to register
+	my $count = 0;
+	while (loaded($name)) {
+		Time::HiRes::sleep($WAIT_DELAY);
+		$count++;
+		if ($count > $MAX_WAIT) {
+			die('Unable to close file: ' . $name . "\n");
+		}
+	}
 }
 
 # Play the named document, waiting for completion

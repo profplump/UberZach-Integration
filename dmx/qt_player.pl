@@ -142,9 +142,10 @@ sub load($$) {
 		return;
 	}
 
-	# Reload as needed
+	# Ignore duplicate loads
 	if (exists($FILES{$name})) {
-		unload($name);
+		warn('Ignoring load request for existing file: ' . $name . "\n");
+		return;
 	}
 
 	# Find out how many files are already open
