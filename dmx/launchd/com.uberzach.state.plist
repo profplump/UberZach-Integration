@@ -18,13 +18,7 @@
 	<key>Label</key>
 	<string>com.uberzach.state</string>
 	<key>KeepAlive</key>
-	<dict>
-		<key>OtherJobEnabled</key>
-		<dict>
-			<key>com.uberzach.projector</key>
-			<true/>
-		</dict>
-	</dict>
+	<true/>
 	<key>ProgramArguments</key>
 	<array>
 		<string>/Users/tv/bin/video/dmx/state.pl</string>
