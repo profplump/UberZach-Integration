@@ -195,7 +195,7 @@ while (1) {
 			$new = $RIFFS{$riff}->{'name'};
 		}
 		my $old = $new;
-		if ($riffLast > 0) {
+		if ($riffLast) {
 			$old = $RIFFS{$riffLast}->{'name'};
 		}
 
