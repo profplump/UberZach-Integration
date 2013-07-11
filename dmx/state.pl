@@ -234,7 +234,8 @@ while (1) {
 		$file->{'status'} = 0;
 
 		# Track available/unavailable files
-		{
+		if (!$file->{'type'} =~ /^EXISTS/) {
+
 			my $wasAvailable = $file->{'available'};
 			$file->{'available'} = -r $file->{'path'} ? 1 : 0;
 			if ($wasAvailable != $file->{'available'}) {
