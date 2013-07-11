@@ -2,35 +2,27 @@
 use strict;
 use warnings;
 use IO::Socket::UNIX;
-use POSIX qw(ceil floor);
+
+# Local modules
+use Cwd qw(abs_path);
+use File::Basename qw(dirname);
+use lib dirname(abs_path($0));
+use DMX;
 
 # App config
-my $TIMEOUT  = 5;
-my $TEMP_DIR = `getconf DARWIN_USER_TEMP_DIR`;
-chomp($TEMP_DIR);
-my $DATA_DIR = $TEMP_DIR . 'plexMonitor/';
-
-# Debug
-my $DEBUG = 0;
-if ($ENV{'DEBUG'}) {
-	$DEBUG = 1;
-}
+my $DATA_DIR = DMX::dataDir();
 
 # Command-line parameters
 my ($DEV, $CMD) = @ARGV;
 my $CMD_FILE = $DATA_DIR . uc($DEV) . '.socket';
 
 # Sanity check
-if (!-d $DATA_DIR || !-S $CMD_FILE) {
-	die("Bad config\n");
+if (!-S $CMD_FILE) {
+	die('Invalid command file: ' . $CMD_FILE . "\n");
 }
 
 # Socket init
-my $sock = IO::Socket::UNIX->new(
-	'Peer'    => $CMD_FILE,
-	'Type'    => SOCK_DGRAM,
-	'Timeout' => $TIMEOUT
-) or die('Unable to open socket: ' . $CMD_FILE . ": ${@}\n");
+my $sock = DMX::clientSock($CMD_FILE);
 
 # Send the command
 $sock->send($CMD)

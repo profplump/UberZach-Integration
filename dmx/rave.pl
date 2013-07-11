@@ -23,27 +23,17 @@ sub lsr_loop($$$);
 
 # User config
 my $MEDIA_PATH = `~/bin/video/mediaPath` . '/DMX';
-my @CHANNELS   = ();
+my @CHANNELS   = (1, 2, 4, 5, 6, 7, 8, 9, 13, 14, 15);
 my %EFFECTS    = ();
 my %FILES      = ();
 
-# Host-specific config
-my $HOST = Sys::Hostname::hostname();
-if ($HOST =~ /loki/i) {
+# Red Alert
+$FILES{'RED_ALERT'} = 'DMX/Red Alert.mp3';
+$EFFECTS{'RED_ALERT'} = { 'cmd' => \&red_alert };
 
-	# Rave-controlled channels
-	push(@CHANNELS, 1, 2, 4, 5, 6, 7, 8, 9, 13, 14, 15);
-
-	# Red Alert
-	$FILES{'RED_ALERT'} = 'DMX/Red Alert.mp3';
-	$EFFECTS{'RED_ALERT'} = { 'cmd' => \&red_alert };
-
-	# Light-switch rave
-	$EFFECTS{'LSR'} = { 'cmd' => \&lsr_init, 'next' => \&lsr_run, 'loop' => \&lsr_loop, 'done' => \&lsr_done };
-	$FILES{'LSR'} = 'DMX/Rave.mp3';
-} elsif ($HOST =~ /beddy/i) {
-} elsif ($HOST =~ /heady/i) {
-}
+# Light-switch rave
+$EFFECTS{'LSR'} = { 'cmd' => \&lsr_init, 'next' => \&lsr_run, 'loop' => \&lsr_loop, 'done' => \&lsr_done };
+$FILES{'LSR'} = 'DMX/Rave.mp3';
 
 # Utility prototypes
 sub ampWait($$$);
@@ -67,9 +57,8 @@ if ($ENV{'DEBUG'}) {
 }
 
 # Load all our audio files
-Audio::init();
 foreach my $file (keys(%FILES)) {
-	Audio::addLoad($file, $FILES{$file});
+	Audio::load($file, $FILES{$file});
 }
 
 # Sockets
@@ -130,7 +119,7 @@ while (1) {
 			if ($DEBUG) {
 				print STDERR "Ending background processing\n";
 			}
-			Audio::stop(undef());
+			Audio::stopAll();
 			kill(SIGTERM, $PID);
 		}
 
@@ -208,20 +197,6 @@ while (1) {
 # ======================================
 # Utility routines
 # ======================================
-sub runApplescript($) {
-	my ($script) = @_;
-	if ($DEBUG) {
-		print STDERR 'Running AppleScript: ' . $script . "\n";
-	}
-
-	my $retval = capture('osascript', '-e', $script);
-	if ($DEBUG) {
-		print STDERR "\tAppleScript result: " . $retval . "\n";
-	}
-
-	return $retval;
-}
-
 sub ampWait($$$) {
 	my ($name, $exists, $params) = @_;
 	if ($DEBUG) {

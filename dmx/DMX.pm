@@ -5,7 +5,6 @@ use POSIX;
 use File::Temp;
 use IO::Select;
 use IO::Socket::UNIX;
-use Sys::Hostname;
 
 # Package name
 package DMX;
@@ -32,15 +31,7 @@ my %CHANNEL_ADJ = (
 
 # Sanity check
 if (!-d $DATA_DIR) {
-
-	# Allow use on dev systems without the full environment
-	my $hostname = Sys::Hostname::hostname();
-	if ($hostname =~ /baldwin/i || $hostname =~ /archer/i) {
-		print STDERR 'Ignoring missing DATA_DIR due to hostname: ' . $hostname . ". Using TEMP_DIR directly...\n";
-		$DATA_DIR = $TEMP_DIR;
-	} else {
-		die('Data directory not available: ' . $DATA_DIR . "\n");
-	}
+	die('Data directory not available: ' . $DATA_DIR . "\n");
 }
 
 # State

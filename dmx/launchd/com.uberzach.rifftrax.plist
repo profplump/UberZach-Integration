@@ -23,6 +23,8 @@
 		<dict>
 			<key>com.uberzach.state</key>
 			<true/>
+			<key>com.uberzach.qt_player</key>
+			<true/>
 		</dict>
 	</dict>
 	<key>ProgramArguments</key>

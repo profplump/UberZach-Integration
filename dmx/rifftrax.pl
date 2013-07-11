@@ -154,7 +154,7 @@ while (1) {
 			Audio::systemVolume($VOLUME_STD);
 
 			# Close the audio file
-			Audio::drop('RIFF');
+			Audio::unload('RIFF');
 			$riff = 0;
 
 			# Warm fuzzies
@@ -176,7 +176,7 @@ while (1) {
 			DMX::say('RiffTrax initiated');
 
 			# Load and start the audio file
-			Audio::addLoad('RIFF', $RIFFS{$riff}->{'file'});
+			Audio::load('RIFF', $RIFFS{$riff}->{'file'});
 			playRiff();
 
 			# Set volume when we load -- riffs should be louder than normal system sounds
@@ -195,7 +195,7 @@ while (1) {
 			$new = $RIFFS{$riff}->{'name'};
 		}
 		my $old = $new;
-		if ($riffLast > 0) {
+		if ($riffLast) {
 			$old = $RIFFS{$riffLast}->{'name'};
 		}
 

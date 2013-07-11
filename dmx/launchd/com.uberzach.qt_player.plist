@@ -16,13 +16,27 @@
 	<key>RunAtLoad</key>
 	<true/>
 	<key>Label</key>
-	<string>com.uberzach.state</string>
+	<string>com.uberzach.qt_player</string>
 	<key>KeepAlive</key>
-	<true/>
+	<dict>
+		<key>OtherJobEnabled</key>
+		<dict>
+			<key>com.uberzach.state</key>
+			<true/>
+		</dict>
+	</dict>
 	<key>ProgramArguments</key>
 	<array>
-		<string>/Users/tv/bin/video/dmx/state.pl</string>
-		<string>0.25</string>
+		<string>/Users/tv/bin/video/dmx/qt_player.pl</string>
 	</array>
+	<!--
+		<key>EnvironmentVariables</key>
+		<dict>
+			<key>DEBUG</key>
+			<string>1</string>
+		</dict>
+		<key>StandardErrorPath</key>
+		<string>/Users/tv/com.uberzach.qt_player_errlog.txt</string>
+	-->
 </dict>
 </plist>

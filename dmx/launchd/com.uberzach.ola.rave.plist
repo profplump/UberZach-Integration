@@ -8,10 +8,6 @@
 	<array>
 		<string>Loki.local</string>
 		<string>loki.uberzach.com</string>
-		<string>Beddy.local</string>
-		<string>beddy.uberzach.com</string>
-		<string>Heady.local</string>
-		<string>heady.uberzach.com</string>
 	</array>
 	<key>RunAtLoad</key>
 	<true/>
@@ -21,9 +17,9 @@
 	<dict>
 		<key>OtherJobEnabled</key>
 		<dict>
-			<key>com.uberzach.ola.dmx</key>
-			<true/>
 			<key>com.uberzach.state</key>
+			<true/>
+			<key>com.uberzach.qt_player</key>
 			<true/>
 		</dict>
 	</dict>
