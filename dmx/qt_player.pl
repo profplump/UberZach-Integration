@@ -98,7 +98,7 @@ while (1) {
 
 	# Ensure "silence" is always available -- reset if it goes away
 	if (!exists($FILES{'SILENCE'})) {
-		init();
+		die("We need only the SILENCE\n");
 	}
 }
 
@@ -121,7 +121,7 @@ sub init() {
 	load('SILENCE', 'DMX/Silence.wav');
 
 	# Bring Plex back to the front
-	Audio::runApplescript('tell application "Plex" to activate');
+	activatePlex();
 }
 
 # Open the named file and record the handle
@@ -177,7 +177,7 @@ sub load($$) {
 	printFiles();
 
 	# Bring Plex back to the front
-	Audio::runApplescript('tell application "Plex" to activate');
+	activatePlex();
 }
 
 # Close the named file
@@ -215,4 +215,14 @@ sub printFiles() {
 	}
 	close($fh);
 	rename($tmp, $OUTPUT_FILE);
+}
+
+# Bring Plex to the front, if it's already running
+sub activatePlex() {
+	my @cmd = ('tell application "System Events"');
+	push(@cmd, 'if exists process "Plex" then');
+	push(@cmd, 'tell application "Plex" to activate');
+	push(@cmd, 'end if');
+	push(@cmd, 'end tell');	
+	Audio::runApplescript(join("\n", @cmd));
 }
