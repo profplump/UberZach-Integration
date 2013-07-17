@@ -239,7 +239,7 @@ while (1) {
 
 		# Announce lamp life status, if near/past $LAMP_LIFE
 		if (exists($exists{'PROJECTOR_LAMP'})) {
-			my $life    = $exists{'PROJECTOR_LAMP'} / $LAMP_LIFE;
+			my $life = $exists{'PROJECTOR_LAMP'} / $LAMP_LIFE;
 			if ($DEBUG) {
 				print STDERR 'Lamp life: ' . $life . "%\n";
 			}

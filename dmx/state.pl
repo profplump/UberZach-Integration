@@ -239,6 +239,7 @@ while (1) {
 			my $wasAvailable = $file->{'available'};
 			$file->{'available'} = -r $file->{'path'} ? 1 : 0;
 			if ($wasAvailable != $file->{'available'}) {
+
 				# Reset and extras for this file
 				if (exists($EXTRAS{ $file->{'name'} })) {
 					foreach my $extra (keys(%{ $EXTRAS{ $file->{'name'} } })) {
