@@ -235,7 +235,6 @@ while (1) {
 
 		# Track available/unavailable files
 		if (!$file->{'type'} =~ /^EXISTS/) {
-
 			my $wasAvailable = $file->{'available'};
 			$file->{'available'} = -r $file->{'path'} ? 1 : 0;
 			if ($wasAvailable != $file->{'available'}) {
@@ -259,7 +258,6 @@ while (1) {
 						print STDERR 'Added file ' . $file->{'name'} . ': ' . $file->{'path'} . "\n";
 					} else {
 						print STDERR 'Dropped file ' . $file->{'name'} . ': ' . $file->{'path'} . "\n";
-
 					}
 				}
 			}

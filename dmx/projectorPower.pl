@@ -14,8 +14,8 @@ my $COUNTDOWN   = 300;
 my $OFF_DELAY   = 15;
 my $CMD_DELAY   = 20;
 my $COLOR_DELAY = 60;
-my $COLOR_HIGH  = 'DYNAMIC';
-my $COLOR_PLAY  = 'THEATER';
+my $COLOR_HIGH  = 'THEATER';
+my $COLOR_PLAY  = 'THEATER_BLACK_1';
 my $COLOR_LOW   = 'THEATER_BLACK_1';
 
 # App config
