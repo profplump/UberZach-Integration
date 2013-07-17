@@ -124,7 +124,7 @@ foreach my $file (keys(%MON_FILES)) {
 		'update'    => 0,
 		'status'    => 0,
 		'last'      => 0,
-		'available' => 0,
+		'available' => 1,
 	);
 
 	# Allow absolute paths to override the $DATA_DIR path
