@@ -39,6 +39,7 @@ my %MON_FILES     = ();
 	$MON_FILES{'PROJECTOR'}       = 'STATUS';
 	$MON_FILES{'PROJECTOR_COLOR'} = 'STATUS_VALUE';
 	$MON_FILES{'PROJECTOR_INPUT'} = 'STATUS_VALUE';
+	$MON_FILES{'PROJECTOR_LAMP'}  = 'STATUS_VALUE';
 
 	# Amplifier
 	$MON_FILES{'AMPLIFIER'}       = 'STATUS';
@@ -234,11 +235,10 @@ while (1) {
 		$file->{'status'} = 0;
 
 		# Track available/unavailable files
-		if (!$file->{'type'} =~ /^EXISTS/) {
+		if (!($file->{'type'} =~ /^EXISTS/)) {
 			my $wasAvailable = $file->{'available'};
 			$file->{'available'} = -r $file->{'path'} ? 1 : 0;
 			if ($wasAvailable != $file->{'available'}) {
-
 				# Reset and extras for this file
 				if (exists($EXTRAS{ $file->{'name'} })) {
 					foreach my $extra (keys(%{ $EXTRAS{ $file->{'name'} } })) {
