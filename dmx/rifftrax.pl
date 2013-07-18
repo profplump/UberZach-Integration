@@ -391,17 +391,17 @@ sub parseConfig($$) {
 
 			# Parse out the data we care about
 			my %data = ();
-			if ($text =~ /^\s*Name:\s*(\S.*\S)\s*$/mi) {
+			if ($text =~ /^\s*Name:[ \t]*(\S.*\S)\s*$/mi) {
 				$data{'name'} = $1;
 			}
-			if ($text =~ /^\s*Year:\s*(\d{4})\s*$/mi) {
+			if ($text =~ /^\s*Year:[ \t]*(\d{4})\s*$/mi) {
 				$data{'year'} = $1;
 			}
-			if ($text =~ /^\s*File:\s*(\S.*\S)\s*$/mi) {
+			if ($text =~ /^\s*File:[ \t]*(\S.*\S)\s*$/mi) {
 				$data{'file'} = $1;
 			}
-			if ($text =~ /^\s*Offset:\s*([\-\+]?\d+(?:\.\d+)?)\s*$/mi) {
-				$data{'offset'} = $1;
+			if ($text =~ /^\s*Offset:[ \t]*([\-\+]?\d+(?:\.\d+)?)\s*$/mi) {
+				$data{'offset'} = $1 * 1.0;
 			}
 
 			# Ensure we have a valid record
