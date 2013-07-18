@@ -123,23 +123,23 @@ foreach my $file (keys(%EXTRAS)) {
 
 # Init the file tracking structure
 my %files = ();
-foreach my $file (keys(%MON_FILES)) {
-	my %tmp = (
-		'name'   => basename($file),
-		'type'   => $MON_FILES{$file},
-		'path'   => $DATA_DIR . $file,
+foreach my $name (keys(%MON_FILES)) {
+	my %file = (
+		'name'   => basename($name),
+		'type'   => $MON_FILES{$name},
+		'path'   => $DATA_DIR . $name,
 		'update' => 0,
 		'value'  => 0,
 		'last'   => 0,
 	);
 
 	# Allow absolute paths to override the $DATA_DIR path
-	if ($file =~ /^\//) {
-		$tmp{'path'} = $file;
+	if ($name =~ /^\//) {
+		$file{'path'} = $name;
 	}
 
 	# Record the directory name for folder monitoring
-	$tmp{'dir'} = dirname($tmp{'path'});
+	$file{'dir'} = dirname($file{'path'});
 
 	# Set the attribute bits, for use in later update handling logic
 	my %attr = (
@@ -153,40 +153,44 @@ foreach my $file (keys(%MON_FILES)) {
 		'gui'       => 0,
 		'playing'   => 0,
 	);
-	if ($tmp{'type'} =~ /\bSTATUS\b/i) {
+	if ($file{'type'} =~ /\bSTATUS\b/i) {
 		$attr{'status'} = 1;
-		$attr{'mtime'}  = 1;
 	}
-	if ($tmp{'type'} =~ /\bEXISTS\b/i) {
+	if ($file{'type'} =~ /\bEXISTS\b/i) {
 		$attr{'exists'} = 1;
-		$attr{'mtime'}  = 1;
 	}
-	if ($tmp{'type'} =~ /\bVALUE\b/i) {
-		$attr{'status'} = 1;
+	if ($file{'type'} =~ /\bVALUE\b/i) {
 		$attr{'value'}  = 1;
-		$attr{'mtime'}  = 1;
 	}
-	if ($tmp{'type'} =~ /\bCLEAR\b/i) {
+	if ($file{'type'} =~ /\bCLEAR\b/i) {
 		$attr{'clear'} = 1;
 	}
-	if ($tmp{'type'} =~ /\bON\b/i) {
+	if ($file{'type'} =~ /\bON\b/i) {
 		$attr{'clear_off'} = 1;
 	}
-	if ($tmp{'type'} =~ /\bMTIME\b/i) {
+	if ($file{'type'} =~ /\bMTIME\b/i) {
 		$attr{'mtime'} = 1;
 	}
-	if ($tmp{'type'} =~ /\bGUI\b/i) {
-		$attr{'status'} = 1;
+	if ($file{'type'} =~ /\bGUI\b/i) {
 		$attr{'gui'}    = 1;
 	}
-	if ($tmp{'type'} =~ /\bPLAYING\b/i) {
-		$attr{'status'}  = 1;
+	if ($file{'type'} =~ /\bPLAYING\b/i) {
 		$attr{'playing'} = 1;
 	}
-	$tmp{'attr'} = \%attr;
+	
+	# Cross-match some data types for easy of use
+	if ($attr{'value'} || $attr{'gui'} || $attr{'playing'}) {
+		$attr{'status'} = 1;
+	}
+	if ($attr{'status'} || $attr{'exists'}) {
+		$attr{'mtime'} = 1;
+	}
+	
+	# Push ATTR into the file hash
+	$file{'attr'} = \%attr;
 
-	# Push a hash ref
-	$files{$file} = \%tmp;
+	# Push FILE into the files hash
+	$files{$name} = \%file;
 }
 
 # Delete any existing input files, to ensure our state is reset
@@ -405,15 +409,35 @@ while (1) {
 		}
 	}
 
+	# Determine some intermediate state data
+	my $playing = 0;
+	if (exists($files{'PLAYING'}) && $files{'PLAYING'}->{'value'}) {
+		$playing = 1;
+	}
+	my $video = 0;
+	if (exists($files{'PLAYING_TYPE'}) && $files{'PLAYING_TYPE'}->{'value'} ne 'Audio') {
+		$video = 1;
+	} elsif (!exists($files{'PLAYING_TYPE'})) {
+		$video = 1;
+	}
+
 	# Calculate the new state
 	$stateLast = $state;
-	if ($DISPLAY && exists($files{$DISPLAY}) && $files{$DISPLAY}->{'value'}) {
+	if (!$DISPLAY) {
 
-		# We are always either playing or paused if the display is on
-		# When we're playing "Audio" assume we are paused
-		if (   (exists($files{'PLAYING'}) && $files{'PLAYING'}->{'value'})
-			&& ((exists($files{'PLAYING_TYPE'}) && $files{'PLAYING_TYPE'}->{'value'} ne 'Audio') || !exists($files{'PLAYING_TYPE'})))
-		{
+		# If there's no display the state is always PLAY or PAUSE, as indicated by the master
+		if ($playing) {
+			$state = 'PLAY';
+		} else {
+			$state = 'PAUSE';
+		}
+
+	} elsif ($DISPLAY && exists($files{$DISPLAY}) && $files{$DISPLAY}->{'value'}) {
+
+		# If a display exists and is on:
+		# PLAY when video is active and playing
+		# PAUSE any other time (including when audio is active)
+		if ($playing && $video) {
 			$state = 'PLAY';
 		} else {
 			$state = 'PAUSE';
@@ -421,7 +445,7 @@ while (1) {
 
 	} else {
 
-		# If the display is off, check the timeouts
+		# If the display exists but is off, check the timeouts to determine MOTION vs. OFF
 		my $timeSinceUpdate = time() - $updateLast;
 		if ($timeSinceUpdate > $STATE_TIMEOUT) {
 			$state = 'OFF';
