@@ -18,7 +18,7 @@ sub mtime($);
 # User config
 my $MEDIA_PATH    = `~/bin/video/mediaPath`;
 my %DISPLAY_DEVS  = ('TV' => 1, 'PROJECTOR' => 1);
-my $DISPLAY       = '<NONE>';
+my $DISPLAY       = undef();
 my $STATE_TIMEOUT = 180;
 my %MON_FILES     = ();
 
@@ -160,7 +160,7 @@ foreach my $name (keys(%MON_FILES)) {
 		$attr{'exists'} = 1;
 	}
 	if ($file{'type'} =~ /\bVALUE\b/i) {
-		$attr{'value'}  = 1;
+		$attr{'value'} = 1;
 	}
 	if ($file{'type'} =~ /\bCLEAR\b/i) {
 		$attr{'clear'} = 1;
@@ -172,12 +172,12 @@ foreach my $name (keys(%MON_FILES)) {
 		$attr{'mtime'} = 1;
 	}
 	if ($file{'type'} =~ /\bGUI\b/i) {
-		$attr{'gui'}    = 1;
+		$attr{'gui'} = 1;
 	}
 	if ($file{'type'} =~ /\bPLAYING\b/i) {
 		$attr{'playing'} = 1;
 	}
-	
+
 	# Cross-match some data types for easy of use
 	if ($attr{'value'} || $attr{'gui'} || $attr{'playing'}) {
 		$attr{'status'} = 1;
@@ -185,7 +185,7 @@ foreach my $name (keys(%MON_FILES)) {
 	if ($attr{'status'} || $attr{'exists'}) {
 		$attr{'mtime'} = 1;
 	}
-	
+
 	# Push ATTR into the file hash
 	$file{'attr'} = \%attr;
 
@@ -423,7 +423,7 @@ while (1) {
 
 	# Calculate the new state
 	$stateLast = $state;
-	if (!$DISPLAY) {
+	if (!defined($DISPLAY) || !exists($files{$DISPLAY})) {
 
 		# If there's no display the state is always PLAY or PAUSE, as indicated by the master
 		if ($playing) {
@@ -432,7 +432,7 @@ while (1) {
 			$state = 'PAUSE';
 		}
 
-	} elsif ($DISPLAY && exists($files{$DISPLAY}) && $files{$DISPLAY}->{'value'}) {
+	} elsif ($files{$DISPLAY}->{'value'}) {
 
 		# If a display exists and is on:
 		# PLAY when video is active and playing
