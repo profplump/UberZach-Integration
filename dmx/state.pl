@@ -39,6 +39,7 @@ my %MON_FILES     = ();
 	$MON_FILES{'PROJECTOR'}       = 'STATUS';
 	$MON_FILES{'PROJECTOR_COLOR'} = 'STATUS_VALUE';
 	$MON_FILES{'PROJECTOR_INPUT'} = 'STATUS_VALUE';
+	$MON_FILES{'PROJECTOR_LAMP'}  = 'STATUS_VALUE';
 
 	# Amplifier
 	$MON_FILES{'AMPLIFIER'}       = 'STATUS';
@@ -123,7 +124,7 @@ foreach my $file (keys(%MON_FILES)) {
 		'update'    => 0,
 		'status'    => 0,
 		'last'      => 0,
-		'available' => 0,
+		'available' => 1,
 	);
 
 	# Allow absolute paths to override the $DATA_DIR path
@@ -234,8 +235,7 @@ while (1) {
 		$file->{'status'} = 0;
 
 		# Track available/unavailable files
-		if (!$file->{'type'} =~ /^EXISTS/) {
-
+		if (!($file->{'type'} =~ /^EXISTS/)) {
 			my $wasAvailable = $file->{'available'};
 			$file->{'available'} = -r $file->{'path'} ? 1 : 0;
 			if ($wasAvailable != $file->{'available'}) {
@@ -259,7 +259,6 @@ while (1) {
 						print STDERR 'Added file ' . $file->{'name'} . ': ' . $file->{'path'} . "\n";
 					} else {
 						print STDERR 'Dropped file ' . $file->{'name'} . ': ' . $file->{'path'} . "\n";
-
 					}
 				}
 			}

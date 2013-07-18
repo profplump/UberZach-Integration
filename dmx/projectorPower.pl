@@ -14,9 +14,10 @@ my $COUNTDOWN   = 300;
 my $OFF_DELAY   = 15;
 my $CMD_DELAY   = 20;
 my $COLOR_DELAY = 60;
-my $COLOR_HIGH  = 'DYNAMIC';
-my $COLOR_PLAY  = 'THEATER';
+my $COLOR_HIGH  = 'THEATER';
+my $COLOR_PLAY  = 'THEATER_BLACK_1';
 my $COLOR_LOW   = 'THEATER_BLACK_1';
+my $LAMP_LIFE   = 2000;
 
 # App config
 my $DATA_DIR     = DMX::dataDir();
@@ -235,6 +236,21 @@ while (1) {
 
 		# Annouce the state change, after the fact
 		DMX::say('Projector ' . $state);
+
+		# Announce lamp life status, if near/past $LAMP_LIFE
+		if (exists($exists{'PROJECTOR_LAMP'})) {
+			my $life = $exists{'PROJECTOR_LAMP'} / $LAMP_LIFE;
+			if ($DEBUG) {
+				print STDERR 'Lamp life: ' . $life . "%\n";
+			}
+
+			if ($life > 0.9) {
+				my $chance = ($life - 0.9) * 10;
+				if (rand(1) <= $chance) {
+					DMX::say('Projector lamp has run for ' . int($life * 100) . '% of its projected life.');
+				}
+			}
+		}
 
 		# No output file
 

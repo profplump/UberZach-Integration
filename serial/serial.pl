@@ -45,11 +45,13 @@ if (basename($0) =~ /PROJECTOR/i) {
 		'HDMI_2'          => 'SOURCE A0',
 		'VGA'             => 'SOURCE 20',
 		'INPUT'           => 'SOURCE?',
+		'LAMP'            => 'LAMP?',
 	);
 	%STATUS_CMDS = (
-		'STATUS' => { 'MATCH' => [ qr/^PWR=/,                 qr/PWR=01/ ] },
-		'COLOR'  => { 'EVAL'  => [ qr/^CMODE=[0-9A-Z]{2}$/i,  'if ($a =~ /06$/i) { $a = "DYNAMIC" } elsif ($a =~ /0C$/i) { $a = "LIVING_ROOM" } elsif ($a =~ /07$/i) { $a = "NATURAL" } elsif ($a =~ /05$/i) { $a = "THEATER" } elsif ($a =~ /09$/i) { $a = "THEATER_BLACK_1" } elsif ($a =~ /0A$/i) { $a = "THEATER_BLACK_2" } elsif ($a =~ /0B$/i) { $a = "XV" }' ] },
-		'INPUT'  => { 'EVAL'  => [ qr/^SOURCE=[0-9A-Z]{2}$/i, 'if ($a =~ /30$/i) { $a = "HDMI_1" } elsif ($a =~ /A0$/i) { $a = "HDMI_2" } elsif ($a =~ /20$/i) { $a = "VGA" }' ] },
+		'STATUS' => { 'MATCH'   => [ qr/^PWR=/,                 qr/PWR=01/ ] },
+		'COLOR'  => { 'EVAL'    => [ qr/^CMODE=[0-9A-Z]{2}$/i,  'if ($a =~ /06$/i) { $a = "DYNAMIC" } elsif ($a =~ /0C$/i) { $a = "LIVING_ROOM" } elsif ($a =~ /07$/i) { $a = "NATURAL" } elsif ($a =~ /05$/i) { $a = "THEATER" } elsif ($a =~ /09$/i) { $a = "THEATER_BLACK_1" } elsif ($a =~ /0A$/i) { $a = "THEATER_BLACK_2" } elsif ($a =~ /0B$/i) { $a = "XV" }' ] },
+		'INPUT'  => { 'EVAL'    => [ qr/^SOURCE=[0-9A-Z]{2}$/i, 'if ($a =~ /30$/i) { $a = "HDMI_1" } elsif ($a =~ /A0$/i) { $a = "HDMI_2" } elsif ($a =~ /20$/i) { $a = "VGA" }' ] },
+		'LAMP'   => { 'REPLACE' => qr/^LAMP=(\d+)$/i },
 	);
 } elsif (basename($0) =~ /AMPLIFIER/i) {
 	$DEV       = 'Amplifier';
