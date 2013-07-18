@@ -4,6 +4,7 @@ use warnings;
 use IO::Select;
 use File::Basename;
 use File::Temp qw( tempfile );
+use Sys::Hostname;
 
 # Local modules
 use Cwd qw(abs_path);
@@ -20,6 +21,13 @@ my %DISPLAY_DEVS  = ('TV' => 1, 'PROJECTOR' => 1);
 my $DISPLAY       = '<NONE>';
 my $STATE_TIMEOUT = 180;
 my %MON_FILES     = ();
+
+# Host-specific config
+# This is necessary to avoid contention on shared disks
+my $HOST = Sys::Hostname::hostname();
+if ($HOST =~ /loki/i) {
+	$MON_FILES{ $MEDIA_PATH . '/DMX/cmd/GARAGE_CMD' } = 'EXISTS-VALUE-CLEAR';
+}
 
 # Available state files
 {
@@ -56,7 +64,6 @@ my %MON_FILES     = ();
 
 	# Equipment
 	$MON_FILES{'FAN_CMD'} = 'EXISTS-ON';
-	$MON_FILES{ $MEDIA_PATH . '/DMX/cmd/GARAGE_CMD' } = 'EXISTS-VALUE-CLEAR';
 
 	# OS State
 	$MON_FILES{'COLOR'}       = 'VALUE';
