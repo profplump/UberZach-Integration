@@ -209,12 +209,11 @@ while (1) {
 		rename($tmp, $OUTPUT_FILE);
 	}
 
-	# Play/pause to match the video
-	# This assumes our local state is valid. We double-check that state tracking if the sync error is large enough to trigger a jump
-	if ($riff) {
-		if ($state eq 'PAUSE' && $playing) {
+	# Play/pause to match the video state
+	if ($riff && exists($exists{'PLAYING'})) {
+		if (!$exists{'PLAYING'} && $playing) {
 			pauseRiff();
-		} elsif ($state eq 'PLAY' && !$playing) {
+		} elsif ($exists{'PLAYING'} && !$playing) {
 			playRiff();
 		}
 	}
@@ -300,17 +299,6 @@ while (1) {
 						print STDERR 'Setting rate to: ' . $newRate . "\n";
 					}
 					setRiffRate($newRate);
-				}
-
-				# Play/pause as needed, before we adjust
-				# The state-change detection should handle most of this
-				# But double-check while adjusting in case things get out-of-sync
-				if (exists($exists{'PLAYING'})) {
-					if ($exists{'PLAYING'} && !$playing) {
-						playRiff();
-					} elsif (!$exists{'PLAYING'} && $playing) {
-						pauseRiff();
-					}
 				}
 			}
 		} else {
