@@ -2,8 +2,8 @@
 
 # Delay if we are currently scanning
 WAIT=0
-DELAY=30
-MAX_WAIT=300
+DELAY=5
+MAX_WAIT=600
 while ~/bin/video/pms/isScanning.sh; do
 	sleep $DELAY
 	WAIT=$(( $WAIT + $DELAY ))
