@@ -4,6 +4,7 @@ use warnings;
 use IO::Select;
 use File::Basename;
 use File::Temp qw( tempfile );
+use Sys::Hostname;
 
 # Local modules
 use Cwd qw(abs_path);
@@ -17,19 +18,26 @@ sub mtime($);
 # User config
 my $MEDIA_PATH    = `~/bin/video/mediaPath`;
 my %DISPLAY_DEVS  = ('TV' => 1, 'PROJECTOR' => 1);
-my $DISPLAY       = '<NONE>';
+my $DISPLAY       = undef();
 my $STATE_TIMEOUT = 180;
 my %MON_FILES     = ();
+
+# Host-specific config
+# This is necessary to avoid contention on shared disks
+my $HOST = Sys::Hostname::hostname();
+if ($HOST =~ /loki/i) {
+	$MON_FILES{ $MEDIA_PATH . '/DMX/cmd/GARAGE_CMD' } = 'EXISTS-VALUE-CLEAR';
+}
 
 # Available state files
 {
 
 	# Plex
-	$MON_FILES{'GUI'}     = 'STATUS_GUI';
-	$MON_FILES{'PLAYING'} = 'STATUS_PLAYING';
+	$MON_FILES{'GUI'}     = 'GUI';
+	$MON_FILES{'PLAYING'} = 'PLAYING';
 
 	# RiffTrax
-	$MON_FILES{'RIFF'} = 'STATUS_VALUE';
+	$MON_FILES{'RIFF'} = 'VALUE';
 
 	# Motion detection
 	$MON_FILES{'MOTION'}    = 'MTIME';
@@ -37,35 +45,34 @@ my %MON_FILES     = ();
 
 	# Projector
 	$MON_FILES{'PROJECTOR'}       = 'STATUS';
-	$MON_FILES{'PROJECTOR_COLOR'} = 'STATUS_VALUE';
-	$MON_FILES{'PROJECTOR_INPUT'} = 'STATUS_VALUE';
-	$MON_FILES{'PROJECTOR_LAMP'}  = 'STATUS_VALUE';
+	$MON_FILES{'PROJECTOR_COLOR'} = 'VALUE';
+	$MON_FILES{'PROJECTOR_INPUT'} = 'VALUE';
+	$MON_FILES{'PROJECTOR_LAMP'}  = 'VALUE';
 
 	# Amplifier
 	$MON_FILES{'AMPLIFIER'}       = 'STATUS';
-	$MON_FILES{'AMPLIFIER_VOL'}   = 'STATUS_VALUE';
-	$MON_FILES{'AMPLIFIER_MODE'}  = 'STATUS_VALUE';
-	$MON_FILES{'AMPLIFIER_INPUT'} = 'STATUS_VALUE';
-	$MON_FILES{'AUDIO_AMP'}       = 'EXISTS_ON';
-	$MON_FILES{'STEREO_CMD'}      = 'EXISTS_ON';
+	$MON_FILES{'AMPLIFIER_VOL'}   = 'VALUE';
+	$MON_FILES{'AMPLIFIER_MODE'}  = 'VALUE';
+	$MON_FILES{'AMPLIFIER_INPUT'} = 'VALUE';
+	$MON_FILES{'AUDIO_AMP'}       = 'EXISTS-ON';
+	$MON_FILES{'STEREO_CMD'}      = 'EXISTS-ON';
 
 	# A/V Effects
-	$MON_FILES{'LIGHTS'} = 'EXISTS_ON';
+	$MON_FILES{'LIGHTS'} = 'EXISTS-ON';
 	$MON_FILES{'RAVE'}   = 'EXISTS';
 	$MON_FILES{'EFFECT'} = 'EXISTS';
 
 	# Equipment
-	$MON_FILES{'FAN_CMD'} = 'EXISTS_ON';
-	$MON_FILES{ $MEDIA_PATH . '/DMX/cmd/GARAGE_CMD' } = 'EXISTS_CLEAR';
+	$MON_FILES{'FAN_CMD'} = 'EXISTS-ON';
 
 	# OS State
-	$MON_FILES{'COLOR'}       = 'STATUS_VALUE';
-	$MON_FILES{'AUDIO'}       = 'STATUS_VALUE';
-	$MON_FILES{'AUDIO_STATE'} = 'STATUS_VALUE';
+	$MON_FILES{'COLOR'}       = 'VALUE';
+	$MON_FILES{'AUDIO'}       = 'VALUE';
+	$MON_FILES{'AUDIO_STATE'} = 'VALUE';
 
 	# TV
 	$MON_FILES{'TV'}     = 'STATUS';
-	$MON_FILES{'TV_VOL'} = 'STATUS_VALUE';
+	$MON_FILES{'TV_VOL'} = 'VALUE';
 }
 my %EXTRAS = (
 	'PLAYING' => {
@@ -116,27 +123,74 @@ foreach my $file (keys(%EXTRAS)) {
 
 # Init the file tracking structure
 my %files = ();
-foreach my $file (keys(%MON_FILES)) {
-	my %tmp = (
-		'name'      => basename($file),
-		'type'      => $MON_FILES{$file},
-		'path'      => $DATA_DIR . $file,
-		'update'    => 0,
-		'status'    => 0,
-		'last'      => 0,
-		'available' => 1,
+foreach my $name (keys(%MON_FILES)) {
+	my %file = (
+		'name'   => basename($name),
+		'type'   => $MON_FILES{$name},
+		'path'   => $DATA_DIR . $name,
+		'update' => 0,
+		'value'  => 0,
+		'last'   => 0,
 	);
 
 	# Allow absolute paths to override the $DATA_DIR path
-	if ($file =~ /^\//) {
-		$tmp{'path'} = $file;
+	if ($name =~ /^\//) {
+		$file{'path'} = $name;
 	}
 
 	# Record the directory name for folder monitoring
-	$tmp{'dir'} = dirname($tmp{'path'});
+	$file{'dir'} = dirname($file{'path'});
 
-	# Push a hash ref
-	$files{$file} = \%tmp;
+	# Set the attribute bits, for use in later update handling logic
+	my %attr = (
+		'available' => 0,
+		'status'    => 0,
+		'exists'    => 0,
+		'value'     => 0,
+		'clear'     => 0,
+		'clear_off' => 0,
+		'mtime'     => 0,
+		'gui'       => 0,
+		'playing'   => 0,
+	);
+	if ($file{'type'} =~ /\bSTATUS\b/i) {
+		$attr{'status'} = 1;
+	}
+	if ($file{'type'} =~ /\bEXISTS\b/i) {
+		$attr{'exists'} = 1;
+	}
+	if ($file{'type'} =~ /\bVALUE\b/i) {
+		$attr{'value'} = 1;
+	}
+	if ($file{'type'} =~ /\bCLEAR\b/i) {
+		$attr{'clear'} = 1;
+	}
+	if ($file{'type'} =~ /\bON\b/i) {
+		$attr{'clear_off'} = 1;
+	}
+	if ($file{'type'} =~ /\bMTIME\b/i) {
+		$attr{'mtime'} = 1;
+	}
+	if ($file{'type'} =~ /\bGUI\b/i) {
+		$attr{'gui'} = 1;
+	}
+	if ($file{'type'} =~ /\bPLAYING\b/i) {
+		$attr{'playing'} = 1;
+	}
+
+	# Cross-match some data types for easy of use
+	if ($attr{'value'} || $attr{'gui'} || $attr{'playing'}) {
+		$attr{'status'} = 1;
+	}
+	if ($attr{'status'} || $attr{'exists'}) {
+		$attr{'mtime'} = 1;
+	}
+
+	# Push ATTR into the file hash
+	$file{'attr'} = \%attr;
+
+	# Push FILE into the files hash
+	$files{$name} = \%file;
 }
 
 # Delete any existing input files, to ensure our state is reset
@@ -231,31 +285,34 @@ while (1) {
 		}
 
 		# Always record the previous status and clear the new one
-		$file->{'last'}   = $file->{'status'};
-		$file->{'status'} = 0;
+		$file->{'last'}  = $file->{'value'};
+		$file->{'value'} = 0;
 
-		# Track available/unavailable files
-		if (!($file->{'type'} =~ /^EXISTS/)) {
-			my $wasAvailable = $file->{'available'};
-			$file->{'available'} = -r $file->{'path'} ? 1 : 0;
-			if ($wasAvailable != $file->{'available'}) {
+		# Track available/unavailable status in each cycle
+		{
+			my $wasAvailable = $file->{'attr'}->{'available'};
+			$file->{'attr'}->{'available'} = -r $file->{'path'} ? 1 : 0;
+			if ($wasAvailable != $file->{'attr'}->{'available'}) {
 
 				# Reset and extras for this file
 				if (exists($EXTRAS{ $file->{'name'} })) {
 					foreach my $extra (keys(%{ $EXTRAS{ $file->{'name'} } })) {
 						my $name = $file->{'name'} . '_' . $extra;
-						$files{$name}{'last'}   = $files{$name}{'status'};
-						$files{$name}{'status'} = 0;
+						$files{$name}{'last'}  = $files{$name}{'value'};
+						$files{$name}{'value'} = 0;
 					}
 				}
 
 				# Determine which display device we have (if any)
 				if (exists($DISPLAY_DEVS{ $file->{'name'} })) {
 					$DISPLAY = $file->{'name'};
+					if ($DEBUG) {
+						print STDERR 'Selecting display device: ' . $DISPLAY . "\n";
+					}
 				}
 
 				if ($DEBUG) {
-					if ($file->{'available'}) {
+					if ($file->{'attr'}->{'available'}) {
 						print STDERR 'Added file ' . $file->{'name'} . ': ' . $file->{'path'} . "\n";
 					} else {
 						print STDERR 'Dropped file ' . $file->{'name'} . ': ' . $file->{'path'} . "\n";
@@ -265,20 +322,33 @@ while (1) {
 		}
 
 		# Skip unavailable files
-		if (!$file->{'available'}) {
+		if (!$file->{'attr'}->{'available'}) {
 			next;
 		}
 
-		# Record the last update for STATUS and MTIME files
-		if ($file->{'type'} =~ /^STATUS/ || $file->{'type'} =~ /^MTIME/) {
-			$file->{'update'} = mtime($file->{'path'});
+		# Record the last update for MTIME files
+		if ($file->{'attr'}->{'mtime'}) {
+			my $mtime = mtime($file->{'path'});
+
+			# All EXISTS files have MTIME set, and mtime returns 0 if the file does not exist, so we can overload this check
+			if ($file->{'attr'}->{'exists'}) {
+				if ($mtime > 0) {
+					$file->{'update'} = $mtime;
+					$file->{'value'}  = 1;
+				} elsif ($file->{'last'}) {
+					$file->{'update'} = time();
+				}
+			} else {
+				$file->{'update'} = $mtime;
+			}
+
 			if ($DEBUG) {
-				print STDERR 'Last change: ' . $file->{'name'} . ': ' . localtime($file->{'update'}) . "\n";
+				print STDERR 'Mtime: ' . $file->{'name'} . ': ' . $file->{'value'} . ':' . $file->{'update'} . "\n";
 			}
 		}
 
 		# Grab the state from STATUS files
-		if ($file->{'type'} =~ /^STATUS/) {
+		if ($file->{'attr'}->{'status'}) {
 			my $text = '';
 			{
 				if (!open(my $fh, $file->{'path'})) {
@@ -290,25 +360,25 @@ while (1) {
 				}
 			}
 
-			# Record the main status for the file
-			if ($file->{'type'} eq 'STATUS_PLAYING') {
-				if ($text =~ /PlayStatus\:Playing/) {
-					$file->{'status'} = 1;
-				}
-			} elsif ($file->{'type'} eq 'STATUS_GUI') {
-				if (!($text =~ /ActiveWindowName\:Fullscreen video/)) {
-					$file->{'status'} = 1;
-				}
-			} elsif ($file->{'type'} eq 'STATUS_VALUE') {
+			# Parse the value for the file
+			if ($file->{'attr'}->{'value'}) {
 				$text =~ s/\n$//;
-				$file->{'status'} = $text;
+				$file->{'value'} = $text;
+			} elsif ($file->{'attr'}->{'playing'}) {
+				if ($text =~ /PlayStatus\:Playing/) {
+					$file->{'value'} = 1;
+				}
+			} elsif ($file->{'attr'}->{'gui'}) {
+				if (!($text =~ /ActiveWindowName\:Fullscreen video/)) {
+					$file->{'value'} = 1;
+				}
 			} else {
 				if ($text =~ /1/) {
-					$file->{'status'} = 1;
+					$file->{'value'} = 1;
 				}
 			}
 			if ($DEBUG) {
-				print STDERR 'Status: ' . $file->{'name'} . ': ' . $file->{'status'} . "\n";
+				print STDERR 'Status: ' . $file->{'name'} . ': ' . $file->{'value'} . "\n";
 			}
 
 			# Handle extras, if any
@@ -316,32 +386,18 @@ while (1) {
 				foreach my $extra (keys(%{ $EXTRAS{ $file->{'name'} } })) {
 
 					my $name = $file->{'name'} . '_' . $extra;
-					$files{$name}{'last'}   = $files{$name}{'status'};
-					$files{$name}{'status'} = 0;
+					$files{$name}{'last'}   = $files{$name}{'value'};
+					$files{$name}{'value'}  = 0;
 					$files{$name}{'update'} = $file->{'update'};
 
 					if ($text =~ $EXTRAS{ $file->{'name'} }{$extra}) {
-						$files{$name}{'status'} = $1;
+						$files{$name}{'value'} = $1;
 					}
 
 					if ($DEBUG) {
-						print STDERR 'Status (extra): ' . $name . ': ' . $files{$name}{'status'} . "\n";
+						print STDERR 'Status (extra): ' . $name . ': ' . $files{$name}{'value'} . "\n";
 					}
 				}
-			}
-		}
-
-		# Check for the presence of EXISTS files and record their last change
-		if ($file->{'type'} =~ /^EXISTS/) {
-			my $mtime = mtime($file->{'path'});
-			if ($mtime > 0) {
-				$file->{'status'} = 1;
-				$file->{'update'} = $mtime;
-			} elsif ($file->{'last'}) {
-				$file->{'update'} = time();
-			}
-			if ($DEBUG) {
-				print STDERR 'Exists: ' . $file->{'name'} . ': ' . $file->{'status'} . ':' . $file->{'update'} . "\n";
 			}
 		}
 	}
@@ -353,15 +409,35 @@ while (1) {
 		}
 	}
 
+	# Determine some intermediate state data
+	my $playing = 0;
+	if (exists($files{'PLAYING'}) && $files{'PLAYING'}->{'value'}) {
+		$playing = 1;
+	}
+	my $video = 0;
+	if (exists($files{'PLAYING_TYPE'}) && $files{'PLAYING_TYPE'}->{'value'} ne 'Audio') {
+		$video = 1;
+	} elsif (!exists($files{'PLAYING_TYPE'})) {
+		$video = 1;
+	}
+
 	# Calculate the new state
 	$stateLast = $state;
-	if (exists($files{$DISPLAY}) && $files{$DISPLAY}->{'status'}) {
+	if (!defined($DISPLAY) || !exists($files{$DISPLAY})) {
 
-		# We are always either playing or paused if the display is on
-		# When we're playing "Audio" assume we are paused
-		if (   (exists($files{'PLAYING'}) && $files{'PLAYING'}->{'status'})
-			&& ((exists($files{'PLAYING_TYPE'}) && $files{'PLAYING_TYPE'}->{'status'} ne 'Audio') || !exists($files{'PLAYING_TYPE'})))
-		{
+		# If there's no display the state is always PLAY or PAUSE, as indicated by the master
+		if ($playing) {
+			$state = 'PLAY';
+		} else {
+			$state = 'PAUSE';
+		}
+
+	} elsif ($files{$DISPLAY}->{'value'}) {
+
+		# If a display exists and is on:
+		# PLAY when video is active and playing
+		# PAUSE any other time (including when audio is active)
+		if ($playing && $video) {
 			$state = 'PLAY';
 		} else {
 			$state = 'PAUSE';
@@ -369,12 +445,12 @@ while (1) {
 
 	} else {
 
-		# If the display is off, check the timeouts
+		# If the display exists but is off, check the timeouts to determine MOTION vs. OFF
 		my $timeSinceUpdate = time() - $updateLast;
 		if ($timeSinceUpdate > $STATE_TIMEOUT) {
 			$state = 'OFF';
 		} elsif ($timeSinceUpdate < $STATE_TIMEOUT) {
-			if (exists($files{'NO_MOTION'}) && $files{'NO_MOTION'}->{'status'}) {
+			if (exists($files{'NO_MOTION'}) && $files{'NO_MOTION'}->{'value'}) {
 				$state = 'OFF';
 			} else {
 				$state = 'MOTION';
@@ -387,7 +463,7 @@ while (1) {
 
 	# Clear EXISTS_ON files when the main state is "OFF" (and before we append their status)
 	foreach my $file (values(%files)) {
-		if ($file->{'type'} eq 'EXISTS_ON' && $file->{'status'} && $state eq 'OFF') {
+		if ($file->{'attr'}->{'clear_off'} && $file->{'value'} && $state eq 'OFF') {
 			unlink($file->{'path'});
 			$file->{'stauts'} = 0;
 			if ($DEBUG) {
@@ -401,7 +477,7 @@ while (1) {
 	{
 		my @statTime = ();
 		foreach my $file (values(%files)) {
-			my $text = $file->{'status'};
+			my $text = $file->{'value'};
 			$text =~ s/\s/ /g;
 			$text =~ s/\|/-/g;
 			push(@statTime, $file->{'name'} . '|' . $text . '|' . $file->{'update'});
@@ -411,7 +487,7 @@ while (1) {
 
 	# Clear EXISTS_CLEAR files immediately (but after we append their status)
 	foreach my $file (values(%files)) {
-		if ($file->{'type'} eq 'EXISTS_CLEAR' && $file->{'status'}) {
+		if ($file->{'attr'}->{'clear'} && $file->{'value'}) {
 			unlink($file->{'path'});
 			$file->{'stauts'} = 0;
 			if ($DEBUG) {
@@ -427,7 +503,7 @@ while (1) {
 
 	# Update on any status change
 	foreach my $file (values(%files)) {
-		if ($file->{'status'} ne $file->{'last'}) {
+		if ($file->{'value'} ne $file->{'last'}) {
 			$update = 1;
 			last;
 		}

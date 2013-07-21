@@ -21,7 +21,7 @@ sub load($$);
 sub unload($);
 sub stop();
 sub printFiles();
-sub dieUnloaded($);
+sub cmdApp($$);
 
 # App config
 my $DATA_DIR    = DMX::dataDir();
@@ -112,8 +112,8 @@ sub init() {
 	%FILES = ();
 
 	# Close all QT documents and relaunch QT Player
-	Audio::runApplescript('tell application "QuickTime Player" to close every document');
-	Audio::runApplescript('tell application "QuickTime Player" to quit');
+	cmdApp('QuickTime Player', 'close every document');
+	cmdApp('QuickTime Player', 'quit');
 	sleep(1);
 	IPC::System::Simple::system('open', '-a', 'QuickTime Player');
 
@@ -121,7 +121,7 @@ sub init() {
 	load('SILENCE', 'DMX/Silence.wav');
 
 	# Bring Plex back to the front
-	activatePlex();
+	cmdApp('Plex', 'activate');
 }
 
 # Open the named file and record the handle
@@ -177,7 +177,7 @@ sub load($$) {
 	printFiles();
 
 	# Bring Plex back to the front
-	activatePlex();
+	cmdApp('Plex', 'activate');
 }
 
 # Close the named file
@@ -217,12 +217,13 @@ sub printFiles() {
 	rename($tmp, $OUTPUT_FILE);
 }
 
-# Bring Plex to the front, if it's already running
-sub activatePlex() {
+# Request the specified action from the provided app, if it's already running
+sub cmdApp($$) {
+	my ($app, $cmd) = @_;
 	my @cmd = ('tell application "System Events"');
-	push(@cmd, 'if exists process "Plex" then');
-	push(@cmd, 'tell application "Plex" to activate');
+	push(@cmd, 'if exists process "' . $app . '" then');
+	push(@cmd, 'tell application "' . $app . '" to ' . $cmd);
 	push(@cmd, 'end if');
-	push(@cmd, 'end tell');	
+	push(@cmd, 'end tell');
 	Audio::runApplescript(join("\n", @cmd));
 }

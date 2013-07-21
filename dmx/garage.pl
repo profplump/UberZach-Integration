@@ -98,6 +98,11 @@ while (1) {
 	# Update the relay
 	if ($update) {
 
+		# Annouce the command
+		if ($exists{'GARAGE_CMD'}) {
+			DMX::say('Garage door activated by ' . $exists{'GARAGE_CMD'});
+		}
+
 		# Toggle
 		$state = 'ACTIVATE';
 		DMX::applyDataset($DIM{$state}, $state, $OUTPUT_FILE);
