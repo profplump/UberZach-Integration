@@ -96,6 +96,11 @@ while (1) {
 		}
 	}
 
+	# Ensure the output file always exists
+	if (!-r $OUTPUT_FILE) {
+		printFiles();
+	}
+
 	# Ensure "silence" is always available -- reset if it goes away
 	if (!exists($FILES{'SILENCE'})) {
 		die("We need only the SILENCE\n");
@@ -156,13 +161,15 @@ sub load($$) {
 	IPC::System::Simple::system('open', '-a', 'QuickTime Player', $path);
 
 	# Wait for QT to load the new file
-	# To avoid indefinate hangs this will give up after 5 seconds. When it does the results are undefined.
+	# To avoid indefinate hangs this will give up after 5 seconds
 	my @cmd = ('tell application "QuickTime Player"');
 	push(@cmd, 'set endDate to current date + (5/60 * minutes)');
 	push(@cmd, 'repeat while (count items of every document) <= ' . $count . ' and current date < endDate');
 	push(@cmd, 'delay 0.1');
 	push(@cmd, 'end repeat');
+	push(@cmd, 'if (count items of every document) > ' . $count . ' then');
 	push(@cmd, 'get document 1');
+	push(@cmd, 'end if');
 	push(@cmd, 'end tell');
 	my $doc = Audio::runApplescript(join("\n", @cmd));
 
