@@ -36,6 +36,7 @@ $EFFECTS{'LSR'} = { 'cmd' => \&lsr_init, 'next' => \&lsr_run, 'loop' => \&lsr_lo
 $FILES{'LSR'} = 'DMX/Rave.mp3';
 
 # Utility prototypes
+sub loadFiles($);
 sub ampWait($$$);
 
 # App config
@@ -56,10 +57,8 @@ if ($ENV{'DEBUG'}) {
 	$DEBUG = 1;
 }
 
-# Load all our audio files
-foreach my $file (keys(%FILES)) {
-	Audio::load($file, $FILES{$file});
-}
+# Load all defined audio files (which will kill us if they are not availble)
+loadFiles(\%FILES);
 
 # Sockets
 DMX::stateSocket($STATE_SOCK);
@@ -192,11 +191,23 @@ while (1) {
 		unlink($EFFECT_FILE);
 		die("Unexpected EFFECT file\n");
 	}
+
+	# Ensure our audio files are always loaded
+	loadFiles(\%FILES);
 }
 
 # ======================================
 # Utility routines
 # ======================================
+sub loadFiles($) {
+	my ($files) = @_;
+	foreach my $file (keys(%{$files})) {
+		if (!Audio::loaded($file)) {
+			Audio::load($file, $files->{$file});
+		}
+	}
+}
+
 sub ampWait($$$) {
 	my ($name, $exists, $params) = @_;
 	if ($DEBUG) {
