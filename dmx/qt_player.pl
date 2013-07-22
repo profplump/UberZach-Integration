@@ -173,6 +173,12 @@ sub load($$) {
 	push(@cmd, 'end tell');
 	my $doc = Audio::runApplescript(join("\n", @cmd));
 
+	# Reset if we cannot open -- something is out-of-sync
+	if (!$doc) {
+		init();
+		return;
+	}
+
 	# Clean up the document name
 	$doc =~ s/^\s*document //;
 	$doc =~ s/\s+$//;
