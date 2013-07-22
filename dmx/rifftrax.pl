@@ -17,6 +17,7 @@ my $MEDIA_PATH     = `~/bin/video/mediaPath`;
 my $CONFIG_PATH    = $MEDIA_PATH . '/DMX/RiffTrax';
 my $ACTION_DELAY   = 0.1;
 my $JUMP_THRESHOLD = 5;
+my $LEADIN_TIME    = 5;
 my $VOLUME_RIFF    = 65;
 my $VOLUME_STD     = 40;
 my $VOL_STEP       = 1 / 20;
@@ -28,6 +29,7 @@ sub pauseRiff();
 sub getRiffRate();
 sub setRiffRate($);
 sub parseConfig($$);
+sub playPausePlex();
 
 # App config
 my $DATA_DIR     = DMX::dataDir();
@@ -60,6 +62,7 @@ my $pullLast  = time();
 my $lastSync  = time();
 my $playing   = 0;
 my $delay     = $DELAY;
+my $leadin    = 0;
 
 # Read the config
 parseConfig($CONFIG_PATH, \%RIFFS);
@@ -138,6 +141,20 @@ while (1) {
 		$title     = $exists{'PLAYING_TITLE'};
 	}
 
+	# Convert the video timestamp to seconds
+	my $videoTime = 0;
+	if ($exists{'PLAYING_POSITION'}) {
+		my @parts = split(/\:/, $exists{'PLAYING_POSITION'});
+		$videoTime = 0;
+		if (scalar(@parts) == 3) {
+			$videoTime = ($parts[0] * 3600) + ($parts[1] * 60) + $parts[2];
+		} elsif (scalar(@parts) == 2) {
+			$videoTime = ($parts[0] * 60) + $parts[1];
+		} else {
+			$videoTime = $parts[0];
+		}
+	}
+
 	# Update our state when the PLAYING_TITLE changes
 	if ($title ne $titleLast) {
 
@@ -155,7 +172,8 @@ while (1) {
 
 			# Close the audio file
 			Audio::unload('RIFF');
-			$riff = 0;
+			$riff   = 0;
+			$leadin = 0;
 
 			# Warm fuzzies
 			DMX::say('RiffTrax complete');
@@ -185,6 +203,12 @@ while (1) {
 
 			# Reduce the delay while playing so we sync faster
 			$delay = 1;
+
+			# Enable LEADIN if we're near the beginning of the movie
+			if ($RIFFS{$riff}->{'offset'} > $LEADIN_TIME && $videoTime < $LEADIN_TIME) {
+				playPausePlex();
+				$leadin = 1;
+			}
 		}
 	}
 
@@ -209,13 +233,27 @@ while (1) {
 		rename($tmp, $OUTPUT_FILE);
 	}
 
-	# Play/pause to match the video state
-	if ($riff && exists($exists{'PLAYING'})) {
-		if (!$exists{'PLAYING'} && $playing) {
+	# Skip further processing if we don't have valid state data from Plex
+	if (!exists($exists{'PLAYING'})) {
+		next;
+	}
+
+	# Play/pause to match the video or LEADIN state
+	if ($riff) {
+		if ($leadin) {
+			if (!$playing) {
+				playRiff();
+			}
+		} elsif (!$exists{'PLAYING'} && $playing) {
 			pauseRiff();
 		} elsif ($exists{'PLAYING'} && !$playing) {
 			playRiff();
 		}
+	}
+
+	# Skip further processing if we don't have valid sync data from Plex
+	if (!$videoTime) {
+		next;
 	}
 
 	# Sync at most once per second
@@ -225,10 +263,9 @@ while (1) {
 		}
 		$lastSync = time();
 
-		# Get the video and riff playback positions
-		my $rate      = getRiffRate();
-		my $riffTime  = Audio::position('RIFF', undef());
-		my $videoTime = $exists{'PLAYING_POSITION'};
+		# Get the riff playback state
+		my $rate = getRiffRate();
+		my $riffTime = Audio::position('RIFF', undef());
 
 		# Update our local playing state tracker
 		# The rate is always 0 when paused (Audio::playing uses this same methodology)
@@ -236,17 +273,6 @@ while (1) {
 			$playing = 1;
 		} else {
 			$playing = 0;
-		}
-
-		# Convert the timestamp to seconds
-		my @parts = split(/\:/, $videoTime);
-		$videoTime = 0;
-		if (scalar(@parts) == 3) {
-			$videoTime = ($parts[0] * 3600) + ($parts[1] * 60) + $parts[2];
-		} elsif (scalar(@parts) == 2) {
-			$videoTime = ($parts[0] * 60) + $parts[1];
-		} else {
-			$videoTime = $parts[0];
 		}
 
 		# Calculate the adjusted riff time and the error between the riff and video times
@@ -262,9 +288,38 @@ while (1) {
 			print STDERR "\tVideo time: " . $videoTime . "\n";
 			print STDERR "\tAdjusted riff time: " . $riffAdjTime . "\n";
 			print STDERR "\tError: " . $error . "\n";
+			print STDERR "\tLeadin: " . $leadin . "\n";
 		}
 
-		# Adjust the riff position if we're off by 0.5 seconds or more
+		# If LEADIN is still active
+		if ($leadin) {
+
+			# Deactivate LEADIN if the movie advances outside the LEADIN_TIME window
+			if ($videoTime > $LEADIN_TIME) {
+				$leadin = 0;
+				if ($DEBUG) {
+					print STDERR "LEADIN canceled due to video time\n";
+				}
+			}
+
+			# Start the movie when we reach the sync point
+			if ($RIFFS{$riff}->{'offset'} <= $riffTime) {
+				if (!$exists{'PLAYING'}) {
+					playPausePlex();
+				}
+				$leadin = 0;
+				if ($DEBUG) {
+					print STDERR "LEADIN canceled due to synchronization\n";
+				}
+			}
+
+			# Skip normal syncing until LEADIN is cleared
+			if ($leadin) {
+				next;
+			}
+		}
+
+		# Adjust the riff rate/position if we're off by 0.5 seconds or more
 		if ($errorAbs > 0.5) {
 
 			# Calculate the new position, including an ACTION_DELAY adjustment to compensate for time elapsed in this process
@@ -424,4 +479,10 @@ sub parseConfig($$) {
 
 	# Record the last update time
 	$riffs->{'_LAST_CONFIG_UPDATE'} = time();
+}
+
+# The UDP listener would be more portable, but I already know how to do this
+# The PMS playback API would work too, but this script currently knows nothing of the PMS
+sub playPausePlex() {
+	Audio::runApplescript('tell application "System Events" to key code 49');
 }
