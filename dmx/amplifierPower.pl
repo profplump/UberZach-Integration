@@ -111,6 +111,7 @@ while (1) {
 		}
 		$amp->send($mode)
 		  or die('Unable to write command to amp socket: ' . $mode . ": ${!}\n");
+		DMX::say('Amplifier: ' . $mode);
 	}
 
 	# Set the amplifier input as needed
@@ -120,6 +121,7 @@ while (1) {
 		}
 		$amp->send($input)
 		  or die('Unable to write command to amp socket: ' . $input . ": ${!}\n");
+		DMX::say('Amplifier: ' . $input);
 	}
 
 	# Update the amp
