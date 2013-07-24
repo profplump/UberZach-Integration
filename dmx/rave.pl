@@ -41,8 +41,8 @@ sub ampWait($$$);
 
 # App config
 my $DATA_DIR     = DMX::dataDir();
-my $OUTPUT_FILE  = $DATA_DIR . 'RAVE_CMD';
-my $STATE_SOCK   = $OUTPUT_FILE . '.socket';
+my $STATE_SOCK   = 'RAVE_CMD';
+my $OUTPUT_FILE  = $DATA_DIR . $STATE_SOCK;
 my $RAVE_FILE    = $DATA_DIR . 'RAVE';
 my $EFFECT_FILE  = $DATA_DIR . 'EFFECT';
 my $PUSH_TIMEOUT = 20;

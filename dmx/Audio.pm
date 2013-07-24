@@ -14,8 +14,8 @@ my $MEDIA_PATH = `~/bin/video/mediaPath`;
 
 # App config
 my $DATA_DIR   = DMX::dataDir();
-my $QT_FILE    = $DATA_DIR . 'QT_PLAYER';
-my $QT_SOCK    = $QT_FILE . '.socket';
+my $QT_SOCK    = 'QT_PLAYER';
+my $QT_FILE    = $DATA_DIR . $QT_SOCK;
 my $WAIT_DELAY = 0.1;
 my $MAX_WAIT   = 5 / $WAIT_DELAY;
 

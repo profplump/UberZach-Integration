@@ -20,9 +20,9 @@ my %DEVS = (
 
 # App config
 my $DATA_DIR     = DMX::dataDir();
-my $OUTPUT_FILE  = $DATA_DIR . 'AUDIO';
+my $STATE_SOCK   = 'AUDIO';
+my $OUTPUT_FILE  = $DATA_DIR . $STATE_SOCK;
 my $OUTPUT_STATE = $OUTPUT_FILE . '_STATE';
-my $STATE_SOCK   = $OUTPUT_FILE . '.socket';
 my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
 my $DELAY        = 1;

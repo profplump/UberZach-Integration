@@ -14,7 +14,7 @@ my $DATA_DIR = DMX::dataDir();
 
 # Command-line parameters
 my ($DEV, $CMD) = @ARGV;
-my $CMD_FILE = $DATA_DIR . uc($DEV) . '.socket';
+my $CMD_FILE = 'UberZach::Integration::' . uc($DEV);
 
 # Sanity check
 if (!-S $CMD_FILE) {

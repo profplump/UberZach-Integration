@@ -21,9 +21,9 @@ my $LAMP_LIFE   = 2000;
 
 # App config
 my $DATA_DIR     = DMX::dataDir();
-my $OUTPUT_FILE  = $DATA_DIR . 'PROJECTOR_POWER';
-my $STATE_SOCK   = $OUTPUT_FILE . '.socket';
-my $PROJ_SOCK    = $DATA_DIR . 'PROJECTOR.socket';
+my $STATE_SOCK   = 'PROJECTOR_POWER';
+my $PROJ_SOCK    = 'PROJECTOR';
+my $OUTPUT_FILE  = $DATA_DIR . $STATE_SOCK;
 my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
 my $DELAY        = $PULL_TIMEOUT / 2;

@@ -92,7 +92,7 @@ my %EXTRAS = (
 # App config
 my $SOCK_TIMEOUT = 5;
 my $DATA_DIR     = DMX::dataDir();
-my $CMD_FILE     = $DATA_DIR . 'STATE.socket';
+my $CMD_FILE     = 'STATE';
 my $MAX_CMD_LEN  = 4096;
 my $RESET_CMD    = $ENV{'HOME'} . '/bin/video/dmx/reset.sh';
 my $PUSH_TIMEOUT = 20;
@@ -232,14 +232,9 @@ while (1) {
 		$fh->recv($path, $MAX_CMD_LEN);
 		$path =~ s/^\s+//;
 		$path =~ s/\s+$//;
+		$path =~ s/\W/_/g;
 		if ($DEBUG) {
 			print STDERR 'Got path: ' . $path . "\n";
-		}
-
-		# Only accept valid paths
-		if (!-r $path) {
-			print STDERR 'Invalid socket path: ' . $path . "\n";
-			next;
 		}
 
 		# Open the new socket

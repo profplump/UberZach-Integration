@@ -21,8 +21,8 @@ my $MAX_CMD_LEN  = 16384;
 my $TEMP_DIR     = `getconf DARWIN_USER_TEMP_DIR`;
 chomp($TEMP_DIR);
 my $DATA_DIR    = $TEMP_DIR . 'plexMonitor/';
-my $DMX_SOCK    = $DATA_DIR . 'DMX.socket';
-my $SUB_SOCK    = $DATA_DIR . 'STATE.socket';
+my $DMX_SOCK    = 'DMX';
+my $SUB_SOCK    = 'STATE';
 my %CHANNEL_ADJ = (
 	'13' => 1.00,
 	'14' => 1.14,
@@ -52,6 +52,7 @@ sub maxCmdLen() {
 # Generic client socket
 sub clientSock($) {
 	my ($path) = @_;
+	$path = $DATA_DIR . $path . '.socket';
 	my $sock = IO::Socket::UNIX->new(
 		'Peer'    => $path,
 		'Type'    => IO::Socket::UNIX::SOCK_DGRAM,
@@ -63,6 +64,7 @@ sub clientSock($) {
 # Generic server socket
 sub serverSock($) {
 	my ($path) = @_;
+	$path = $DATA_DIR . $path . '.socket';
 
 	if (-e $path) {
 		unlink($path);

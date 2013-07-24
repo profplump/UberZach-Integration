@@ -25,8 +25,8 @@ sub cmdApp($$);
 
 # App config
 my $DATA_DIR    = DMX::dataDir();
-my $OUTPUT_FILE = $DATA_DIR . 'QT_PLAYER';
-my $STATE_SOCK  = $OUTPUT_FILE . '.socket';
+my $STATE_SOCK  = 'QT_PLAYER';
+my $OUTPUT_FILE  = $DATA_DIR . $STATE_SOCK;
 my $DELAY       = 5;
 my $MAX_CMD_LEN = 16384;
 

@@ -116,7 +116,7 @@ if (basename($0) =~ /PROJECTOR/i) {
 
 # App config
 my $DATA_DIR        = DMX::dataDir();
-my $CMD_FILE        = $DATA_DIR . uc($DEV) . '.socket';
+my $CMD_FILE        = uc($DEV);
 my $BT_CHECK        = $ENV{'HOME'} . '/bin/btcheck';
 my $DELAY_STATUS    = 1;
 my $BYTE_TIMEOUT    = 50;

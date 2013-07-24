@@ -33,8 +33,8 @@ sub playPausePlex();
 
 # App config
 my $DATA_DIR     = DMX::dataDir();
-my $OUTPUT_FILE  = $DATA_DIR . 'RIFF';
-my $STATE_SOCK   = $OUTPUT_FILE . '.socket';
+my $STATE_SOCK   = 'RIFF';
+my $OUTPUT_FILE  = $DATA_DIR . $STATE_SOCK;
 my $PULL_TIMEOUT = 60;
 my $DELAY        = $PULL_TIMEOUT / 3;
 my %RIFFS        = ();

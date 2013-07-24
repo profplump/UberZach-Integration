@@ -16,8 +16,7 @@ my %DIM   = ();
 my $DELAY = 10;
 
 # App config
-my $DATA_DIR   = DMX::dataDir();
-my $STATE_SOCK = $DATA_DIR . 'DEBUG.socket';
+my $STATE_SOCK = 'DEBUG';
 
 # Sockets
 DMX::stateSocket($STATE_SOCK);

@@ -11,9 +11,9 @@ use DMX;
 
 # App config
 my $DATA_DIR     = DMX::dataDir();
-my $OUTPUT_FILE  = $DATA_DIR . 'AMPLIFIER_POWER';
-my $STATE_SOCK   = $OUTPUT_FILE . '.socket';
-my $AMP_SOCK     = $DATA_DIR . 'AMPLIFIER.socket';
+my $STATE_SOCK   = 'AMPLIFIER_POWER';
+my $AMP_SOCK     = 'AMPLIFIER';
+my $OUTPUT_FILE  = $DATA_DIR . $STATE_SOCK;
 my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
 my $DELAY        = $PULL_TIMEOUT / 2;

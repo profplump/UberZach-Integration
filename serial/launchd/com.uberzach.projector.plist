@@ -14,13 +14,7 @@
 	<key>Label</key>
 	<string>com.uberzach.projector</string>
 	<key>KeepAlive</key>
-	<dict>
-		<key>PathState</key>
-		<dict>
-			<key>/dev/tty.usbserial-A5006xbj</key>
-			<true/>
-		</dict>
-	</dict>
+	<true/>
 	<key>ProgramArguments</key>
 	<array>
 		<string>/Users/tv/bin/video/serial/projector.pl</string>

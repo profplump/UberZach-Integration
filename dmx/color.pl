@@ -21,8 +21,8 @@ my %PROFILES = (
 
 # App config
 my $DATA_DIR     = DMX::dataDir();
-my $OUTPUT_FILE  = $DATA_DIR . 'COLOR';
-my $STATE_SOCK   = $OUTPUT_FILE . '.socket';
+my $STATE_SOCK   = 'COLOR';
+my $OUTPUT_FILE  = $DATA_DIR . $STATE_SOCK;
 my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
 my $DELAY        = $PULL_TIMEOUT / 2;
