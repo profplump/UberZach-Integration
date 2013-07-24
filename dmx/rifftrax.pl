@@ -77,8 +77,12 @@ while (1) {
 
 	# Reconnect if we're playing and haven't seen an update for $JUMP_THRESHOLD seconds
 	if ($playing && time() - $pullLast > $JUMP_THRESHOLD) {
-		print STDERR "Attempting to reconnect state socket...\n";
-		DMX::stateSubscribe($STATE_SOCK);
+
+		# Unless LEADIN is active -- when video is paused updates are less frequent
+		if (!$leadin) {
+			print STDERR "Attempting to reconnect state socket...\n";
+			DMX::stateSubscribe($STATE_SOCK);
+		}
 	}
 
 	# Wait for state updates
