@@ -95,6 +95,7 @@ my $DATA_DIR     = DMX::dataDir();
 my $CMD_FILE     = 'STATE';
 my $MAX_CMD_LEN  = 4096;
 my $RESET_CMD    = $ENV{'HOME'} . '/bin/video/dmx/reset.sh';
+my $MEDIA_CMD    = $ENV{'HOME'} . '/bin/video/mountMedia';
 my $PUSH_TIMEOUT = 20;
 
 # Debug
@@ -193,6 +194,9 @@ foreach my $name (keys(%MON_FILES)) {
 	$files{$name} = \%file;
 }
 
+# Try to mount the media share
+system($MEDIA_CMD);
+
 # Delete any existing input files, to ensure our state is reset
 foreach my $file (values(%files)) {
 	if (-e $file->{'path'}) {
@@ -260,13 +264,13 @@ while (1) {
 	foreach my $file (values(%files)) {
 		if (!$folders{ $file->{'dir'} }) {
 			my $dh = undef();
-			if (opendir($dh, $file->{'dir'})) {
-				if ($DEBUG) {
-					print STDERR 'Refreshed folder: ' . $file->{'dir'} . "\n";
-				}
-				my @files = readdir($dh);
-				closedir($dh);
+			opendir($dh, $file->{'dir'})
+			  or die('Unable to open directory: ' . $file->{'dir'});
+			if ($DEBUG) {
+				print STDERR 'Refreshed folder: ' . $file->{'dir'} . "\n";
 			}
+			my @files = readdir($dh);
+			closedir($dh);
 			$folders{ $file->{'dir'} } = 1;
 		}
 	}
