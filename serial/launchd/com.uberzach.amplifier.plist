@@ -17,7 +17,7 @@
 	<dict>
 		<key>PathState</key>
 		<dict>
-			<key>/dev/tty.usbserial-A5006x9u</key>
+			<key>/dev/tty.usbserial-AM01C96Q</key>
 			<true/>
 		</dict>
 	</dict>
@@ -26,5 +26,14 @@
 		<string>/Users/tv/bin/video/serial/amplifier.pl</string>
 		<string>5</string>
 	</array>
+	<!--
+		<key>EnvironmentVariables</key>
+		<dict>
+			<key>DEBUG</key>
+			<string>1</string>
+		</dict>
+		<key>StandardErrorPath</key>
+		<string>/Users/tv/com.uberzach.amplifier_errlog.txt</string>
+	-->
 </dict>
 </plist>
