@@ -185,8 +185,11 @@ while (1) {
 
 		# Activate a new RIFF, if applicable
 		# Always match on title, validate year if provided
-		if ($RIFFS{$title}
-			&& (!exists($RIFFS{$title}{'year'}) || $RIFFS{$title}{'year'} eq $exists{'PLAYING_YEAR'}))
+		if (   $RIFFS{$title}
+			&& (!exists($RIFFS{$title}{'year'})    || $RIFFS{$title}{'year'} eq $exists{'PLAYING_YEAR'})
+			&& (!exists($RIFFS{$title}{'series'})  || $RIFFS{$title}{'series'} eq $exists{'PLAYING_SERIES'})
+			&& (!exists($RIFFS{$title}{'season'})  || $RIFFS{$title}{'season'} eq $exists{'PLAYING_SEASON'})
+			&& (!exists($RIFFS{$title}{'episode'}) || $RIFFS{$title}{'episode'} eq $exists{'PLAYING_EPISODE'}))
 		{
 
 			if ($DEBUG) {
@@ -443,6 +446,15 @@ sub parseConfig($$) {
 			}
 			if ($text =~ /^\s*Year:[ \t]*(\d{4})\s*$/mi) {
 				$data{'year'} = $1;
+			}
+			if ($text =~ /^\s*Series:[ \t]*(\S.*\S)\s*$/mi) {
+				$data{'series'} = $1;
+			}
+			if ($text =~ /^\s*Season:[ \t]*(\d+)\s*$/mi) {
+				$data{'season'} = $1;
+			}
+			if ($text =~ /^\s*Episode:[ \t]*(\d+)\s*$/mi) {
+				$data{'episode'} = $1;
 			}
 			if ($text =~ /^\s*File:[ \t]*(\S.*\S)\s*$/mi) {
 				$data{'file'} = $1;
