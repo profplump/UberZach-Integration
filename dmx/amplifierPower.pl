@@ -9,6 +9,9 @@ use File::Basename qw(dirname);
 use lib dirname(abs_path($0));
 use DMX;
 
+# Prototypes
+sub sendCmd($$);
+
 # App config
 my $DATA_DIR     = DMX::dataDir();
 my $STATE_SOCK   = 'AMPLIFIER_POWER';
@@ -109,9 +112,8 @@ while (1) {
 		if ($DEBUG) {
 			print STDERR 'Setting mode to: ' . $mode . "\n";
 		}
-		$amp->send($mode)
-		  or die('Unable to write command to amp socket: ' . $mode . ": ${!}\n");
 		DMX::say('Amplifier: ' . $mode);
+		sendCmd($amp, $mode);
 	}
 
 	# Set the amplifier input as needed
@@ -119,9 +121,8 @@ while (1) {
 		if ($DEBUG) {
 			print STDERR 'Setting input to: ' . $input . "\n";
 		}
-		$amp->send($input)
-		  or die('Unable to write command to amp socket: ' . $input . ": ${!}\n");
 		DMX::say('Amplifier: ' . $input);
+		sendCmd($amp, $input);
 	}
 
 	# Update the amp
@@ -140,8 +141,7 @@ while (1) {
 			$cmd = 'ON';
 		}
 		if (defined($cmd)) {
-			$amp->send($cmd)
-			  or die('Unable to write command to amp socket: ' . $cmd . ": ${!}\n");
+			sendCmd($amp, $cmd);
 		}
 
 		# No output file
@@ -152,4 +152,19 @@ while (1) {
 		# Clear the update flag
 		$update = 0;
 	}
+}
+
+sub sendCmd($$) {
+	my ($amp, $cmd) = @_;
+
+	# Send the command
+	$amp->send($cmd)
+	  or die('Unable to write command to amp socket: ' . $cmd . ": ${!}\n");
+	sleep(1);
+
+	# Always reset the input mode
+	$cmd = 'INPUT_AUTO';
+	$amp->send($cmd)
+	  or die('Unable to write command to amp socket: ' . $cmd . ": ${!}\n");
+	sleep(1);
 }
