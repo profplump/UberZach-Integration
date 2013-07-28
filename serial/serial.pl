@@ -55,7 +55,7 @@ if (basename($0) =~ /PROJECTOR/i) {
 	);
 } elsif (basename($0) =~ /AMPLIFIER/i) {
 	$DEV       = 'Amplifier';
-	$PORT      = '/dev/tty.usbserial-A5006x9u';
+	$PORT      = '/dev/tty.usbserial-AM01C96Q';
 	$BLUETOOTH = 0;
 	$CRLF      = "\r";
 	$DELIMITER = "\r";
