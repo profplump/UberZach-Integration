@@ -2,6 +2,7 @@
 use strict;
 use warnings;
 use IPC::System::Simple qw( system capture );
+use Time::HiRes qw( usleep sleep time );
 
 # Local modules
 use Cwd qw(abs_path);
@@ -20,6 +21,8 @@ my $OUTPUT_FILE  = $DATA_DIR . $STATE_SOCK;
 my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
 my $DELAY        = $PULL_TIMEOUT / 2;
+my $CMD_DELAY    = 1.0;
+my $AUTO_CMD     = 'INPUT_AUTO';
 
 # Debug
 my $DEBUG = 0;
@@ -114,6 +117,11 @@ while (1) {
 		}
 		DMX::say('Amplifier: ' . $mode);
 		sendCmd($amp, $mode);
+
+		# Reset the input mode anytime we switch to SURROUND
+		if ($mode eq 'SURROUND') {
+			sendCmd($amp, $AUTO_CMD);
+		}
 	}
 
 	# Set the amplifier input as needed
@@ -154,17 +162,12 @@ while (1) {
 	}
 }
 
+# Send the requested command and enforce an inter-command delay
 sub sendCmd($$) {
 	my ($amp, $cmd) = @_;
 
 	# Send the command
 	$amp->send($cmd)
 	  or die('Unable to write command to amp socket: ' . $cmd . ": ${!}\n");
-	sleep(1);
-
-	# Always reset the input mode
-	$cmd = 'INPUT_AUTO';
-	$amp->send($cmd)
-	  or die('Unable to write command to amp socket: ' . $cmd . ": ${!}\n");
-	sleep(1);
+	sleep($CMD_DELAY);
 }
