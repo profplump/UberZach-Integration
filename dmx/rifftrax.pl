@@ -17,7 +17,7 @@ my $MEDIA_PATH     = `~/bin/video/mediaPath`;
 my $CONFIG_PATH    = $MEDIA_PATH . '/DMX/RiffTrax';
 my $ACTION_DELAY   = 0.1;
 my $JUMP_THRESHOLD = 5;
-my $LEADIN_TIME    = 10;
+my $LEADIN_TIME    = 8;
 my $VOLUME_RIFF    = 65;
 my $VOLUME_STD     = 40;
 my $VOL_STEP       = 1 / 20;
@@ -76,20 +76,21 @@ while (1) {
 	%last      = %exists;
 
 	# Reconnect if we're playing and haven't seen an update for $JUMP_THRESHOLD seconds
+	# During leadin this leads to a number of reconnects, but that's preferable to missing a disconnect
 	if ($playing && time() - $pullLast > $JUMP_THRESHOLD) {
-
-		# Unless LEADIN is active -- when video is paused updates are less frequent
-		if (!$leadin) {
-			print STDERR "Attempting to reconnect state socket...\n";
-			DMX::stateSubscribe($STATE_SOCK);
-		}
+		print STDERR "Attempting to reconnect state socket...\n";
+		DMX::stateSubscribe($STATE_SOCK);
 	}
 
 	# Wait for state updates
 	my $cmdState = DMX::readState($delay, \%exists, undef(), undef());
 	if (defined($cmdState)) {
-		$state    = $cmdState;
-		$pullLast = time();
+		$state = $cmdState;
+
+		# Don't count HUP as a valid update
+		if ($state ne 'HUP') {
+			$pullLast = time();
+		}
 	}
 
 	# Die if we don't see regular updates
