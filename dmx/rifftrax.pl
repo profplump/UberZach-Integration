@@ -29,7 +29,7 @@ sub playRiff();
 sub pauseRiff();
 sub getRiffRate();
 sub setRiffRate($);
-sub parseConfig($$);
+sub parseConfig($);
 sub playPausePlex();
 
 # App config
@@ -38,7 +38,6 @@ my $STATE_SOCK   = 'RIFF';
 my $OUTPUT_FILE  = $DATA_DIR . $STATE_SOCK;
 my $PULL_TIMEOUT = 60;
 my $DELAY        = $PULL_TIMEOUT / 3;
-my %RIFFS        = ();
 my %ATTRS        = (
 	'name'    => { 'dmx'   => 'PLAYING_TITLE',   'regex' => qr/^\s*Name:[ \t]*(\S.*\S)\s*$/mi },
 	'year'    => { 'dmx'   => 'PLAYING_YEAR',    'regex' => qr/^\s*Year:[ \t]*(\d{4})\s*$/mi },
@@ -73,15 +72,17 @@ my $lastSync  = time();
 my $playing   = 0;
 my $delay     = $DELAY;
 my $leadin    = 0;
+my $reload    = 0;
 
 # Read the config
-parseConfig($CONFIG_PATH, \%RIFFS);
+my $RIFFS = parseConfig($CONFIG_PATH);
 
 # Loop forever
 while (1) {
 
 	# Save the last RIFF and state
 	$stateLast = $state;
+	$state     = '';
 	$riffLast  = $riff;
 	%last      = %exists;
 
@@ -110,15 +111,16 @@ while (1) {
 
 	# Re-read the config on-demand
 	if ($state eq 'HUP') {
-		parseConfig($CONFIG_PATH, \%RIFFS);
+		$RIFFS  = parseConfig($CONFIG_PATH);
+		$reload = 1;
 
 		# Skip further processing this loop -- the exists hash is useless
 		next;
 	}
 
 	# Re-read the config periodically (unless we are currently playing)
-	if (!$riff && time() > $RIFFS{'_LAST_CONFIG_UPDATE'} + $CONFIG_DELAY) {
-		parseConfig($CONFIG_PATH, \%RIFFS);
+	if (!$riff && time() > $RIFFS->{'_LAST_CONFIG_UPDATE'} + $CONFIG_DELAY) {
+		$RIFFS = parseConfig($CONFIG_PATH);
 	}
 
 	# Handle volume changes
@@ -170,6 +172,12 @@ while (1) {
 		}
 	}
 
+	# Force reloading if the flag is set
+	if ($reload) {
+		$riff      = undef();
+		$titleLast = '';
+	}
+
 	# Update our state when the PLAYING_TITLE changes
 	if ($title ne $titleLast) {
 
@@ -196,7 +204,7 @@ while (1) {
 
 		# Activate a new RIFF, if applicable
 		# Always match on title, validate year if provided
-		if ($RIFFS{$title}) {
+		if ($RIFFS->{$title}) {
 			if ($DEBUG) {
 				print STDERR 'Matched RIFF title: ' . $title . "\n";
 			}
@@ -205,7 +213,7 @@ while (1) {
 			my $match = undef();
 			{
 				my $matchAttrCount = 0;
-				foreach my $data (@{ $RIFFS{$title} }) {
+				foreach my $data (@{ $RIFFS->{$title} }) {
 					my $valid     = 1;
 					my $attrCount = 0;
 					if ($DEBUG) {
@@ -241,28 +249,35 @@ while (1) {
 			if ($match) {
 				$riff = $match;
 
-				# Warm fuzzies
-				DMX::say('RiffTrax initiated');
+				# Load unless we are reloading
+				if (!$reload) {
 
-				# Load and start the audio file
-				Audio::load('RIFF', $riff->{'file'});
-				playRiff();
+					# Warm fuzzies
+					DMX::say('RiffTrax initiated');
 
-				# Set volume when we load -- riffs should be louder than normal system sounds
-				Audio::systemVolume($VOLUME_RIFF);
-				Audio::volume('RIFF', 1.0);
+					# Load and start the audio file
+					Audio::load('RIFF', $riff->{'file'});
+					playRiff();
 
-				# Reduce the delay while playing so we sync faster
-				$delay = 1;
+					# Set volume when we load -- riffs should be louder than normal system sounds
+					Audio::systemVolume($VOLUME_RIFF);
+					Audio::volume('RIFF', 1.0);
 
-				# Enable LEADIN if we're near the beginning of the movie
-				if ($riff->{'offset'} > $LEADIN_TIME && $videoTime < $LEADIN_TIME) {
-					playPausePlex();
-					$leadin = 1;
+					# Reduce the delay while playing so we sync faster
+					$delay = 1;
+
+					# Enable LEADIN if we're near the beginning of the movie
+					if ($riff->{'offset'} > $LEADIN_TIME && $videoTime < $LEADIN_TIME) {
+						playPausePlex();
+						$leadin = 1;
+					}
 				}
 			}
 		}
 	}
+
+	# Always clear the reload flag
+	$reload = 0;
 
 	# If the RIFF has changed, save the state to disk
 	if (   (defined($riff) != defined($riffLast))
@@ -457,11 +472,12 @@ sub setRiffRate($) {
 	}
 }
 
-sub parseConfig($$) {
-	my ($conf_path, $riffs) = @_;
+sub parseConfig($) {
+	my ($conf_path) = @_;
 	if ($DEBUG) {
 		print STDERR "parseConfig()\n";
 	}
+	my %riffs = ();
 
 	opendir(CONF, $conf_path)
 	  or die('Unable to open config directory: ' . $! . "\n");
@@ -527,17 +543,19 @@ sub parseConfig($$) {
 			}
 
 			# Push the data up the chain
-			if (!exists($riffs->{ $data{'name'} })) {
+			if (!exists($riffs{ $data{'name'} })) {
 				my @tmp = ();
-				$riffs->{ $data{'name'} } = \@tmp;
+				$riffs{ $data{'name'} } = \@tmp;
 			}
-			push(@{ $riffs->{ $data{'name'} } }, \%data);
+			push(@{ $riffs{ $data{'name'} } }, \%data);
 		}
 	}
 	closedir(CONF);
 
 	# Record the last update time
-	$riffs->{'_LAST_CONFIG_UPDATE'} = time();
+	$riffs{'_LAST_CONFIG_UPDATE'} = time();
+
+	return \%riffs;
 }
 
 # The UDP listener would be more portable, but I already know how to do this
