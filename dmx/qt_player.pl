@@ -3,6 +3,7 @@ use strict;
 use warnings;
 use File::Basename;
 use IPC::System::Simple;
+use Time::Out qw( timeout );
 
 # Local modules
 use Cwd qw(abs_path);
@@ -22,13 +23,15 @@ sub unload($);
 sub stop();
 sub printFiles();
 sub cmdApp($$);
+sub openQT($);
 
 # App config
-my $DATA_DIR    = DMX::dataDir();
-my $STATE_SOCK  = 'QT_PLAYER';
+my $DATA_DIR     = DMX::dataDir();
+my $STATE_SOCK   = 'QT_PLAYER';
 my $OUTPUT_FILE  = $DATA_DIR . $STATE_SOCK;
-my $DELAY       = 5;
-my $MAX_CMD_LEN = 16384;
+my $DELAY        = 5;
+my $MAX_CMD_LEN  = 16384;
+my $TIMEOUT_OPEN = 10;
 
 # Debug
 my $DEBUG = 0;
@@ -120,7 +123,7 @@ sub init() {
 	cmdApp('QuickTime Player', 'close every document');
 	cmdApp('QuickTime Player', 'quit');
 	sleep(1);
-	IPC::System::Simple::system('open', '-a', 'QuickTime Player');
+	openQT(undef());
 
 	# Always load and play the SILENCE file (for sanity and general init)
 	load('SILENCE', 'DMX/Silence.wav');
@@ -157,8 +160,7 @@ sub load($$) {
 	my $count = Audio::runApplescript('tell application "QuickTime Player" to count items of every document');
 
 	# Open the file
-	# It would be nice to use AppleScript here, so we can get a more definitive name, but the open() call is borked
-	IPC::System::Simple::system('open', '-a', 'QuickTime Player', $path);
+	openQT($path);
 
 	# Wait for QT to load the new file
 	# To avoid indefinate hangs this will give up after 5 seconds
@@ -233,10 +235,34 @@ sub printFiles() {
 # Request the specified action from the provided app, if it's already running
 sub cmdApp($$) {
 	my ($app, $cmd) = @_;
+
+	# Ask AppleScript to execute the provided command only if the specified app is already running
 	my @cmd = ('tell application "System Events"');
 	push(@cmd, 'if exists process "' . $app . '" then');
 	push(@cmd, 'tell application "' . $app . '" to ' . $cmd);
 	push(@cmd, 'end if');
 	push(@cmd, 'end tell');
+
+	# Execute
 	Audio::runApplescript(join("\n", @cmd));
+}
+
+# Activate QT player, optionally loading a document
+# It would be nice to use AS here to get a more definitive document name, but the open() call is QT player is borked
+sub openQT($) {
+	my ($doc) = @_;
+	
+	# Build the open command
+	my @cmd = ('open', '-a', 'QuickTime Player');
+	if ($doc) {
+		push(@cmd, $doc);
+	}
+	
+	# Execute, dying on timeout
+	timeout $TIMEOUT_OPEN => sub {
+		IPC::System::Simple::system(@cmd);
+	};
+	if ($@) {
+		die("Open command timed out\n");
+	}
 }

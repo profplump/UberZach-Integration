@@ -4,7 +4,8 @@ use warnings;
 use POSIX;
 use File::Basename;
 use IPC::System::Simple;
-use Time::HiRes qw( usleep sleep time );
+use Time::Out;
+use Time::HiRes;
 
 # Package name
 package Audio;
@@ -18,6 +19,7 @@ my $QT_SOCK    = 'QT_PLAYER';
 my $QT_FILE    = $DATA_DIR . $QT_SOCK;
 my $WAIT_DELAY = 0.1;
 my $MAX_WAIT   = 5 / $WAIT_DELAY;
+my $TIMEOUT_AS = 10;
 
 # Debug
 my $DEBUG = 0;
@@ -62,10 +64,20 @@ sub runApplescript($) {
 		print STDERR 'AppleScript: ' . $script . "\n";
 	}
 
-	my $retval = IPC::System::Simple::capture('osascript', '-e', $script);
-	$retval =~ s/[\r\n]$//;
-	if ($DEBUG) {
-		print STDERR "\tAppleScript result: " . $retval . "\n";
+	# Die if operations take too long
+	my $retval = Time::Out::timeout $TIMEOUT_AS => sub {
+		return IPC::System::Simple::capture('osascript', '-e', $script);
+	};
+	if ($@) {
+		die("Applescript execution timed out\n");
+	}
+
+	# Clean up the return value
+	if (defined($retval)) {
+		$retval =~ s/[\r\n]$//;
+		if ($DEBUG) {
+			print STDERR "\tAppleScript result: " . $retval . "\n";
+		}
 	}
 
 	return $retval;
