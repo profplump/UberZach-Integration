@@ -2,6 +2,7 @@
 use strict;
 use warnings;
 use File::Temp qw( tempfile );
+use Scalar::Util qw( refaddr );
 use Time::HiRes qw( usleep sleep time );
 use IPC::System::Simple qw( system capture );
 
@@ -38,6 +39,15 @@ my $OUTPUT_FILE  = $DATA_DIR . $STATE_SOCK;
 my $PULL_TIMEOUT = 60;
 my $DELAY        = $PULL_TIMEOUT / 3;
 my %RIFFS        = ();
+my %ATTRS        = (
+	'name'    => { 'dmx'   => 'PLAYING_TITLE',   'regex' => qr/^\s*Name:[ \t]*(\S.*\S)\s*$/mi },
+	'year'    => { 'dmx'   => 'PLAYING_YEAR',    'regex' => qr/^\s*Year:[ \t]*(\d{4})\s*$/mi },
+	'series'  => { 'dmx'   => 'PLAYING_SERIES',  'regex' => qr/^\s*Series:[ \t]*(\S.*\S)\s*$/mi },
+	'season'  => { 'dmx'   => 'PLAYING_SEASON',  'regex' => qr/^\s*Season:[ \t]*(\d+)\s*$/mi },
+	'episode' => { 'dmx'   => 'PLAYING_EPISODE', 'regex' => qr/^\s*Episode:[ \t]*(\d+)\s*$/mi },
+	'file'    => { 'regex' => qr/^\s*File:[ \t]*(\S.*\S)\s*$/mi },
+	'offset'  => { 'regex' => qr/^\s*Offset:[ \t]*([\-\+]?\d+(?:\.\d+)?)\s*$/mi },
+);
 
 # Debug
 my $DEBUG = 0;
@@ -177,7 +187,7 @@ while (1) {
 
 			# Close the audio file
 			Audio::unload('RIFF');
-			$riff   = 0;
+			$riff   = undef();
 			$leadin = 0;
 
 			# Warm fuzzies
@@ -186,49 +196,85 @@ while (1) {
 
 		# Activate a new RIFF, if applicable
 		# Always match on title, validate year if provided
-		if (   $RIFFS{$title}
-			&& (!exists($RIFFS{$title}{'year'})    || $RIFFS{$title}{'year'} eq $exists{'PLAYING_YEAR'})
-			&& (!exists($RIFFS{$title}{'series'})  || $RIFFS{$title}{'series'} eq $exists{'PLAYING_SERIES'})
-			&& (!exists($RIFFS{$title}{'season'})  || $RIFFS{$title}{'season'} eq $exists{'PLAYING_SEASON'})
-			&& (!exists($RIFFS{$title}{'episode'}) || $RIFFS{$title}{'episode'} eq $exists{'PLAYING_EPISODE'}))
-		{
-
+		if ($RIFFS{$title}) {
 			if ($DEBUG) {
-				print STDERR 'Matched RIFF: ' . $title . ' => ' . $RIFFS{$title}->{'file'} . "\n";
+				print STDERR 'Matched RIFF title: ' . $title . "\n";
 			}
-			$riff = $title;
 
-			# Warm fuzzies
-			DMX::say('RiffTrax initiated');
+			# Find the best available match among media with identical titles
+			my $match = undef();
+			{
+				my $matchAttrCount = 0;
+				foreach my $data (@{ $RIFFS{$title} }) {
+					my $valid     = 1;
+					my $attrCount = 0;
+					if ($DEBUG) {
+						print STDERR '';
+					}
+					foreach my $attr (keys(%ATTRS)) {
+						if (!exists($data->{$attr}) || !exists($ATTRS{$attr}{'dmx'})) {
+							next;
+						}
+						if ($data->{$attr} eq $exists{ $ATTRS{$attr}{'dmx'} }) {
+							if ($DEBUG) {
+								print STDERR "\t\tMatched attr: " . $attr . ' => ' . $data->{$attr} . "\n";
+							}
+							$attrCount++;
+						} else {
+							if ($DEBUG) {
+								print STDERR "\t\tFailed match for attr: " . $attr . ' => ' . $data->{$attr} . "\n";
+							}
+							$valid = 0;
+							last;
+						}
+					}
 
-			# Load and start the audio file
-			Audio::load('RIFF', $RIFFS{$riff}->{'file'});
-			playRiff();
+					# Record the match if it's better than previous matches
+					if ($valid && $attrCount > $matchAttrCount) {
+						$match          = $data;
+						$matchAttrCount = $attrCount;
+					}
+				}
+			}
 
-			# Set volume when we load -- riffs should be louder than normal system sounds
-			Audio::systemVolume($VOLUME_RIFF);
-			Audio::volume('RIFF', 1.0);
+			# Match exists -- activate
+			if ($match) {
+				$riff = $match;
 
-			# Reduce the delay while playing so we sync faster
-			$delay = 1;
+				# Warm fuzzies
+				DMX::say('RiffTrax initiated');
 
-			# Enable LEADIN if we're near the beginning of the movie
-			if ($RIFFS{$riff}->{'offset'} > $LEADIN_TIME && $videoTime < $LEADIN_TIME) {
-				playPausePlex();
-				$leadin = 1;
+				# Load and start the audio file
+				Audio::load('RIFF', $riff->{'file'});
+				playRiff();
+
+				# Set volume when we load -- riffs should be louder than normal system sounds
+				Audio::systemVolume($VOLUME_RIFF);
+				Audio::volume('RIFF', 1.0);
+
+				# Reduce the delay while playing so we sync faster
+				$delay = 1;
+
+				# Enable LEADIN if we're near the beginning of the movie
+				if ($riff->{'offset'} > $LEADIN_TIME && $videoTime < $LEADIN_TIME) {
+					playPausePlex();
+					$leadin = 1;
+				}
 			}
 		}
 	}
 
 	# If the RIFF has changed, save the state to disk
-	if ($riff ne $riffLast) {
+	if (   (defined($riff) != defined($riffLast))
+		|| (defined($riff) && ref($riff) && defined($riffLast) && ref($riffLast) && refaddr($riff) == refaddr($riffLast)))
+	{
 		my $new = '<none>';
 		if ($riff) {
-			$new = $RIFFS{$riff}->{'name'};
+			$new = $riff->{'name'};
 		}
 		my $old = $new;
 		if ($riffLast) {
-			$old = $RIFFS{$riffLast}->{'name'};
+			$old = $riffLast->{'name'};
 		}
 
 		if ($DEBUG) {
@@ -284,14 +330,14 @@ while (1) {
 		}
 
 		# Calculate the adjusted riff time and the error between the riff and video times
-		my $riffAdjTime = $riffTime - $RIFFS{$riff}->{'offset'};
+		my $riffAdjTime = $riffTime - $riff->{'offset'};
 		my $error       = $videoTime - $riffAdjTime;
 		my $errorAbs    = abs($error);
 
 		# Debug
 		if ($DEBUG) {
 			print STDERR "\tRate: " . $rate . "\n";
-			print STDERR "\tOffset: " . $RIFFS{$riff}->{'offset'} . "\n";
+			print STDERR "\tOffset: " . $riff->{'offset'} . "\n";
 			print STDERR "\tRiff time: " . $riffTime . "\n";
 			print STDERR "\tVideo time: " . $videoTime . "\n";
 			print STDERR "\tAdjusted riff time: " . $riffAdjTime . "\n";
@@ -311,7 +357,7 @@ while (1) {
 			}
 
 			# Start the movie when we reach the sync point
-			if ($RIFFS{$riff}->{'offset'} <= $riffTime) {
+			if ($riff->{'offset'} <= $riffTime) {
 				if (!$exists{'PLAYING'}) {
 					playPausePlex();
 				}
@@ -442,26 +488,13 @@ sub parseConfig($$) {
 
 			# Parse out the data we care about
 			my %data = ();
-			if ($text =~ /^\s*Name:[ \t]*(\S.*\S)\s*$/mi) {
-				$data{'name'} = $1;
-			}
-			if ($text =~ /^\s*Year:[ \t]*(\d{4})\s*$/mi) {
-				$data{'year'} = $1;
-			}
-			if ($text =~ /^\s*Series:[ \t]*(\S.*\S)\s*$/mi) {
-				$data{'series'} = $1;
-			}
-			if ($text =~ /^\s*Season:[ \t]*(\d+)\s*$/mi) {
-				$data{'season'} = $1;
-			}
-			if ($text =~ /^\s*Episode:[ \t]*(\d+)\s*$/mi) {
-				$data{'episode'} = $1;
-			}
-			if ($text =~ /^\s*File:[ \t]*(\S.*\S)\s*$/mi) {
-				$data{'file'} = $1;
-			}
-			if ($text =~ /^\s*Offset:[ \t]*([\-\+]?\d+(?:\.\d+)?)\s*$/mi) {
-				$data{'offset'} = $1 * 1.0;
+			foreach my $attr (keys(%ATTRS)) {
+				if (!exists($ATTRS{$attr}{'regex'})) {
+					next;
+				}
+				if ($text =~ $ATTRS{$attr}{'regex'}) {
+					$data{$attr} = $1;
+				}
 			}
 
 			# Ensure we have a valid record
@@ -485,11 +518,20 @@ sub parseConfig($$) {
 
 			# Debug
 			if ($DEBUG) {
-				print STDERR 'Added RiffTrax: ' . $data{'name'} . "\n\tFile: " . $data{'file'} . "\n\tOffset: " . $data{'offset'} . "\n";
+				print STDERR 'Added RiffTrax: ' . $file . "\n";
+				foreach my $attr (keys(%ATTRS)) {
+					if ($data{$attr}) {
+						print STDERR "\t" . $attr . ': ' . $data{$attr} . "\n";
+					}
+				}
 			}
 
 			# Push the data up the chain
-			$riffs->{ $data{'name'} } = \%data;
+			if (!exists($riffs->{ $data{'name'} })) {
+				my @tmp = ();
+				$riffs->{ $data{'name'} } = \@tmp;
+			}
+			push(@{ $riffs->{ $data{'name'} } }, \%data);
 		}
 	}
 	closedir(CONF);
