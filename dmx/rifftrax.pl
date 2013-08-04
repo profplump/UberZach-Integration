@@ -501,5 +501,6 @@ sub parseConfig($$) {
 # The UDP listener would be more portable, but I already know how to do this
 # The PMS playback API would work too, but this script currently knows nothing of the PMS
 sub playPausePlex() {
-	Audio::runApplescript('tell application "System Events" to key code 49');
+	my @cmd = ('tell application "Plex" to activate', 'tell application "System Events" to key code 49');
+	Audio::runApplescript(join("\n", @cmd));
 }
