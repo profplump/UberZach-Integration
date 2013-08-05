@@ -31,6 +31,7 @@ sub getRiffRate();
 sub setRiffRate($);
 sub parseConfig($);
 sub playPausePlex();
+sub matchRiff($$$);
 
 # App config
 my $DATA_DIR     = DMX::dataDir();
@@ -157,6 +158,10 @@ while (1) {
 		$titleLast = $title;
 		$title     = $exists{'PLAYING_TITLE'};
 	}
+	my $titleChanged = 0;
+	if ($title ne $titleLast) {
+		$titleChanged = 1;
+	}
 
 	# Convert the video timestamp to seconds
 	my $videoTime = 0;
@@ -172,112 +177,56 @@ while (1) {
 		}
 	}
 
-	# Force reloading if the flag is set
-	if ($reload) {
-		$riff      = undef();
-		$titleLast = '';
-	}
-
-	# Update our state when the PLAYING_TITLE changes
-	if ($title ne $titleLast) {
-
-		# If a RIFF was active, clear it
-		if ($riff) {
-			if ($DEBUG) {
-				print STDERR "RIFF complete\n";
-			}
-
-			# Increase the delay while nothing is happening
-			$delay = $DELAY;
-
-			# Reset the volume when we unload -- normal system sounds should be quieter than riffs
-			Audio::systemVolume($VOLUME_STD);
-
-			# Close the audio file
-			Audio::unload('RIFF');
-			$riff   = undef();
-			$leadin = 0;
-
-			# Warm fuzzies
-			DMX::say('RiffTrax complete');
+	# If a RIFF was active and the title changed, clear it
+	if ($riff && $titleChanged) {
+		if ($DEBUG) {
+			print STDERR "RIFF complete\n";
 		}
 
-		# Activate a new RIFF, if applicable
-		# Always match on title, validate year if provided
-		if ($RIFFS->{$title}) {
-			if ($DEBUG) {
-				print STDERR 'Matched RIFF title: ' . $title . "\n";
-			}
+		# Increase the delay while nothing is happening
+		$delay = $DELAY;
 
-			# Find the best available match among media with identical titles
-			my $match = undef();
-			{
-				my $matchAttrCount = 0;
-				foreach my $data (@{ $RIFFS->{$title} }) {
-					my $valid     = 1;
-					my $attrCount = 0;
-					if ($DEBUG) {
-						print STDERR '';
-					}
-					foreach my $attr (keys(%ATTRS)) {
-						if (!exists($data->{$attr}) || !exists($ATTRS{$attr}{'dmx'})) {
-							next;
-						}
-						if ($data->{$attr} eq $exists{ $ATTRS{$attr}{'dmx'} }) {
-							if ($DEBUG) {
-								print STDERR "\t\tMatched attr: " . $attr . ' => ' . $data->{$attr} . "\n";
-							}
-							$attrCount++;
-						} else {
-							if ($DEBUG) {
-								print STDERR "\t\tFailed match for attr: " . $attr . ' => ' . $data->{$attr} . "\n";
-							}
-							$valid = 0;
-							last;
-						}
-					}
+		# Reset the volume when we unload -- normal system sounds should be quieter than riffs
+		Audio::systemVolume($VOLUME_STD);
 
-					# Record the match if it's better than previous matches
-					if ($valid && $attrCount > $matchAttrCount) {
-						$match          = $data;
-						$matchAttrCount = $attrCount;
-					}
-				}
-			}
+		# Close the audio file
+		Audio::unload('RIFF');
+		$riff   = undef();
+		$leadin = 0;
 
-			# Match exists -- activate
-			if ($match) {
-				$riff = $match;
-
-				# Load unless we are reloading
-				if (!$reload) {
-
-					# Warm fuzzies
-					DMX::say('RiffTrax initiated');
-
-					# Load and start the audio file
-					Audio::load('RIFF', $riff->{'file'});
-					playRiff();
-
-					# Set volume when we load -- riffs should be louder than normal system sounds
-					Audio::systemVolume($VOLUME_RIFF);
-					Audio::volume('RIFF', 1.0);
-
-					# Reduce the delay while playing so we sync faster
-					$delay = 1;
-
-					# Enable LEADIN if we're near the beginning of the movie
-					if ($riff->{'offset'} > $LEADIN_TIME && $videoTime < $LEADIN_TIME) {
-						playPausePlex();
-						$leadin = 1;
-					}
-				}
-			}
-		}
+		# Warm fuzzies
+		DMX::say('RiffTrax complete');
 	}
 
-	# Always clear the reload flag
-	$reload = 0;
+	# Look for new matches when the title changes or a reload is requested
+	if ($titleChanged || $reload) {
+		$riff = matchRiff($RIFFS, \%ATTRS, \%exists);
+		$reload = 0;
+	}
+
+	# If we matched a riff and it isn't active, load it
+	if (defined($riff) && !defined($riffLast)) {
+
+		# Warm fuzzies
+		DMX::say('RiffTrax initiated');
+
+		# Load and start the audio file
+		Audio::load('RIFF', $riff->{'file'});
+		playRiff();
+
+		# Set volume when we load -- riffs should be louder than normal system sounds
+		Audio::systemVolume($VOLUME_RIFF);
+		Audio::volume('RIFF', 1.0);
+
+		# Reduce the delay while playing so we sync faster
+		$delay = 1;
+
+		# Enable LEADIN if we're near the beginning of the movie
+		if ($riff->{'offset'} > $LEADIN_TIME && $videoTime < $LEADIN_TIME) {
+			playPausePlex();
+			$leadin = 1;
+		}
+	}
 
 	# If the RIFF has changed, save the state to disk
 	if (   (defined($riff) != defined($riffLast))
@@ -563,4 +512,53 @@ sub parseConfig($) {
 sub playPausePlex() {
 	my @cmd = ('tell application "Plex" to activate', 'tell application "System Events" to key code 49');
 	Audio::runApplescript(join("\n", @cmd));
+}
+
+# Determine if anything matches the currently playing media
+sub matchRiff($$$) {
+	my ($riffs, $attrs, $dmx) = @_;
+	my $match = undef();
+
+	# Quick check for a title match
+	if (!$riffs->{ $dmx->{'PLAYING_TITLE'} }) {
+		return;
+	}
+	if ($DEBUG) {
+		print STDERR 'Matched RIFF title: ' . $dmx->{'PLAYING_TITLE'} . "\n";
+	}
+
+	# Find the best available match among media with identical titles
+	my $matchAttrCount = 0;
+	foreach my $data (@{ $riffs->{ $dmx->{'PLAYING_TITLE'} } }) {
+		my $valid     = 1;
+		my $attrCount = 0;
+		if ($DEBUG) {
+			print STDERR '';
+		}
+		foreach my $attr (keys(%{$attrs})) {
+			if (!exists($data->{$attr}) || !exists($attrs->{$attr}{'dmx'})) {
+				next;
+			}
+			if ($data->{$attr} eq $dmx->{ $attrs->{$attr}{'dmx'} }) {
+				if ($DEBUG) {
+					print STDERR "\t\tMatched attr: " . $attr . ' => ' . $data->{$attr} . "\n";
+				}
+				$attrCount++;
+			} else {
+				if ($DEBUG) {
+					print STDERR "\t\tFailed match for attr: " . $attr . ' => ' . $data->{$attr} . "\n";
+				}
+				$valid = 0;
+				last;
+			}
+		}
+
+		# Record the match if it's better than previous matches
+		if ($valid && $attrCount > $matchAttrCount) {
+			$match          = $data;
+			$matchAttrCount = $attrCount;
+		}
+	}
+
+	return $match;
 }
