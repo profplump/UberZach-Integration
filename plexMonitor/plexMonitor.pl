@@ -93,6 +93,9 @@ sub xbmcHTTP($) {
 	my ($cmd) = @_;
 	my $data = get('http://localhost:3000/xbmcCmds/xbmcHttp?command=' . $cmd);
 	if (!defined($data)) {
+		if ($DEBUG) {
+			print STDERR "No data returned from HTTP call\n";
+		}
 		$data = '';
 	}
 	return $data;
