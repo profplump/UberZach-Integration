@@ -13,7 +13,6 @@ my $TIMEOUT     = 900;
 my $COUNTDOWN   = 300;
 my $OFF_DELAY   = 15;
 my $CMD_DELAY   = 20;
-my $COLOR_DELAY = 60;
 my $COLOR_HIGH  = 'NATURAL';
 my $COLOR_PLAY  = 'THEATER_BLACK_1';
 my $COLOR_LOW   = 'THEATER_BLACK_1';
@@ -142,12 +141,9 @@ while (1) {
 	# LOW for audio, and when we're half way to the timeout (to save the bulb)
 	# HIGH when the GUI is up
 	# PLAY if we haven't figured out what else to do
+	my $playLights = 0;
 	if ($newState eq 'PLAY') {
-		if ($exists{'LIGHTS'}) {
-			$color = $COLOR_HIGH;
-		} else {
-			$color = $COLOR_PLAY;
-		}
+		$playLights = 1;
 	} elsif ($exists{'PLAYING_TYPE'} eq 'Audio') {
 		$color = $COLOR_LOW;
 	} elsif ($elapsed > $TIMEOUT / 2) {
@@ -155,7 +151,14 @@ while (1) {
 	} elsif ($exists{'GUI'}) {
 		$color = $COLOR_HIGH;
 	} else {
+		$playLights = 1;
+	}
+	# If playLights was set, choose the color mode based on the LIGHTS setting
+	if ($playLights) {
 		$color = $COLOR_PLAY;
+		if ($exists{'LIGHTS'}) {
+			$color = $COLOR_HIGH;
+		}
 	}
 
 	# Force updates on a periodic basis
