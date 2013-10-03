@@ -10,7 +10,7 @@ use DMX;
 
 # Config
 my $TIMEOUT     = 900;
-my $COUNTDOWN   = 125;
+my $COUNTDOWN   = 119;
 my $OFF_DELAY   = 15;
 my $CMD_DELAY   = 20;
 my $COLOR_HIGH  = 'NATURAL';
