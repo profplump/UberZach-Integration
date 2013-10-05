@@ -18,7 +18,6 @@
 	<key>ProgramArguments</key>
 	<array>
 		<string>/opt/local/bin/olad</string>
-		<string>-s</string>
 		<string>-i</string>
 		<string>127.0.0.1</string>
 		<string>-p</string>
