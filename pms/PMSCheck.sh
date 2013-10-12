@@ -1,9 +1,11 @@
 #!/bin/bash
 
 # Config
-CURL_TIMEOUT=2
+CURL_TIMEOUT=5
 RESTART_DELAY=120
 PMS_URL="http://localhost:32400/"
+UNWATCHED_URL="${PMS_URL}library/sections/2/unwatched"
+MIN_UNWATCHED_COUNT=10
 ADMIN_EMAIL="zach@kotlarek.com"
 
 # Command-line config
@@ -17,13 +19,37 @@ while [ $LOOP -ne 0 ]; do
 	# State tracking
 	FAILED=""
 
-	# Ask for the last update time from Plex
-	UPDATE="`curl --silent --max-time "${CURL_TIMEOUT}" "${PMS_URL}" | \
-		grep 'updatedAt=' | sed 's%^.*updatedAt="\([0-9]*\)".*$%\1%'`"
+	# Ensure the media share is mounted
+	if [ -z "${FAILED}" ]; then
+		if ! ~/bin/video/isMediaMounted; then
+			FAILED="Media share not mounted"
+		fi
+	fi
 
-	# If Plex replied, assume thing are workingcheck the update time
-	if [ -z "${UPDATE}" ]; then
-		FAILED="HTTP timeout"
+	# Ask Plex for the top-level status page
+	if [ -z "${FAILED}" ]; then
+		PAGE="`curl --silent --max-time "${CURL_TIMEOUT}" "${PMS_URL}"`"
+		if [ -z "${PAGE}" ]; then
+			FAILED="HTTP timeout"
+		else
+			UPDATE="`echo "${PAGE}" | grep 'updatedAt=' | sed 's%^.*updatedAt="\([0-9]*\)".*$%\1%'`"
+			if [ -z "${UPDATE}" ]; then
+				FAILED="Invalid update timestamp on status page"
+			fi
+		fi
+	fi
+
+	# Ask Plex for a list of unwatched TV series
+	if [ -z "${FAILED}" ]; then
+		PAGE="`curl --silent --max-time "${CURL_TIMEOUT}" "${UNWATCHED_URL}"`"
+		if [ -z "${PAGE}" ]; then
+			FAILED="HTTP timeout"
+		else
+			COUNT="`echo "${PAGE}" | grep '</Directory>' | wc -l`"
+			if [ $COUNT -lt $MIN_UNWATCHED_COUNT ]; then
+				FAILED="Too few unwatched series"
+			fi
+		fi
 	fi
 
 	# If Plex has failed kill it
