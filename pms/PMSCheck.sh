@@ -1,10 +1,11 @@
 #!/bin/bash
 
 # Config
-CURL_TIMEOUT=10
+CURL_TIMEOUT=5
 RESTART_DELAY=120
 PMS_URL="http://localhost:32400/"
 UNWATCHED_URL="${PMS_URL}library/sections/2/unwatched"
+UNWATCHED_TIMEOUT=$(( $CURL_TIMEOUT * 3 ))
 MIN_UNWATCHED_COUNT=10
 ADMIN_EMAIL="zach@kotlarek.com"
 
@@ -41,7 +42,7 @@ while [ $LOOP -ne 0 ]; do
 
 	# Ask Plex for a list of unwatched TV series
 	if [ -z "${FAILED}" ]; then
-		PAGE="`curl --silent --max-time "${CURL_TIMEOUT}" "${UNWATCHED_URL}"`"
+		PAGE="`curl --silent --max-time "${UNWATCHED_TIMEOUT}" "${UNWATCHED_URL}"`"
 		if [ -z "${PAGE}" ]; then
 			FAILED="HTTP timeout"
 		else
