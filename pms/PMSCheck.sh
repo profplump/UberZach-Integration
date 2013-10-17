@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Config
-CURL_TIMEOUT=5
+CURL_TIMEOUT=10
 RESTART_DELAY=120
 PMS_URL="http://localhost:32400/"
 UNWATCHED_URL="${PMS_URL}library/sections/2/unwatched"
