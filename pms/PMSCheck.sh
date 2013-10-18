@@ -5,7 +5,8 @@ CURL_TIMEOUT=5
 RESTART_DELAY=120
 PMS_URL="http://localhost:32400/"
 UNWATCHED_URL="${PMS_URL}library/sections/2/unwatched"
-UNWATCHED_TIMEOUT=$(( $CURL_TIMEOUT * 3 ))
+UNWATCHED_TIMEOUT=$(( $CURL_TIMEOUT * 2 ))
+UNWATCHED_RETRIES=3
 MIN_UNWATCHED_COUNT=10
 ADMIN_EMAIL="zach@kotlarek.com"
 
@@ -42,15 +43,22 @@ while [ $LOOP -ne 0 ]; do
 
 	# Ask Plex for a list of unwatched TV series
 	if [ -z "${FAILED}" ]; then
-		PAGE="`curl --silent --max-time "${UNWATCHED_TIMEOUT}" "${UNWATCHED_URL}"`"
-		if [ -z "${PAGE}" ]; then
-			FAILED="HTTP timeout"
-		else
-			COUNT="`echo "${PAGE}" | grep '</Directory>' | wc -l`"
-			if [ $COUNT -lt $MIN_UNWATCHED_COUNT ]; then
-				FAILED="Too few unwatched series"
+		TRY=1
+		FAILED="Too few unwatched series"
+		while [ $TRY -le $UNWATCHED_RETRIES ] && [ -n "${FAILED}" ]; do
+			TRY=$(( $TRY + 1 ))
+			PAGE="`curl --silent --max-time "${UNWATCHED_TIMEOUT}" "${UNWATCHED_URL}"`"
+			if [ -z "${PAGE}" ]; then
+				FAILED="HTTP timeout"
+			else
+				COUNT="`echo "${PAGE}" | grep '</Directory>' | wc -l`"
+				if [ $COUNT -ge $MIN_UNWATCHED_COUNT ]; then
+					FAILED=""
+				else
+					sleep 2
+				fi
 			fi
-		fi
+		done
 	fi
 
 	# If Plex has failed kill it
@@ -69,8 +77,7 @@ while [ $LOOP -ne 0 ]; do
 		sleep "${RESTART_DELAY}"
 
 		# Re-index (in the background)
-		~/bin/video/isScanning && \
-			curl --silent --upload-file /dev/null "${PMS_URL}library/optimize" &
+		~/bin/video/pms/optimize.sh &
 	fi
 
 	# Sleep for the next loop or exit

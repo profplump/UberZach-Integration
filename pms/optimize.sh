@@ -1,9 +1,16 @@
 #!/bin/bash
 
-# Delay if we are currently scanning
-WAIT=0
+# Defaults
 DELAY=5
 MAX_WAIT=600
+
+# Accept an alternate MAX_WAIT
+if [ -n "${1}" ]; then
+	MAX_WAIT="${1}"
+fi
+
+# Delay if we are currently scanning
+WAIT=0
 while ~/bin/video/pms/isScanning.sh; do
 	sleep $DELAY
 	WAIT=$(( $WAIT + $DELAY ))
@@ -14,4 +21,4 @@ while ~/bin/video/pms/isScanning.sh; do
 done
 
 # Optimize
-curl --silent --upload-file /dev/null 'http://localhost:32400/library/optimize'
+exec curl --silent --upload-file /dev/null 'http://localhost:32400/library/optimize'
