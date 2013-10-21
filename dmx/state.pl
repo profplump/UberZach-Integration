@@ -16,11 +16,12 @@ use DMX;
 sub mtime($);
 
 # User config
-my $MEDIA_PATH    = `~/bin/video/mediaPath`;
-my %DISPLAY_DEVS  = ('TV' => 1, 'PROJECTOR' => 1);
-my $DISPLAY       = undef();
-my $STATE_TIMEOUT = 180;
-my %MON_FILES     = ();
+my $MEDIA_PATH     = `~/bin/video/mediaPath`;
+my %DISPLAY_DEVS   = ('TV' => 1, 'PROJECTOR' => 1);
+my $DISPLAY        = undef();
+my $STATE_TIMEOUT  = 180;
+my $EXISTS_TIMEOUT = 900;
+my %MON_FILES      = ();
 
 # Host-specific config
 # This is necessary to avoid contention on shared disks
@@ -58,7 +59,7 @@ if ($HOST =~ /loki/i) {
 	$MON_FILES{'STEREO_CMD'}      = 'EXISTS-ON';
 
 	# A/V Effects
-	$MON_FILES{'LIGHTS'} = 'EXISTS-ON';
+	$MON_FILES{'LIGHTS'} = 'EXISTS-TIMEOUT';
 	$MON_FILES{'RAVE'}   = 'EXISTS';
 	$MON_FILES{'EFFECT'} = 'EXISTS';
 
@@ -169,6 +170,9 @@ foreach my $name (keys(%MON_FILES)) {
 	if ($file{'type'} =~ /\bON\b/i) {
 		$attr{'clear_off'} = 1;
 	}
+	if ($file{'type'} =~ /\bTIMEOUT\b/i) {
+		$attr{'clear_timeout'} = 1;
+	}
 	if ($file{'type'} =~ /\bMTIME\b/i) {
 		$attr{'mtime'} = 1;
 	}
@@ -214,12 +218,13 @@ system($RESET_CMD);
 my @subscribers = ();
 
 # State
-my $state      = 'INIT';
-my $stateLast  = $state;
-my $status     = '';
-my $statusLast = $status;
-my $updateLast = 0;
-my $pushLast   = 0;
+my $state           = 'INIT';
+my $stateLast       = $state;
+my $status          = '';
+my $statusLast      = $status;
+my $updateLast      = 0;
+my $timeSinceUpdate = 0;
+my $pushLast        = 0;
 
 # Loop forever
 while (1) {
@@ -401,12 +406,21 @@ while (1) {
 		}
 	}
 
+	# Ignore the MOTION file if NO_MOTION is set
+	if (exists($files{'NO_MOTION'}) && $files{'NO_MOTION'}->{'value'}) {
+		if (exists($files{'MOTION'})) {
+			$files{'MOTION'}->{'value'}  = 0;
+			$files{'MOTION'}->{'update'} = 0;
+		}
+	}
+
 	# Set the global update timestamp
 	foreach my $file (values(%files)) {
 		if ($file->{'update'} > $updateLast) {
 			$updateLast = $file->{'update'};
 		}
 	}
+	$timeSinceUpdate = time() - $updateLast;
 
 	# Determine some intermediate state data
 	my $playing = 0;
@@ -445,15 +459,10 @@ while (1) {
 	} else {
 
 		# If the display exists but is off, check the timeouts to determine MOTION vs. OFF
-		my $timeSinceUpdate = time() - $updateLast;
 		if ($timeSinceUpdate > $STATE_TIMEOUT) {
 			$state = 'OFF';
 		} elsif ($timeSinceUpdate < $STATE_TIMEOUT) {
-			if (exists($files{'NO_MOTION'}) && $files{'NO_MOTION'}->{'value'}) {
-				$state = 'OFF';
-			} else {
-				$state = 'MOTION';
-			}
+			$state = 'MOTION';
 		}
 	}
 	if ($state eq 'INIT') {
@@ -462,9 +471,28 @@ while (1) {
 
 	# Clear EXISTS_ON files when the main state is "OFF" (and before we append their status)
 	foreach my $file (values(%files)) {
-		if ($file->{'attr'}->{'clear_off'} && $file->{'value'} && $state eq 'OFF') {
+		if (   $file->{'attr'}->{'clear_off'}
+			&& $file->{'value'}
+			&& $state eq 'OFF')
+		{
 			unlink($file->{'path'});
-			$file->{'stauts'} = 0;
+			$file->{'status'} = 0;
+			if ($DEBUG) {
+				print STDERR 'Clearing exists flag for: ' . $file->{'name'} . "\n";
+			}
+		}
+	}
+
+	# Clear EXISTS_TIMEOUT files when the main state is "OFF" and EXISTS_TIMEOUT has expired (and before we append their status)
+	foreach my $file (values(%files)) {
+		if (   $file->{'attr'}->{'clear_timeout'}
+			&& $file->{'value'}
+			&& $state eq 'OFF'
+			&& $timeSinceUpdate > $EXISTS_TIMEOUT)
+		{
+
+			unlink($file->{'path'});
+			$file->{'status'} = 0;
 			if ($DEBUG) {
 				print STDERR 'Clearing exists flag for: ' . $file->{'name'} . "\n";
 			}
@@ -488,7 +516,7 @@ while (1) {
 	foreach my $file (values(%files)) {
 		if ($file->{'attr'}->{'clear'} && $file->{'value'}) {
 			unlink($file->{'path'});
-			$file->{'stauts'} = 0;
+			$file->{'status'} = 0;
 			if ($DEBUG) {
 				print STDERR 'Clearing exists flag for: ' . $file->{'name'} . "\n";
 			}

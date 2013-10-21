@@ -126,6 +126,8 @@ while (1) {
 	if ($exists{'LIGHTS'}) {
 		if ($newState eq 'PLAY') {
 			$newState = 'PLAY_HIGH';
+		} elsif ($newState eq 'OFF') {
+			$newState = 'MOTION';
 		}
 	} else {
 		if ($newState eq 'PLAY_HIGH') {
