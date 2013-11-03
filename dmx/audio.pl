@@ -36,10 +36,6 @@ if ($ENV{'DEBUG'}) {
 	$DEBUG = 1;
 }
 
-# Sockets
-DMX::stateSocket($STATE_SOCK);
-DMX::stateSubscribe($STATE_SOCK);
-
 # State
 my $state      = 'OFF';
 my $stateLast  = $state;
@@ -50,7 +46,13 @@ my $pushLast   = 0;
 my $pullLast   = time();
 my $update     = 0;
 
+# Sockets
+DMX::stateSocket($STATE_SOCK);
+DMX::stateSubscribe($STATE_SOCK);
+
 # Always force the output to default at launch
+# In most components this happens before state subscription
+# but here we want to avoid making any changes while STATE is not available
 system(@AUDIO_SET, $DEVS{'DEFAULT'});
 
 # Loop forever

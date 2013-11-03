@@ -26,9 +26,9 @@ my %DIM            = (
 		{ 'channel' => 15,  'value' => 0,   'time' => 60000 },
 	],
 	'PLAY'      => [
-		{ 'channel' => 13, 'value' => 10,   'time' => 500  },
-		{ 'channel' => 14, 'value' => 10,   'time' => 500  },
-		{ 'channel' => 15, 'value' => 8,    'time' => 500  },
+		{ 'channel' => 13, 'value' => 10,   'time' => 500 },
+		{ 'channel' => 14, 'value' => 10,   'time' => 500 },
+		{ 'channel' => 15, 'value' => 8,    'time' => 500 },
 	],
 	'PLAY_HIGH' => [
 		{ 'channel' => 13, 'value' => 64,  'time' => 1000, 'delay' => 3000 },
@@ -41,9 +41,14 @@ my %DIM            = (
 		{ 'channel' => 15, 'value' => 96,  'time' => 3000, 'delay' => 7000 },
 	],
 	'MOTION'    => [
-		{ 'channel' => 13, 'value' => 144, 'time' => 1000  },
-		{ 'channel' => 14, 'value' => 144, 'time' => 1000  },
-		{ 'channel' => 15, 'value' => 144, 'time' => 1000  },
+		{ 'channel' => 13, 'value' => 144, 'time' => 1000 },
+		{ 'channel' => 14, 'value' => 144, 'time' => 1000 },
+		{ 'channel' => 15, 'value' => 144, 'time' => 1000 },
+	],
+	'ERROR'    => [
+		{ 'channel' => 13, 'value' => 144, 'time' => 0 },
+		{ 'channel' => 14, 'value' => 255, 'time' => 0 },
+		{ 'channel' => 15, 'value' => 144, 'time' => 0 },
 	],
 );
 
@@ -75,10 +80,6 @@ foreach my $key (keys(%DIM)) {
 	$VALID{$key} = 1;
 }
 
-# Sockets
-DMX::stateSocket($STATE_SOCK);
-DMX::stateSubscribe($STATE_SOCK);
-
 # State
 my $state       = 'OFF';
 my $stateLast   = $state;
@@ -89,10 +90,13 @@ my $update      = 0;
 my @COLOR       = ();
 my $colorChange = time();
 
-# Always force lights out at launch
-DMX::dim({ 'channel' => 13, 'value' => 0, 'time' => 0 });
-DMX::dim({ 'channel' => 14, 'value' => 0, 'time' => 0 });
-DMX::dim({ 'channel' => 15, 'value' => 0, 'time' => 0 });
+# Always force lights into ERROR at launch
+$state = 'ERROR';
+DMX::applyDataset($DIM{$state}, $state, $OUTPUT_FILE);
+
+# Sockets
+DMX::stateSocket($STATE_SOCK);
+DMX::stateSubscribe($STATE_SOCK);
 
 # Loop forever
 while (1) {

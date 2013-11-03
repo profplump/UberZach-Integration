@@ -15,6 +15,7 @@ my %DIM = (
 	'PLAY_HIGH' => [ { 'channel' => 4, 'value' => 48,  'time' => 500 }, ],
 	'PAUSE'     => [ { 'channel' => 4, 'value' => 96,  'time' => 6000, 'delay' => 9000 }, ],
 	'MOTION'    => [ { 'channel' => 4, 'value' => 128, 'time' => 2500 }, ],
+	'ERROR'     => [ { 'channel' => 4, 'value' => 255, 'time' => 0 }, ],
 );
 
 # App config
@@ -37,10 +38,6 @@ foreach my $key (keys(%DIM)) {
 	$VALID{$key} = 1;
 }
 
-# Sockets
-DMX::stateSocket($STATE_SOCK);
-DMX::stateSubscribe($STATE_SOCK);
-
 # State
 my $state     = 'OFF';
 my $stateLast = $state;
@@ -50,8 +47,13 @@ my $pushLast  = 0;
 my $pullLast  = time();
 my $update    = 0;
 
-# Always force lights out at launch
-DMX::dim({ 'channel' => 4, 'value' => 0, 'time' => 0 });
+# Always force lights into ERROR at launch
+$state = 'ERROR';
+DMX::applyDataset($DIM{$state}, $state, $OUTPUT_FILE);
+
+# Sockets
+DMX::stateSocket($STATE_SOCK);
+DMX::stateSubscribe($STATE_SOCK);
 
 # Loop forever
 while (1) {
