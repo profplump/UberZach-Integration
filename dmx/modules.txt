@@ -2,3 +2,4 @@ IPC::System::Simple
 Math::Random
 Time::Out
 File::Touch
+Device::SerialPort
