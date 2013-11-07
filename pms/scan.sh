@@ -22,3 +22,6 @@ fi
 if echo "${@}" | grep -q -- '--deep'; then
 	~/bin/video/pms/optimize.sh
 fi
+
+# Clean the trash, if conditions are safe
+~/bin/video/pms/emptyTrash.sh
