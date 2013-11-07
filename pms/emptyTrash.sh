@@ -11,7 +11,8 @@ if ~/bin/video/pms/isScanning.sh; then
 fi
 
 # Read the list of section numbers
-SECTIONS="`curl 'http://localhost:32400/library/sections' | grep '<Directory ' | sed 's%^.* key="\([0-9]*\)".*$%\1%'`"
+SECTIONS="`curl --silent 'http://localhost:32400/library/sections' | \
+	grep '<Directory ' | sed 's%^.* key="\([0-9]*\)".*$%\1%'`"
 
 # Empty the trash for each section
 for i in $SECTIONS; do
