@@ -3,3 +3,4 @@ Math::Random
 Time::Out
 File::Touch
 Device::SerialPort
+JSON
