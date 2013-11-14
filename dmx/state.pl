@@ -15,24 +15,6 @@ use DMX;
 # Prototypes
 sub mtime($);
 
-# App config
-my $SOCK_TIMEOUT    = 5;
-my $DATA_DIR        = DMX::dataDir();
-my $CMD_FILE        = 'STATE';
-my $MAX_CMD_LEN     = 4096;
-my $RESET_CMD       = $ENV{'HOME'} . '/bin/video/dmx/reset.sh';
-my $MEDIA_MOUNT_CMD = $ENV{'HOME'} . '/bin/video/mountMedia';
-my $MEDIA_CHECK_CMD = $ENV{'HOME'} . '/bin/video/isMediaMounted';
-my $MEDIA_PATH_CMD  = $ENV{'HOME'} . '/bin/video/mediaPath';
-my $PUSH_TIMEOUT    = 20;
-
-# Ensure the media path is available before we get going
-system($MEDIA_MOUNT_CMD);
-my $MEDIA_PATH = `${MEDIA_PATH_CMD}`;
-if (!$MEDIA_PATH || !-d $MEDIA_PATH) {
-	die("Unable to access media path\n");
-}
-
 # User config
 my %DISPLAY_DEVS   = ('TV' => 1, 'PROJECTOR' => 1);
 my $DISPLAY        = undef();
@@ -44,6 +26,20 @@ my %MON_FILES      = ();
 # This is necessary to avoid contention on shared disks
 my $HOST = Sys::Hostname::hostname();
 if ($HOST =~ /loki/i) {
+
+	# Ensure the media path is available before we get going
+	my $MEDIA_PATH = undef();
+	{
+		my $mount = $ENV{'HOME'} . '/bin/video/mediaPath';
+		my $path  = $ENV{'HOME'} . '/bin/video/mediaPath';
+		system($mount);
+		$MEDIA_PATH = `${cmd}`;
+	}
+	if (!$MEDIA_PATH || !-d $MEDIA_PATH) {
+		die("Unable to access media path\n");
+	}
+
+	# Garage door opener
 	$MON_FILES{ $MEDIA_PATH . '/DMX/cmd/GARAGE_CMD' } = 'EXISTS-VALUE-CLEAR';
 }
 
@@ -106,6 +102,14 @@ my %EXTRAS = (
 		'TYPE'     => qr/^\<li\>Type\:(.+)$/m,
 	}
 );
+
+# App config
+my $SOCK_TIMEOUT = 5;
+my $DATA_DIR     = DMX::dataDir();
+my $CMD_FILE     = 'STATE';
+my $MAX_CMD_LEN  = 4096;
+my $RESET_CMD    = $ENV{'HOME'} . '/bin/video/dmx/reset.sh';
+my $PUSH_TIMEOUT = 20;
 
 # Debug
 my $DEBUG = 0;
