@@ -33,7 +33,7 @@ if ($HOST =~ /loki/i) {
 		my $mount = $ENV{'HOME'} . '/bin/video/mediaPath';
 		my $path  = $ENV{'HOME'} . '/bin/video/mediaPath';
 		system($mount);
-		$MEDIA_PATH = `${cmd}`;
+		$MEDIA_PATH = `${path}`;
 	}
 	if (!$MEDIA_PATH || !-d $MEDIA_PATH) {
 		die("Unable to access media path\n");
