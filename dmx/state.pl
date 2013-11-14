@@ -15,8 +15,25 @@ use DMX;
 # Prototypes
 sub mtime($);
 
+# App config
+my $SOCK_TIMEOUT    = 5;
+my $DATA_DIR        = DMX::dataDir();
+my $CMD_FILE        = 'STATE';
+my $MAX_CMD_LEN     = 4096;
+my $RESET_CMD       = $ENV{'HOME'} . '/bin/video/dmx/reset.sh';
+my $MEDIA_MOUNT_CMD = $ENV{'HOME'} . '/bin/video/mountMedia';
+my $MEDIA_CHECK_CMD = $ENV{'HOME'} . '/bin/video/isMediaMounted';
+my $MEDIA_PATH_CMD  = $ENV{'HOME'} . '/bin/video/mediaPath';
+my $PUSH_TIMEOUT    = 20;
+
+# Ensure the media path is available before we get going
+system($MEDIA_MOUNT_CMD);
+my $MEDIA_PATH = `${MEDIA_PATH_CMD}`;
+if (!$MEDIA_PATH || !-d $MEDIA_PATH) {
+	die("Unable to access media path\n");
+}
+
 # User config
-my $MEDIA_PATH     = `~/bin/video/mediaPath`;
 my %DISPLAY_DEVS   = ('TV' => 1, 'PROJECTOR' => 1);
 my $DISPLAY        = undef();
 my $STATE_TIMEOUT  = 180;
@@ -89,15 +106,6 @@ my %EXTRAS = (
 		'TYPE'     => qr/^\<li\>Type\:(.+)$/m,
 	}
 );
-
-# App config
-my $SOCK_TIMEOUT = 5;
-my $DATA_DIR     = DMX::dataDir();
-my $CMD_FILE     = 'STATE';
-my $MAX_CMD_LEN  = 4096;
-my $RESET_CMD    = $ENV{'HOME'} . '/bin/video/dmx/reset.sh';
-my $MEDIA_CMD    = $ENV{'HOME'} . '/bin/video/mountMedia';
-my $PUSH_TIMEOUT = 20;
 
 # Debug
 my $DEBUG = 0;
@@ -197,9 +205,6 @@ foreach my $name (keys(%MON_FILES)) {
 	# Push FILE into the files hash
 	$files{$name} = \%file;
 }
-
-# Try to mount the media share
-system($MEDIA_CMD);
 
 # Delete any existing input files, to ensure our state is reset
 foreach my $file (values(%files)) {
