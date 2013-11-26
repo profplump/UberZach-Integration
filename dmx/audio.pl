@@ -20,6 +20,7 @@ my %DEVS = (
 );
 
 # Prototypes
+sub getAudio();
 sub setAudio($);
 
 # App config
@@ -65,8 +66,7 @@ while (1) {
 
 	# Grab the current audio output device
 	$deviceLast = $device;
-	$device     = capture(@AUDIO_GET);
-	$device =~ s/\n$//;
+	$device = getAudio();
 
 	# If the device has changed, save the state to disk
 	if ($deviceLast ne $device) {
@@ -152,10 +152,22 @@ while (1) {
 	}
 }
 
+sub getAudio() {
+	my $device = '';
+	timeout $TIMEOUT => sub {
+		$device = capture(@AUDIO_GET);
+	};
+	if ($@) {
+		die("Audio get command timed out\n");
+	}
+	$device =~ s/\n$//;
+	return $device;
+}
+
 sub setAudio($) {
 	my ($state) = @_;
 	timeout $TIMEOUT => sub {
-		IPC::System::Simple::system(@AUDIO_SET, $DEVS{$state});
+		system(@AUDIO_SET, $DEVS{$state});
 	};
 	if ($@) {
 		die("Audio set command timed out\n");
