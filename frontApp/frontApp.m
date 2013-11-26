@@ -39,7 +39,7 @@ int main(int argc, const char * argv[]) {
 		[appController setOutfile:str];
 	} else {
 		NSString *tmpDir = NSTemporaryDirectory();
-		[appController setOutfile:[NSString stringWithFormat:@"%@plexMonitor/frontApp", tmpDir]];
+		[appController setOutfile:[NSString stringWithFormat:@"%@plexMonitor/FRONT_APP", tmpDir]];
 	}
 
 	// Force an update at init

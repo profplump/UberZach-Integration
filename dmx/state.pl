@@ -80,6 +80,7 @@ if ($HOST =~ /loki/i) {
 	$MON_FILES{'FAN_CMD'} = 'EXISTS-ON';
 
 	# OS State
+	$MON_FILES{'FRONT_APP'}   = 'VALUE';
 	$MON_FILES{'COLOR'}       = 'VALUE';
 	$MON_FILES{'AUDIO'}       = 'VALUE';
 	$MON_FILES{'AUDIO_STATE'} = 'VALUE';
