@@ -47,6 +47,7 @@ if ($HOST =~ /loki/i) {
 {
 
 	# Plex
+	$MON_FILES{'PLEX'}    = 'NONE';
 	$MON_FILES{'GUI'}     = 'GUI';
 	$MON_FILES{'PLAYING'} = 'PLAYING';
 
@@ -431,6 +432,15 @@ while (1) {
 		}
 	}
 	$timeSinceUpdate = time() - $updateLast;
+
+	# Calculate the PLEX state
+	$files{'PLEX'}->{'value'} = 0;
+	if (exists($files{'FRONT_APP'})) {
+		if ($files{'FRONT_APP'}->{'value'} eq 'com.plexapp.plex' ||
+			$files{'FRONT_APP'}->{'value'} eq 'com.apple.ScreenSaver.Engine') {
+			$files{'PLEX'}->{'value'} = 1;
+		}
+	}
 
 	# Determine some intermediate state data
 	my $playing = 0;
