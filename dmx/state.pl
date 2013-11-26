@@ -436,8 +436,9 @@ while (1) {
 	# Calculate the PLEX state
 	$files{'PLEX'}->{'value'} = 0;
 	if (exists($files{'FRONT_APP'})) {
-		if ($files{'FRONT_APP'}->{'value'} eq 'com.plexapp.plex' ||
-			$files{'FRONT_APP'}->{'value'} eq 'com.apple.ScreenSaver.Engine') {
+		if (   $files{'FRONT_APP'}->{'value'} eq 'com.plexapp.plex'
+			|| $files{'FRONT_APP'}->{'value'} eq 'com.apple.ScreenSaver.Engine')
+		{
 			$files{'PLEX'}->{'value'} = 1;
 		}
 	}
