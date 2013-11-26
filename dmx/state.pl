@@ -434,6 +434,7 @@ while (1) {
 	$timeSinceUpdate = time() - $updateLast;
 
 	# Calculate the PLEX state
+	$files{'PLEX'}->{'last'} = $files{'PLEX'}->{'value'};
 	$files{'PLEX'}->{'value'} = 0;
 	if (exists($files{'FRONT_APP'})) {
 		if (   $files{'FRONT_APP'}->{'value'} eq 'com.plexapp.plex'
@@ -441,6 +442,9 @@ while (1) {
 		{
 			$files{'PLEX'}->{'value'} = 1;
 		}
+	}
+	if ($files{'PLEX'}->{'last'} != $files{'PLEX'}->{'value'}) {
+		$files{'PLEX'}->{'update'} = time();
 	}
 
 	# Determine some intermediate state data
@@ -452,6 +456,12 @@ while (1) {
 	if (exists($files{'PLAYING_TYPE'}) && $files{'PLAYING_TYPE'}->{'value'} ne 'Audio') {
 		$video = 1;
 	} elsif (!exists($files{'PLAYING_TYPE'})) {
+		$video = 1;
+	}
+
+	# Non-plex apps are always "playing" and "video"
+	if (exists($files{'PLEX'}) && $files{'PLEX'}->{'value'}) {
+		$playing = 1;
 		$video = 1;
 	}
 
