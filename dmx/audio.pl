@@ -4,6 +4,7 @@ use warnings;
 use File::Temp qw( tempfile );
 use Time::HiRes qw( usleep sleep time );
 use IPC::System::Simple qw( system capture );
+use Time::Out qw( timeout );
 
 # Local modules
 use Cwd qw(abs_path);
@@ -18,6 +19,9 @@ my %DEVS = (
 	'DEFAULT' => 'USB Audio CODEC ',
 );
 
+# Prototypes
+sub setAudio($);
+
 # App config
 my $DATA_DIR     = DMX::dataDir();
 my $STATE_SOCK   = 'AUDIO';
@@ -26,6 +30,7 @@ my $OUTPUT_STATE = $OUTPUT_FILE . '_STATE';
 my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
 my $DELAY        = 1;
+my $TIMEOUT      = 10;
 my @AUDIO_CMD    = ('/Users/tv/bin/SwitchAudioSource');
 my @AUDIO_GET    = (@AUDIO_CMD, '-c');
 my @AUDIO_SET    = (@AUDIO_CMD, '-s');
@@ -53,7 +58,7 @@ DMX::stateSubscribe($STATE_SOCK);
 # Always force the output to default at launch
 # In most components this happens before state subscription
 # but here we want to avoid making any changes while STATE is not available
-system(@AUDIO_SET, $DEVS{'DEFAULT'});
+setAudio('DEFAULT');
 
 # Loop forever
 while (1) {
@@ -95,6 +100,8 @@ while (1) {
 		$state = 'RAVE';
 	} elsif ($exists{'AUDIO_AMP'}) {
 		$state = 'AMP';
+	} elsif (!$exists{'PLEX'}) {
+		$state = 'AMP';
 	} else {
 		$state = 'DEFAULT';
 	}
@@ -120,11 +127,11 @@ while (1) {
 	# Update the audio output device
 	if ($update) {
 
-		# Update
+		# Update, dying on timeout
 		if ($DEBUG) {
 			print STDERR 'Setting output to: ' . $DEVS{$state} . "\n";
 		}
-		system(@AUDIO_SET, $DEVS{$state});
+		setAudio($state);
 
 		# Update the push time
 		$pushLast = time();
@@ -142,5 +149,15 @@ while (1) {
 		print $fh $state . "\n";
 		close($fh);
 		rename($tmp, $OUTPUT_STATE);
+	}
+}
+
+sub setAudio($) {
+	my ($state) = @_;
+	timeout $TIMEOUT => sub {
+		IPC::System::Simple::system(@AUDIO_SET, $DEVS{$state});
+	};
+	if ($@) {
+		die("Audio set command timed out\n");
 	}
 }
