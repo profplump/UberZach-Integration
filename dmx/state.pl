@@ -460,7 +460,7 @@ while (1) {
 	}
 
 	# Non-plex apps are always "playing" and "video"
-	if (exists($files{'PLEX'}) && $files{'PLEX'}->{'value'}) {
+	if (exists($files{'PLEX'}) && !$files{'PLEX'}->{'value'}) {
 		$playing = 1;
 		$video = 1;
 	}
