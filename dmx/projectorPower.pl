@@ -137,7 +137,7 @@ while (1) {
 
 	# Calculate the color mode
 	# PLAY for normal playback
-	# HIGH when playing and LIGHTS
+	# HIGH when playing and LIGHTS || BRIGHT
 	# LOW for audio, and when we're half way to the timeout (to save the bulb)
 	# HIGH when the GUI is up
 	# PLAY if we haven't figured out what else to do
@@ -156,7 +156,7 @@ while (1) {
 	# If playLights was set, choose the color mode based on the LIGHTS setting
 	if ($playLights) {
 		$color = $COLOR_PLAY;
-		if ($exists{'LIGHTS'}) {
+		if ($exists{'LIGHTS'} || $exists{'BRIGHT'}) {
 			$color = $COLOR_HIGH;
 		}
 	}

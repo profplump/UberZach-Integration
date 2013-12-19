@@ -74,6 +74,7 @@ if ($HOST =~ /loki/i) {
 
 	# A/V Effects
 	$MON_FILES{'LIGHTS'} = 'EXISTS-TIMEOUT';
+	$MON_FILES{'BRIGHT'} = 'EXISTS-TIMEOUT';
 	$MON_FILES{'RAVE'}   = 'EXISTS';
 	$MON_FILES{'EFFECT'} = 'EXISTS';
 
