@@ -5,6 +5,7 @@ use IO::Select;
 use File::Basename;
 use File::Temp qw( tempfile );
 use Sys::Hostname;
+use IPC::System::Simple qw( system capture );
 
 # Local modules
 use Cwd qw(abs_path);
@@ -31,9 +32,7 @@ if ($HOST =~ /loki/i) {
 	my $MEDIA_PATH = undef();
 	{
 		my $mount = $ENV{'HOME'} . '/bin/video/mediaPath';
-		my $path  = $ENV{'HOME'} . '/bin/video/mediaPath';
-		system($mount);
-		$MEDIA_PATH = `${path}`;
+		$MEDIA_PATH = capture($mount);
 	}
 	if (!$MEDIA_PATH || !-d $MEDIA_PATH) {
 		die("Unable to access media path\n");
@@ -52,11 +51,11 @@ if ($HOST =~ /loki/i) {
 	$MON_FILES{'PLAYING'} = 'PLAYING';
 
 	# RiffTrax
-	$MON_FILES{'RIFF'} = 'VALUE';
+	$MON_FILES{'RIFF'} = 'VALUE-NOUPDATE';
 
 	# Motion detection
 	$MON_FILES{'MOTION'}    = 'MTIME';
-	$MON_FILES{'NO_MOTION'} = 'EXISTS';
+	$MON_FILES{'NO_MOTION'} = 'EXISTS-NOUPDATE';
 
 	# Projector
 	$MON_FILES{'PROJECTOR'}       = 'STATUS';
@@ -82,10 +81,10 @@ if ($HOST =~ /loki/i) {
 	$MON_FILES{'FAN_CMD'} = 'EXISTS-ON';
 
 	# OS State
-	$MON_FILES{'FRONT_APP'}   = 'VALUE';
-	$MON_FILES{'COLOR'}       = 'VALUE';
-	$MON_FILES{'AUDIO'}       = 'VALUE';
-	$MON_FILES{'AUDIO_STATE'} = 'VALUE';
+	$MON_FILES{'FRONT_APP'}   = 'VALUE-NOUPDATE';
+	$MON_FILES{'COLOR'}       = 'VALUE-NOUPDATE';
+	$MON_FILES{'AUDIO'}       = 'VALUE-NOUPDATE';
+	$MON_FILES{'AUDIO_STATE'} = 'VALUE-NOUPDATE';
 
 	# TV
 	$MON_FILES{'TV'}     = 'STATUS';
@@ -169,6 +168,7 @@ foreach my $name (keys(%MON_FILES)) {
 		'mtime'     => 0,
 		'gui'       => 0,
 		'playing'   => 0,
+		'no_update' => 0,
 	);
 	if ($file{'type'} =~ /\bSTATUS\b/i) {
 		$attr{'status'} = 1;
@@ -196,6 +196,9 @@ foreach my $name (keys(%MON_FILES)) {
 	}
 	if ($file{'type'} =~ /\bPLAYING\b/i) {
 		$attr{'playing'} = 1;
+	}
+	if ($file{'type'} =~ /\bNOUPDATE\b/i) {
+		$attr{'no_update'} = 1;
 	}
 
 	# Cross-match some data types for easy of use
@@ -426,9 +429,9 @@ while (1) {
 		}
 	}
 
-	# Set the global update timestamp
+	# Set the global update timestamp, excluding files marked NOUPDATE
 	foreach my $file (values(%files)) {
-		if ($file->{'update'} > $updateLast) {
+		if ($file->{'update'} > $updateLast && !$file->{'attr'}->{'no_update'}) {
 			$updateLast = $file->{'update'};
 		}
 	}
