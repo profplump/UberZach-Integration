@@ -9,10 +9,10 @@ use lib dirname(abs_path($0));
 use DMX;
 
 # Config
-my $TIMEOUT     = 900;
-my $COUNTDOWN   = 119;
-my $OFF_DELAY   = 15;
-my $CMD_DELAY   = 20;
+my $TIMEOUT   = 900;
+my $COUNTDOWN = 119;
+my $OFF_DELAY = 15;
+my $CMD_DELAY = 20;
 
 # Available color modes, bright to dark:
 #	DYNAMIC
@@ -21,8 +21,8 @@ my $CMD_DELAY   = 20;
 #	THEATER_BLACK_1
 #
 # Color modes by proportion of lamp life
-my $LAMP_LIFE   = 2000;
-my %COLORS      = (
+my $LAMP_LIFE = 2000;
+my %COLORS    = (
 	'0.425' => {
 		'high' => 'THEATER',
 		'play' => 'THEATER_BLACK_1',
@@ -75,7 +75,7 @@ my $lastAnnounce = 0;
 my $lastUser     = time();
 my $shutdown     = 0;
 my $life         = 0;
-my @color_sets   = sort {$a <=> $b} keys(%COLORS);
+my @color_sets   = sort { $a <=> $b } keys(%COLORS);
 my $color_set    = $color_sets[0];
 my $color        = $COLORS{$color_set}{'low'};
 
@@ -168,7 +168,7 @@ while (1) {
 		}
 		my $max_set_num = scalar(@color_sets) - 1;
 		$color_set = $max_set_num;
-		for (my $i = 0; $i < $max_set_num; $i++) {
+		for (my $i = 0 ; $i < $max_set_num ; $i++) {
 			if ($life < $color_sets[$i]) {
 				$color_set = $color_sets[$i];
 				last;
@@ -197,6 +197,7 @@ while (1) {
 	} else {
 		$playLights = 1;
 	}
+
 	# If playLights was set, choose the color mode based on the LIGHTS setting
 	if ($playLights) {
 		$color = $COLORS{$color_set}{'play'};
