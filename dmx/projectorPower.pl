@@ -14,9 +14,15 @@ my $COUNTDOWN   = 119;
 my $OFF_DELAY   = 15;
 my $CMD_DELAY   = 20;
 my $COLOR_HIGH  = 'NATURAL';
-my $COLOR_PLAY  = 'THEATER_BLACK_1';
+my $COLOR_PLAY  = 'THEATER';
 my $COLOR_LOW   = 'THEATER_BLACK_1';
 my $LAMP_LIFE   = 2000;
+
+# Available color modes, bright to dark:
+# DYNAMIC
+# NATURAL
+# THEATER
+# THEATER_BLACK_1
 
 # App config
 my $DATA_DIR     = DMX::dataDir();
