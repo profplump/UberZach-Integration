@@ -11,6 +11,11 @@ UNWATCHED_RETRIES=5
 MIN_UNWATCHED_COUNT=10
 ADMIN_EMAIL="zach@kotlarek.com"
 
+# Heady allows 0 unwatched
+if hostname | grep -qi heady; then
+	MIN_UNWATCHED_COUNT=0
+fi
+
 # Command-line config
 LOOP=-1
 if [ "${1}" ]; then
