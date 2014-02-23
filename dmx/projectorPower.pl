@@ -28,12 +28,12 @@ my %COLORS    = (
 		'play' => 'THEATER_BLACK_1',
 		'low'  => 'THEATER_BLACK_1',
 	},
-	'0.675' => {
+	'0.550' => {
 		'high' => 'NATURAL',
 		'play' => 'THEATER',
 		'low'  => 'THEATER_BLACK_1',
 	},
-	'0.875' => {
+	'0.675' => {
 		'high' => 'DYNAMIC',
 		'play' => 'THEATER',
 		'low'  => 'THEATER_BLACK_1',
