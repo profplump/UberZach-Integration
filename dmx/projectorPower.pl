@@ -55,7 +55,7 @@ sub sayShutdown($);
 # Debug
 my $DEBUG = 0;
 if ($ENV{'DEBUG'}) {
-	$DEBUG = 1;
+$DEBUG = 1;
 }
 
 # Sockets
@@ -167,7 +167,7 @@ while (1) {
 			print STDERR 'Lamp life: ' . $life . "%\n";
 		}
 		my $max_set_num = scalar(@color_sets) - 1;
-		$color_set = $max_set_num;
+		$color_set = $color_sets[$max_set_num];
 		for (my $i = 0 ; $i < $max_set_num ; $i++) {
 			if ($life < $color_sets[$i]) {
 				$color_set = $color_sets[$i];
@@ -175,7 +175,7 @@ while (1) {
 			}
 		}
 		if ($DEBUG) {
-			print STDERR 'Color set: ' . $color_set . "%\n";
+			print STDERR 'Color set: ' . $color_set . "\n";
 		}
 	}
 
