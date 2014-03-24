@@ -21,21 +21,26 @@ my $CMD_DELAY = 20;
 #	THEATER_BLACK_1
 #
 # Color modes by proportion of lamp life
-my $LAMP_LIFE = 2000;
+my $LAMP_LIFE = 1500;
 my %COLORS    = (
-	'0.425' => {
+	'0.500' => {
 		'high' => 'THEATER',
 		'play' => 'THEATER_BLACK_1',
 		'low'  => 'THEATER_BLACK_1',
 	},
-	'0.550' => {
+	'0.600' => {
 		'high' => 'NATURAL',
 		'play' => 'THEATER',
 		'low'  => 'THEATER_BLACK_1',
 	},
-	'0.675' => {
+	'0.700' => {
 		'high' => 'DYNAMIC',
-		'play' => 'THEATER',
+		'play' => 'NATURAL',
+		'low'  => 'THEATER_BLACK_1',
+	},
+	'0.800' => {
+		'high' => 'DYNAMIC',
+		'play' => 'DYNAMIC',
 		'low'  => 'THEATER_BLACK_1',
 	},
 );
@@ -55,7 +60,7 @@ sub sayShutdown($);
 # Debug
 my $DEBUG = 0;
 if ($ENV{'DEBUG'}) {
-$DEBUG = 1;
+	$DEBUG = 1;
 }
 
 # Sockets
@@ -164,7 +169,7 @@ while (1) {
 	if (exists($exists{'PROJECTOR_LAMP'})) {
 		$life = $exists{'PROJECTOR_LAMP'} / $LAMP_LIFE;
 		if ($DEBUG) {
-			print STDERR 'Lamp life: ' . $life . "%\n";
+			print STDERR 'Lamp life: ' . ($life * 100) . "%\n";
 		}
 		my $max_set_num = scalar(@color_sets) - 1;
 		$color_set = $color_sets[$max_set_num];
