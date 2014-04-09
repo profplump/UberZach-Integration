@@ -84,12 +84,15 @@ static void sockCallback (CFSocketRef sock, CFSocketCallBackType type, CFDataRef
 @end
 
 int main(int argc, const char *argv[]) {
-	if (argc < 2) {
-		return -1;
+
+	// Construct a default socket path or use the provided one
+	NSString *str;
+	if (argc > 1) {
+		str = [NSString stringWithUTF8String: argv[1]];
+	} else {
+		NSString *tmpDir = NSTemporaryDirectory();
+		str = [NSString stringWithFormat:@"%@plexMonitor/SPEAK.socket", tmpDir];
 	}
-		
-	// Convert from c-string to NSString
-	NSString *str = [NSString stringWithUTF8String: argv[1]];
 	
 	// Init the speech engine
 	synth = [[NSSpeechSynthesizer alloc] init];
