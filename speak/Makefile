@@ -1,17 +1,17 @@
 STD_FLAGS=-fobjc-arc
 FRAMES=-framework AppKit
 
-default: speak
+default: speak cli
 .PHONY: clean
 
 clean:
-	rm -f *.o speak say
+	rm -f *.o speak cli
 
-say.o: say.m
-	gcc -c say.m
+cli.o: cli.m
+	gcc -c cli.m
 
-say: say.o
-	gcc $(FRAMES) -o say say.o
+cli: cli.o
+	gcc $(FRAMES) -o cli cli.o
 
 speak.o: speak.m
 	gcc $(STD_FLAGS) -c speak.m
