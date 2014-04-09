@@ -23,6 +23,7 @@ chomp($TEMP_DIR);
 my $DATA_DIR    = $TEMP_DIR . 'plexMonitor/';
 my $DMX_SOCK    = 'DMX';
 my $SUB_SOCK    = 'STATE';
+my $SPEAK_SOCK  = undef();
 my %CHANNEL_ADJ = (
 	'13' => 1.00,
 	'14' => 1.14,
@@ -37,7 +38,6 @@ if (!-d $DATA_DIR) {
 # State
 my $DMX_FH = undef();
 my $SELECT = undef();
-my %SAY    = ();
 
 # Data directory
 sub dataDir() {
@@ -254,9 +254,6 @@ sub readState($$$$) {
 	my ($delay, $exists, $mtime, $valid) = @_;
 	my $cmdState = undef();
 
-	# Cleanup previous say calls
-	sayCleanup();
-
 	# Wait for state updates
 	my @ready_clients = $SELECT->can_read($delay);
 	foreach my $fh (@ready_clients) {
@@ -313,14 +310,6 @@ sub readState($$$$) {
 	return $cmdState;
 }
 
-# Reap zombie children
-sub sayCleanup() {
-	foreach my $pid (keys(%SAY)) {
-		waitpid($pid, POSIX::WNOHANG);
-		delete($SAY{$pid});
-	}
-}
-
 # Speak
 sub say($) {
 	my ($str) = @_;
@@ -328,19 +317,12 @@ sub say($) {
 		print STDERR 'Say: ' . $str . "\n";
 	}
 
-	# Cleanup previous say calls
-	sayCleanup();
+	if (!$SPEAK_SOCK) {
+		$SPEAK_SOCK = DMX::clientSock('SPEAK');
+	}
 
-	# Fork and speak in the background
-	my $pid = fork();
-	if (!defined($pid)) {
-		die('Unable to fork: ' . $! . "\n");
-	}
-	if (!$pid) {
-		exec('say', $str);
-	} else {
-		$SAY{$pid} = 1;
-	}
+	$SPEAK_SOCK->send($str)
+	  or die('Unable to write command to socket: SPEAK: ' . $str . ": ${!}\n");
 }
 
 # Always return true
