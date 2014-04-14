@@ -1,17 +1,19 @@
 #!/bin/bash
 
-NUM_EPISODES=10
 HOST="http://beddy.uberzach.com:32400"
 
+# Select a configuration mode
 URL1="${HOST}/library/sections/2/recentlyViewedShows/"
 URL2_POST="allLeaves?unwatched=1"
 ELEMENT="Directory"
+NUM_EPISODES=5
 MOVIES=0
 if echo "${1}" | grep -iq Movie; then
 	MOVIES=1
 	URL1="${HOST}/library/sections/1/recentlyAdded/"
 	URL2_POST=""
 	ELEMENT="Video"
+	NUM_EPISODES=10
 fi
 
 SERIES="`curl --silent "${URL1}" | \
