@@ -34,6 +34,7 @@ if [ "${MOVIES}" -gt 0 ]; then
 	SERIES="${UNWATCHED}"
 fi
 
+nscount=0
 IFS=$'\n'
 for i in $SERIES; do
 	FILES="`curl --silent "${HOST}/library/metadata/${i}/${URL2_POST}" | \
@@ -44,20 +45,28 @@ for i in $SERIES; do
 	scounts=()
 	IFS=$'\n'
 	for j in $FILES; do
-		# Find the season number, or assume 0 if none is available
+		# Find the season number and increment the count
+		# Account no-season items (i.e. movies) separately
 		season="`echo "${j}" | sed 's%^.*/Season \([0-9]*\)/.*$%\1%'`"
 		if ! echo "${season}" | grep -q '^[0-9]*$'; then
-			season=0
+			season=-1
+			nscount=$(( $nscount + 1 ))
+		else
+			scounts[$season]=$(( ${scounts[$season]} + 1 ))
 		fi
 
+		# For no-season items, output only NUM_EPISODES total
+		if [ $season -lt 0 ]; then
+			if [ $nscount -gt $NUM_EPISODES ]; then
+				continue
+			fi
 		# Only output NUM_EPISODES files per season
 		# This allows discontinous output, but that's desirable compared to only getting season 0
-		scounts[$season]=$(( ${scounts[$season]} + 1 ))
-		if [ ${scounts[$season]} -gt $NUM_EPISODES ]; then
+		elif [ ${scounts[$season]} -gt $NUM_EPISODES ]; then
 			continue
 		fi
 
-		# If we're still around, this is a show we want
+		# If we're still around, this is an item we want
 		echo "${j}"
 	done
 done
