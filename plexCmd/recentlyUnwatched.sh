@@ -1,7 +1,6 @@
 #!/bin/bash
 
 NUM_EPISODES=10
-MAX_RESULTS=50
 HOST="http://beddy.uberzach.com:32400"
 
 URL1="${HOST}/library/sections/2/recentlyViewedShows/"
@@ -17,7 +16,6 @@ fi
 
 SERIES="`curl --silent "${URL1}" | \
 	grep "<${ELEMENT} " | \
-	head -n "${MAX_RESULTS}" | \
 	sed 's%^.*key="/library/metadata/\([0-9]*\).*$%\1%'`"
 
 # Movies need an intermediate step
@@ -26,7 +24,6 @@ if [ "${MOVIES}" -gt 0 ]; then
 	for i in $SERIES; do
 		MOVIE="`curl --silent "${HOST}/library/metadata/${i}/" | \
 			grep "<${ELEMENT} " | \
-			head -n "${MAX_RESULTS}" | \
 			grep -v 'lastViewedAt="' | \
 			sed 's%^.*key="/library/metadata/\([0-9]*\).*$%\1%'`"
 
@@ -42,11 +39,25 @@ for i in $SERIES; do
 	FILES="`curl --silent "${HOST}/library/metadata/${i}/${URL2_POST}" | \
 		grep '<Part ' | \
 		sed 's%^.*file="\([^\"]*\)".*$%\1%' | \
-		head -n "${NUM_EPISODES}" | \
 		sed "s%^.*/media/%%"`"
 
+	scounts=()
 	IFS=$'\n'
 	for j in $FILES; do
+		# Find the season number, or assume 0 if none is available
+		season="`echo "${j}" | sed 's%^.*/Season \([0-9]*\)/.*$%\1%'`"
+		if ! echo "${season}" | grep -q '^[0-9]*$'; then
+			season=0
+		fi
+
+		# Only output NUM_EPISODES files per season
+		# This allows discontinous output, but that's desirable compared to only getting season 0
+		scounts[$season]=$(( ${scounts[$season]} + 1 ))
+		if [ ${scounts[$season]} -gt $NUM_EPISODES ]; then
+			continue
+		fi
+
+		# If we're still around, this is a show we want
 		echo "${j}"
 	done
 done
