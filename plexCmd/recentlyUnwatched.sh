@@ -1,18 +1,18 @@
 #!/bin/bash
 
 NUM_EPISODES=10
-MAX_RESULTS=25
+MAX_RESULTS=50
 HOST="http://beddy.uberzach.com:32400"
 
 URL1="${HOST}/library/sections/2/recentlyViewedShows/"
 URL2_POST="allLeaves?unwatched=1"
 ELEMENT="Directory"
-DIR="TV"
+MOVIES=0
 if echo "${1}" | grep -iq Movie; then
+	MOVIES=1
 	URL1="${HOST}/library/sections/1/recentlyAdded/"
 	URL2_POST=""
 	ELEMENT="Video"
-	DIR="Movies"
 fi
 
 SERIES="`curl --silent "${URL1}" | \
@@ -21,7 +21,7 @@ SERIES="`curl --silent "${URL1}" | \
 	sed 's%^.*key="/library/metadata/\([0-9]*\).*$%\1%'`"
 
 # Movies need an intermediate step
-if [ "${DIR}" == "Movies" ]; then
+if [ "${MOVIES}" -gt 0 ]; then
 	IFS=$'\n'
 	for i in $SERIES; do
 		MOVIE="`curl --silent "${HOST}/library/metadata/${i}/" | \
@@ -43,7 +43,7 @@ for i in $SERIES; do
 		grep '<Part ' | \
 		sed 's%^.*file="\([^\"]*\)".*$%\1%' | \
 		head -n "${NUM_EPISODES}" | \
-		sed "s%^.*/media/${DIR}/%%"`"
+		sed "s%^.*/media/%%"`"
 
 	IFS=$'\n'
 	for j in $FILES; do
