@@ -69,6 +69,6 @@ for i in $SERIES; do
 		fi
 
 		# If we're still around, this is an item we want
-		echo "${j}"
+		echo "${j}" | perl -pe 's/%([0-9a-f]{2})/sprintf("%s", pack("H2",$1))/eig'
 	done
 done
