@@ -1,8 +1,8 @@
 #!/bin/bash
 
 HOST="http://beddy.uberzach.com:32400"
-NUM_SERIES=10
-NUM_EPISODES=5
+NUM_SERIES=15
+NUM_EPISODES=6
 MAX_RESULTS=100
 
 # Select a configuration mode
@@ -68,12 +68,13 @@ for i in $SERIES; do
 		if [ $SERIES_COUNT -gt $NUM_SERIES ]; then
 			continue
 		# Only output NUM_EPISODES files per season
-		# This allows discontinous output, but that's desirable compared to only getting season 0
 		elif [ $SEASON -ge 0 ] && [ ${SEASON_COUNTS[$SEASON]} -gt $NUM_EPISODES ]; then
 			continue
 		fi
 
-		# If we're still around, this is an item we want
-		echo "${j}" | perl -pe 's/%([0-9a-f]{2})/sprintf("%s", pack("H2",$1))/eig'
+		# Print the name, decoding both hex encoding and XML entities
+		echo "${j}" | \
+			perl -pe 's/%([0-9a-f]{2})/sprintf("%s", pack("H2",$1))/eig' | \
+			perl -e 'use XML::Entities; while (<>) { print XML::Entities::decode('all', $_); }'
 	done
 done
