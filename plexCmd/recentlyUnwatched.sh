@@ -3,38 +3,44 @@
 HOST="http://beddy.uberzach.com:32400"
 NUM_SERIES=10
 NUM_EPISODES=5
+MAX_RESULTS=100
 
 # Select a configuration mode
-URL1="${HOST}/library/sections/2/recentlyViewedShows/"
-URL2_POST="allLeaves?unwatched=1"
-ELEMENT="Directory"
-MOVIES=0
+URL1="${HOST}/library/sections/2/onDeck/"
+URL2_POST="children/allLeaves?unwatched=1"
 if echo "${1}" | grep -iq Movie; then
-	MOVIES=1
 	URL1="${HOST}/library/sections/1/recentlyAdded/"
 	URL2_POST=""
-	ELEMENT="Video"
 fi
 
-SERIES="`curl --silent "${URL1}" | \
-	grep "<${ELEMENT} " | \
-	sed 's%^.*key="/library/metadata/\([0-9]*\).*$%\1%'`"
+ITEMS="`curl --silent "${URL1}" | \
+	grep '<Video ' | \
+	head -n "${MAX_RESULTS}" | \
+	sed 's%^.* ratingKey="\([0-9]*\)".*$%\1%'`"
 
-# Movies need an intermediate step
-if [ "${MOVIES}" -gt 0 ]; then
-	IFS=$'\n'
-	for i in $SERIES; do
-		MOVIE="`curl --silent "${HOST}/library/metadata/${i}/" | \
-			grep "<${ELEMENT} " | \
+# Resolve the series metadata item
+SERIES=""
+IFS=$'\n'
+for i in $ITEMS; do
+	ITEM="`curl --silent "${HOST}/library/metadata/${i}/" | \
+		grep '<Video ' | \
+		head -n "${MAX_RESULTS}"`"
+	if echo "${ITEM}" | grep -q 'type="episode"'; then
+		KEY="`echo "${ITEM}" | \
+			sed 's%^.* parentRatingKey="\([0-9]*\)".*$%\1%'`"
+	elif  echo "${ITEM}" | grep -q 'type="movie"'; then
+		KEY="`echo "${ITEM}" | \
 			grep -v 'lastViewedAt="' | \
-			sed 's%^.*key="/library/metadata/\([0-9]*\).*$%\1%'`"
+			sed 's%^.* ratingKey="\([0-9]*\)".*$%\1%'`"
+	else
+		echo "Unknown type: ${ITEM}" 1>&2
+		exit -1
+	fi
 
-		if [ -n "${MOVIE}" ]; then
-			UNWATCHED="${UNWATCHED}${MOVIE}"$'\n'
-		fi
-	done
-	SERIES="${UNWATCHED}"
-fi
+	if [ -n "${KEY}" ]; then
+		SERIES="${SERIES}${KEY}"$'\n'
+	fi
+done
 
 SERIES_COUNT=0
 IFS=$'\n'
@@ -42,6 +48,7 @@ for i in $SERIES; do
 	SERIES_COUNT=$(( $SERIES_COUNT + 1 ))
 	FILES="`curl --silent "${HOST}/library/metadata/${i}/${URL2_POST}" | \
 		grep '<Part ' | \
+		head -n "${MAX_RESULTS}" | \
 		sed 's%^.*file="\([^\"]*\)".*$%\1%' | \
 		sed "s%^.*/media/%%"`"
 
@@ -58,13 +65,11 @@ for i in $SERIES; do
 		fi
 
 		# Limit the number of series (or movies)
-		if [ $SEASON -lt 0 ]; then
-			if [ $SERIES_COUNT -gt $NUM_SERIES ]; then
-				continue
-			fi
+		if [ $SERIES_COUNT -gt $NUM_SERIES ]; then
+			continue
 		# Only output NUM_EPISODES files per season
 		# This allows discontinous output, but that's desirable compared to only getting season 0
-		elif [ ${SEASON_COUNTS[$SEASON]} -gt $NUM_EPISODES ]; then
+		elif [ $SEASON -ge 0 ] && [ ${SEASON_COUNTS[$SEASON]} -gt $NUM_EPISODES ]; then
 			continue
 		fi
 
