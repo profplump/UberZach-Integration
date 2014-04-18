@@ -1,7 +1,7 @@
 #!/bin/bash
 
 HOST="http://beddy.uberzach.com:32400"
-CURL_OPTS="--silent --connect-timeout 5 --max-time 10"
+CURL_OPTS=(--silent --connect-timeout 5 --max-time 10)
 NUM_SERIES=15
 NUM_EPISODES=6
 MAX_RESULTS=100
@@ -15,7 +15,7 @@ if echo "${1}" | grep -iq Movie; then
 fi
 
 # Find recent items
-ITEMS="`curl ${CURL_OPTS} "${URL1}" | \
+ITEMS="`curl ${CURL_OPTS[@]} "${URL1}" | \
 	grep '<Video ' | \
 	head -n "${MAX_RESULTS}" | \
 	sed 's%^.* ratingKey="\([0-9]*\)".*$%\1%'`"
@@ -24,7 +24,7 @@ ITEMS="`curl ${CURL_OPTS} "${URL1}" | \
 SERIES=""
 IFS=$'\n'
 for i in $ITEMS; do
-	ITEM="`curl ${CURL_OPTS} "${HOST}/library/metadata/${i}/" | \
+	ITEM="`curl ${CURL_OPTS[@]} "${HOST}/library/metadata/${i}/" | \
 		grep '<Video ' | \
 		head -n "${MAX_RESULTS}"`"
 	if echo "${ITEM}" | grep -q 'type="episode"'; then
@@ -48,7 +48,7 @@ SERIES_COUNT=0
 IFS=$'\n'
 for i in $SERIES; do
 	SERIES_COUNT=$(( $SERIES_COUNT + 1 ))
-	FILES="`curl ${CURL_OPTS} "${HOST}/library/metadata/${i}/${URL2_POST}" | \
+	FILES="`curl ${CURL_OPTS[@]} "${HOST}/library/metadata/${i}/${URL2_POST}" | \
 		grep '<Part ' | \
 		head -n "${MAX_RESULTS}" | \
 		sed 's%^.*file="\([^\"]*\)".*$%\1%' | \
