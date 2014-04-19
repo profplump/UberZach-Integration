@@ -1,0 +1,8 @@
+#!/bin/bash
+
+TMPDIR="`tempDir.sh`"
+if [ -z "${TMPDIR}" ] || [ ! -S "${TMPDIR}/plexMonitor/SPEAK.socket" ]; then
+	exec say.orig ${@}
+fi
+
+exec ~/bin/video/dmx/cmd.pl SPEAK "${1}"

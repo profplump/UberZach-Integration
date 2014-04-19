@@ -5,6 +5,7 @@ use IO::Select;
 use File::Basename;
 use File::Temp qw( tempfile );
 use Sys::Hostname;
+use IPC::System::Simple qw( system capture );
 
 # Local modules
 use Cwd qw(abs_path);
@@ -16,7 +17,6 @@ use DMX;
 sub mtime($);
 
 # User config
-my $MEDIA_PATH     = `~/bin/video/mediaPath`;
 my %DISPLAY_DEVS   = ('TV' => 1, 'PROJECTOR' => 1);
 my $DISPLAY        = undef();
 my $STATE_TIMEOUT  = 180;
@@ -27,6 +27,18 @@ my %MON_FILES      = ();
 # This is necessary to avoid contention on shared disks
 my $HOST = Sys::Hostname::hostname();
 if ($HOST =~ /loki/i) {
+
+	# Ensure the media path is available before we get going
+	my $MEDIA_PATH = undef();
+	{
+		my $mount = $ENV{'HOME'} . '/bin/video/mediaPath';
+		$MEDIA_PATH = capture($mount);
+	}
+	if (!$MEDIA_PATH || !-d $MEDIA_PATH) {
+		die("Unable to access media path\n");
+	}
+
+	# Garage door opener
 	$MON_FILES{ $MEDIA_PATH . '/DMX/cmd/GARAGE_CMD' } = 'EXISTS-VALUE-CLEAR';
 }
 
@@ -34,15 +46,16 @@ if ($HOST =~ /loki/i) {
 {
 
 	# Plex
+	$MON_FILES{'PLEX'}    = 'NONE';
 	$MON_FILES{'GUI'}     = 'GUI';
 	$MON_FILES{'PLAYING'} = 'PLAYING';
 
 	# RiffTrax
-	$MON_FILES{'RIFF'} = 'VALUE';
+	$MON_FILES{'RIFF'} = 'VALUE-NOUPDATE';
 
 	# Motion detection
 	$MON_FILES{'MOTION'}    = 'MTIME';
-	$MON_FILES{'NO_MOTION'} = 'EXISTS';
+	$MON_FILES{'NO_MOTION'} = 'EXISTS-NOUPDATE';
 
 	# Projector
 	$MON_FILES{'PROJECTOR'}       = 'STATUS';
@@ -60,6 +73,7 @@ if ($HOST =~ /loki/i) {
 
 	# A/V Effects
 	$MON_FILES{'LIGHTS'} = 'EXISTS-TIMEOUT';
+	$MON_FILES{'BRIGHT'} = 'EXISTS-TIMEOUT';
 	$MON_FILES{'RAVE'}   = 'EXISTS';
 	$MON_FILES{'EFFECT'} = 'EXISTS';
 
@@ -67,9 +81,10 @@ if ($HOST =~ /loki/i) {
 	$MON_FILES{'FAN_CMD'} = 'EXISTS-ON';
 
 	# OS State
-	$MON_FILES{'COLOR'}       = 'VALUE';
-	$MON_FILES{'AUDIO'}       = 'VALUE';
-	$MON_FILES{'AUDIO_STATE'} = 'VALUE';
+	$MON_FILES{'FRONT_APP'}   = 'VALUE-NOUPDATE';
+	$MON_FILES{'COLOR'}       = 'VALUE-NOUPDATE';
+	$MON_FILES{'AUDIO'}       = 'VALUE-NOUPDATE';
+	$MON_FILES{'AUDIO_STATE'} = 'VALUE-NOUPDATE';
 
 	# TV
 	$MON_FILES{'TV'}     = 'STATUS';
@@ -96,7 +111,6 @@ my $DATA_DIR     = DMX::dataDir();
 my $CMD_FILE     = 'STATE';
 my $MAX_CMD_LEN  = 4096;
 my $RESET_CMD    = $ENV{'HOME'} . '/bin/video/dmx/reset.sh';
-my $MEDIA_CMD    = $ENV{'HOME'} . '/bin/video/mountMedia';
 my $PUSH_TIMEOUT = 20;
 
 # Debug
@@ -154,6 +168,7 @@ foreach my $name (keys(%MON_FILES)) {
 		'mtime'     => 0,
 		'gui'       => 0,
 		'playing'   => 0,
+		'no_update' => 0,
 	);
 	if ($file{'type'} =~ /\bSTATUS\b/i) {
 		$attr{'status'} = 1;
@@ -182,6 +197,9 @@ foreach my $name (keys(%MON_FILES)) {
 	if ($file{'type'} =~ /\bPLAYING\b/i) {
 		$attr{'playing'} = 1;
 	}
+	if ($file{'type'} =~ /\bNOUPDATE\b/i) {
+		$attr{'no_update'} = 1;
+	}
 
 	# Cross-match some data types for easy of use
 	if ($attr{'value'} || $attr{'gui'} || $attr{'playing'}) {
@@ -197,9 +215,6 @@ foreach my $name (keys(%MON_FILES)) {
 	# Push FILE into the files hash
 	$files{$name} = \%file;
 }
-
-# Try to mount the media share
-system($MEDIA_CMD);
 
 # Delete any existing input files, to ensure our state is reset
 foreach my $file (values(%files)) {
@@ -414,13 +429,27 @@ while (1) {
 		}
 	}
 
-	# Set the global update timestamp
+	# Set the global update timestamp, excluding files marked NOUPDATE
 	foreach my $file (values(%files)) {
-		if ($file->{'update'} > $updateLast) {
+		if ($file->{'update'} > $updateLast && !$file->{'attr'}->{'no_update'}) {
 			$updateLast = $file->{'update'};
 		}
 	}
 	$timeSinceUpdate = time() - $updateLast;
+
+	# Calculate the PLEX state
+	$files{'PLEX'}->{'last'} = $files{'PLEX'}->{'value'};
+	$files{'PLEX'}->{'value'} = 0;
+	if (exists($files{'FRONT_APP'})) {
+		if (   $files{'FRONT_APP'}->{'value'} eq 'com.plexapp.plex'
+			|| $files{'FRONT_APP'}->{'value'} eq 'com.apple.ScreenSaver.Engine')
+		{
+			$files{'PLEX'}->{'value'} = 1;
+		}
+	}
+	if ($files{'PLEX'}->{'last'} != $files{'PLEX'}->{'value'}) {
+		$files{'PLEX'}->{'update'} = time();
+	}
 
 	# Determine some intermediate state data
 	my $playing = 0;
@@ -431,6 +460,12 @@ while (1) {
 	if (exists($files{'PLAYING_TYPE'}) && $files{'PLAYING_TYPE'}->{'value'} ne 'Audio') {
 		$video = 1;
 	} elsif (!exists($files{'PLAYING_TYPE'})) {
+		$video = 1;
+	}
+
+	# Non-plex apps are always "playing" and "video"
+	if (exists($files{'PLEX'}) && !$files{'PLEX'}->{'value'}) {
+		$playing = 1;
 		$video = 1;
 	}
 

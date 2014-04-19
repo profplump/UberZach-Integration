@@ -45,6 +45,11 @@ my %DIM            = (
 		{ 'channel' => 14, 'value' => 144, 'time' => 1000 },
 		{ 'channel' => 15, 'value' => 144, 'time' => 1000 },
 	],
+	'BRIGHT'    => [
+		{ 'channel' => 13, 'value' => 255, 'time' => 1000 },
+		{ 'channel' => 14, 'value' => 255, 'time' => 1000 },
+		{ 'channel' => 15, 'value' => 255, 'time' => 1000 },
+	],
 	'ERROR'    => [
 		{ 'channel' => 13, 'value' => 144, 'time' => 0 },
 		{ 'channel' => 14, 'value' => 255, 'time' => 0 },
@@ -127,15 +132,15 @@ while (1) {
 
 	# Calculate the new state
 	$stateLast = $state;
-	if ($exists{'LIGHTS'}) {
+	if ($exists{'BRIGHT'} || $exists{'LIGHTS'}) {
 		if ($newState eq 'PLAY') {
 			$newState = 'PLAY_HIGH';
-		} elsif ($newState eq 'OFF') {
-			$newState = 'MOTION';
-		}
-	} else {
-		if ($newState eq 'PLAY_HIGH') {
-			$newState = 'PLAY';
+		} else {
+			if ($exists{'BRIGHT'}) {
+				$newState = 'BRIGHT';
+			} else {
+				$newState = 'MOTION';
+			}
 		}
 	}
 	$state = $newState;

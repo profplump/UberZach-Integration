@@ -9,14 +9,41 @@ use lib dirname(abs_path($0));
 use DMX;
 
 # Config
-my $TIMEOUT     = 900;
-my $COUNTDOWN   = 119;
-my $OFF_DELAY   = 15;
-my $CMD_DELAY   = 20;
-my $COLOR_HIGH  = 'NATURAL';
-my $COLOR_PLAY  = 'THEATER_BLACK_1';
-my $COLOR_LOW   = 'THEATER_BLACK_1';
-my $LAMP_LIFE   = 2000;
+my $TIMEOUT   = 900;
+my $COUNTDOWN = 119;
+my $OFF_DELAY = 15;
+my $CMD_DELAY = 20;
+
+# Available color modes, bright to dark:
+#	DYNAMIC
+#	NATURAL
+#	THEATER
+#	THEATER_BLACK_1
+#
+# Color modes by proportion of lamp life
+my $LAMP_LIFE = 1500;
+my %COLORS    = (
+	'0.500' => {
+		'high' => 'THEATER',
+		'play' => 'THEATER_BLACK_1',
+		'low'  => 'THEATER_BLACK_1',
+	},
+	'0.600' => {
+		'high' => 'NATURAL',
+		'play' => 'THEATER',
+		'low'  => 'THEATER_BLACK_1',
+	},
+	'0.700' => {
+		'high' => 'DYNAMIC',
+		'play' => 'NATURAL',
+		'low'  => 'THEATER_BLACK_1',
+	},
+	'0.800' => {
+		'high' => 'DYNAMIC',
+		'play' => 'DYNAMIC',
+		'low'  => 'THEATER_BLACK_1',
+	},
+);
 
 # App config
 my $DATA_DIR     = DMX::dataDir();
@@ -52,7 +79,10 @@ my $update       = 0;
 my $lastAnnounce = 0;
 my $lastUser     = time();
 my $shutdown     = 0;
-my $color        = $COLOR_LOW;
+my $life         = 0;
+my @color_sets   = sort { $a <=> $b } keys(%COLORS);
+my $color_set    = $color_sets[0];
+my $color        = $COLORS{$color_set}{'low'};
 
 # Loop forever
 while (1) {
@@ -135,9 +165,28 @@ while (1) {
 		}
 	}
 
+	# Select a color set based on the lamp life
+	if (exists($exists{'PROJECTOR_LAMP'})) {
+		$life = $exists{'PROJECTOR_LAMP'} / $LAMP_LIFE;
+		if ($DEBUG) {
+			print STDERR 'Lamp life: ' . ($life * 100) . "%\n";
+		}
+		my $max_set_num = scalar(@color_sets) - 1;
+		$color_set = $color_sets[$max_set_num];
+		for (my $i = 0 ; $i < $max_set_num ; $i++) {
+			if ($life < $color_sets[$i]) {
+				$color_set = $color_sets[$i];
+				last;
+			}
+		}
+		if ($DEBUG) {
+			print STDERR 'Color set: ' . $color_set . "\n";
+		}
+	}
+
 	# Calculate the color mode
 	# PLAY for normal playback
-	# HIGH when playing and LIGHTS
+	# HIGH when playing and LIGHTS || BRIGHT
 	# LOW for audio, and when we're half way to the timeout (to save the bulb)
 	# HIGH when the GUI is up
 	# PLAY if we haven't figured out what else to do
@@ -145,20 +194,24 @@ while (1) {
 	if ($newState eq 'PLAY') {
 		$playLights = 1;
 	} elsif ($exists{'PLAYING_TYPE'} eq 'Audio') {
-		$color = $COLOR_LOW;
+		$color = $COLORS{$color_set}{'low'};
 	} elsif ($elapsed > $TIMEOUT / 2) {
-		$color = $COLOR_LOW;
+		$color = $COLORS{$color_set}{'low'};
 	} elsif ($exists{'GUI'}) {
-		$color = $COLOR_HIGH;
+		$color = $COLORS{$color_set}{'high'};
 	} else {
 		$playLights = 1;
 	}
+
 	# If playLights was set, choose the color mode based on the LIGHTS setting
 	if ($playLights) {
-		$color = $COLOR_PLAY;
-		if ($exists{'LIGHTS'}) {
-			$color = $COLOR_HIGH;
+		$color = $COLORS{$color_set}{'play'};
+		if ($exists{'LIGHTS'} || $exists{'BRIGHT'}) {
+			$color = $COLORS{$color_set}{'high'};
 		}
+	}
+	if ($DEBUG) {
+		print STDERR 'Selected color: ' . $color . "\n";
 	}
 
 	# Force updates on a periodic basis
@@ -242,11 +295,6 @@ while (1) {
 
 		# Announce lamp life status, if near/past $LAMP_LIFE
 		if (exists($exists{'PROJECTOR_LAMP'})) {
-			my $life = $exists{'PROJECTOR_LAMP'} / $LAMP_LIFE;
-			if ($DEBUG) {
-				print STDERR 'Lamp life: ' . $life . "%\n";
-			}
-
 			if ($life > 0.9) {
 				my $chance = ($life - 0.9) * 10;
 				if (rand(1) <= $chance) {

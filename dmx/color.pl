@@ -14,9 +14,10 @@ use DMX;
 # Config
 my $DISPLAY  = 1;
 my %PROFILES = (
-	'HIGH' => 'Epson-High',
-	'PLAY' => 'Epson-Theater',
-	'LOW'  => 'Epson-Theater_Black',
+	'DYNAMIC'        => 'Epson-High',
+	'NATURAL'        => 'Epson-High',
+	'THEATER'        => 'Epson-Theater',
+	'THEATER_BLACK'  => 'Epson-Theater_Black',
 );
 
 # App config
@@ -95,12 +96,10 @@ while (1) {
 
 	# Calculate the new state
 	$stateLast = $state;
-	if ($exists{'PROJECTOR_COLOR'} eq 'DYNAMIC') {
-		$state = 'HIGH';
-	} elsif ($exists{'PROJECTOR_COLOR'} eq 'THEATER') {
-		$state = 'PLAY';
+	if (exists($PROFILES{ $exists{'PROJECTOR_COLOR'} })) {
+		$state = $exists{'PROJECTOR_COLOR'};
 	} else {
-		$state = 'LOW';
+		$state = 'THEATER_BLACK';
 	}
 
 	# Force updates on a periodic basis

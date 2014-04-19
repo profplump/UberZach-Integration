@@ -15,6 +15,7 @@ my %DIM = (
 	'PLAY_HIGH' => [ { 'channel' => 4, 'value' => 48,  'time' => 500 }, ],
 	'PAUSE'     => [ { 'channel' => 4, 'value' => 96,  'time' => 6000, 'delay' => 9000 }, ],
 	'MOTION'    => [ { 'channel' => 4, 'value' => 128, 'time' => 2500 }, ],
+	'BRIGHT'    => [ { 'channel' => 4, 'value' => 255, 'time' => 2500 }, ],
 	'ERROR'     => [ { 'channel' => 4, 'value' => 255, 'time' => 0 }, ],
 );
 
@@ -85,20 +86,27 @@ while (1) {
 
 	# Calculate the new state
 	$stateLast = $state;
-	if ($exists{'LIGHTS'}) {
+	if ($exists{'LIGHTS'} || $exists{'BRIGHT'}) {
 		if ($newState eq 'PLAY') {
 			$newState = 'PLAY_HIGH';
-		} elsif ($newState eq 'OFF') {
-			$newState = 'MOTION';
-		}
-	} else {
-		if ($newState eq 'PLAY_HIGH') {
-			$newState = 'PLAY';
+		} else {
+			if ($exists{'BRIGHT'}) {
+				$newState = 'BRIGHT';
+			} else {
+				$newState = 'MOTION';
+			}
 		}
 	}
 	$state = $newState;
 
-	# Speak when LIGHTS changes
+	# Speak when LIGHTS or BRIGHT changes
+	if (exists($exists{'BRIGHT'}) && exists($last{'BRIGHT'}) && $exists{'BRIGHT'} ne $last{'BRIGHT'}) {
+		if ($exists{'BRIGHT'}) {
+			DMX::say('Lights - Full power');
+		} else {
+			DMX::say('Lights - Nominal power');
+		}
+	}
 	if (exists($exists{'LIGHTS'}) && exists($last{'LIGHTS'}) && $exists{'LIGHTS'} ne $last{'LIGHTS'}) {
 		if ($exists{'LIGHTS'}) {
 			DMX::say('Lights up');
