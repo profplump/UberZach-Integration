@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Config
-CURL_TIMEOUT=10
+CURL_TIMEOUT=15
 RESTART_DELAY=300
 PMS_URL="http://localhost:32400/"
 UNWATCHED_SECTION="2"
