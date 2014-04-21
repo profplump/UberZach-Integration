@@ -76,6 +76,7 @@ for i in $SERIES; do
 
 		# Print the name, decoding both hex encoding and XML entities
 		echo "${j}" | \
+			sed 's/%C3%A9/é/' | \
 			perl -pe 's/%([0-9a-f]{2})/sprintf("%s", pack("H2",$1))/eig' | \
 			perl -e 'use XML::Entities; while (<>) { print XML::Entities::decode('all', $_); }'
 	done
