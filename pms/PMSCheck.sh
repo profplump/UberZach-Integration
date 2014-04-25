@@ -7,7 +7,6 @@ PMS_URL="http://localhost:32400/"
 UNWATCHED_SECTION="2"
 UNWATCHED_SLEEP=60
 UNWATCHED_RETRIES=5
-UNWATCHED_TIMEOUT_FACTOR=2
 MIN_UNWATCHED_COUNT=10
 ADMIN_EMAIL="zach@kotlarek.com"
 
@@ -48,7 +47,7 @@ while [ $LOOP -ne 0 ]; do
 	fi
 
 	# Ask Plex for a list of unwatched TV series
-	UNWATCHED_TIMEOUT=$(( $CURL_TIMEOUT * $UNWATCHED_TIMEOUT_FACTOR ))
+	UNWATCHED_TIMEOUT=$(( $CURL_TIMEOUT ))
 	if [ -z "${FAILED}" ]; then
 		UNWATCHED_URL="${PMS_URL}library/sections/${UNWATCHED_SECTION}/all?unwatchedLeaves=1"
 		TRY=1
@@ -62,7 +61,7 @@ while [ $LOOP -ne 0 ]; do
 			else
 				sleep $UNWATCHED_SLEEP
 				FAILED="${FAILED} ${COUNT}"
-				UNWATCHED_TIMEOUT=$(( $UNWATCHED_TIMEOUT + $(( $CURL_TIMEOUT * $UNWATCHED_TIMEOUT_FACTOR )) ))
+				UNWATCHED_TIMEOUT=$(( $UNWATCHED_TIMEOUT + $CURL_TIMEOUT ))
 			fi
 		done
 	fi
@@ -86,7 +85,7 @@ while [ $LOOP -ne 0 ]; do
 		~/bin/video/pms/optimize.sh &
 
 	# If Plex was super slow, optimize it
-	elif [ $UNWATCHED_TIMEOUT -gt $(( $CURL_TIMEOUT * $UNWATCHED_TIMEOUT_FACTOR * $(( $UNWATCHED_RETRIES / 2 )) )) ]; then
+	elif [ $UNWATCHED_TIMEOUT -gt $(( $CURL_TIMEOUT * $(( $UNWATCHED_RETRIES / 2 )) )) ]; then
 		ERR_MSG="PMS is slow (${UNWATCHED_TIMEOUT}). Optimizing..."
 		echo "${ERR_MSG}" 1>&2
 
