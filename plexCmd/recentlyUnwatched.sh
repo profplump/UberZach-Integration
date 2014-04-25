@@ -1,7 +1,7 @@
 #!/bin/bash
 
-HOST="http://beddy.uberzach.com:32400"
-CURL_OPTS=(--silent --connect-timeout 5 --max-time 10)
+HOST="http://pms.uberzach.com:32400"
+CURL_OPTS=(--silent --connect-timeout 5 --max-time 30)
 NUM_SERIES=15
 NUM_EPISODES=6
 MAX_RESULTS=100
