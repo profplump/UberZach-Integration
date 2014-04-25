@@ -296,10 +296,7 @@ while (1) {
 		# Announce lamp life status, if near/past $LAMP_LIFE
 		if (exists($exists{'PROJECTOR_LAMP'})) {
 			if ($life > 0.9) {
-				my $chance = ($life - 0.9) * 10;
-				if (rand(1) <= $chance) {
-					DMX::say('Projector lamp has run for ' . int($life * 100) . '% of its projected life.');
-				}
+				DMX::say('Projector lamp has run for ' . int($life * 100) . '% of its projected life.');
 			}
 		}
 
