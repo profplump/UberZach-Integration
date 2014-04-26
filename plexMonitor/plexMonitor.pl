@@ -84,7 +84,7 @@ do {
 	}
 
 	# Get details about the player
-	if ($data{'playerid'}) {
+	if ($data{'playerid'} >= 0) {
 		$result = xbmcJSON('Player.GetProperties', { 'playerid' => $data{'playerid'}, 'properties' => [ 'time', 'type', 'speed' ] });
 		if (defined($result)) {
 			if (exists($result->{'time'})) {
