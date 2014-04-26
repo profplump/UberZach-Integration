@@ -11,4 +11,4 @@ fi
 killall Plex
 
 # Exec
-exec '/Applications/Zach/Media/Plex.app/Contents/MacOS/Plex'
+exec '/Applications/Zach/Media/Plex Home Theater.app/Contents/MacOS/Plex Home Theater'
