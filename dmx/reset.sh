@@ -11,3 +11,6 @@ done
 
 # Kill everything we found
 kill $PIDS
+
+# Always exit cleanly
+exit 0
