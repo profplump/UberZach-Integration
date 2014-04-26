@@ -438,7 +438,7 @@ while (1) {
 	$files{'PLEX'}->{'last'}  = $files{'PLEX'}->{'value'};
 	$files{'PLEX'}->{'value'} = 0;
 	if (exists($files{'FRONT_APP'})) {
-		if (   $files{'FRONT_APP'}->{'value'} eq 'com.plexapp.plex'
+		if (   $files{'FRONT_APP'}->{'value'} =~ 'com.plexapp.plexhometheater'
 			|| $files{'FRONT_APP'}->{'value'} eq 'com.apple.ScreenSaver.Engine')
 		{
 			$files{'PLEX'}->{'value'} = 1;
