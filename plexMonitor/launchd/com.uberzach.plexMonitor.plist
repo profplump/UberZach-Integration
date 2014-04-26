@@ -7,24 +7,28 @@
 	<key>LimitLoadToHosts</key>
 	<array>
 		<string>Beddy.local</string>
-		<string>beddy.uberzach.com</string>
 		<string>Loki.local</string>
+		<string>beddy.uberzach.com</string>
 		<string>loki.uberzach.com</string>
-		<string>Heady.local</string>
-		<string>heady.uberzach.com</string>
 	</array>
 	<key>RunAtLoad</key>
 	<true/>
 	<key>Label</key>
-	<string>com.uberzach.plexMonitor</string>
+	<string>com.uberzach.plexMonitor.playing</string>
 	<key>KeepAlive</key>
 	<dict>
 		<key>NetworkState</key>
 		<true/>
+		<key>OtherJobEnabled</key>
+		<dict>
+			<key>com.uberzach.plexMonitor</key>
+			<true/>
+		</dict>
 	</dict>
 	<key>ProgramArguments</key>
 	<array>
-		<string>/Users/tv/bin/video/plexMonitor/plexHelper.sh</string>
+		<string>/Users/tv/bin/video/plexMonitor/plexMonitor-playing</string>
+		<string>0.25</string>
 	</array>
 </dict>
 </plist>

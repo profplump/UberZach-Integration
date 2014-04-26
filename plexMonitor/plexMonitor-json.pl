@@ -80,13 +80,12 @@ do {
 	# See if anything is playing
 	my $result = xbmcJSON('Player.GetActivePlayers', undef());
 	if (defined($result) && exists($result->{'playerid'})) {
-		$data{'playing'}  = 1;
 		$data{'playerid'} = $result->{'playerid'} + 0;
 	}
 
-	# Get details about the playing item
-	if ($data{'playing'}) {
-		$result = xbmcJSON('Player.GetProperties', { 'playerid' => $data{'playerid'}, 'properties' => [ 'time', 'type' ] });
+	# Get details about the player
+	if ($data{'playerid'}) {
+		$result = xbmcJSON('Player.GetProperties', { 'playerid' => $data{'playerid'}, 'properties' => [ 'time', 'type', 'speed' ] });
 		if (defined($result)) {
 			if (exists($result->{'time'})) {
 				$data{'time'} = 0;
@@ -103,11 +102,15 @@ do {
 					$data{'time'} += ($result->{'time'}->{'milliseconds'} / 1000);
 				}
 			}
+			if (exists($result->{'speed'}) && $result->{'speed'} > 0) {
+				$data{'playing'} = 1;
+			}
 			if (exists($result->{'type'})) {
 				$data{'type'} = $result->{'type'};
 			}
 		}
 
+		# Get details about the playing item
 		$result = xbmcJSON(
 			'Player.GetItem',
 			{
