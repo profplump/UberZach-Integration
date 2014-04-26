@@ -6,8 +6,6 @@
 	<string>Aqua</string>
 	<key>LimitLoadToHosts</key>
 	<array>
-		<string>Beddy.local</string>
-		<string>beddy.uberzach.com</string>
 		<string>Loki.local</string>
 		<string>loki.uberzach.com</string>
 		<string>Heady.local</string>
