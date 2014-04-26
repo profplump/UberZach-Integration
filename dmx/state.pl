@@ -421,14 +421,14 @@ while (1) {
 
 	# Simulate the old GUI indicator
 	{
-	my $gui = 0;
+		my $gui = 0;
 		if (exists($files{'PLAYING_WINDOW'}) && $files{'PLAYING_WINDOW'}->{'value'} ne 'Fullscreen video') {
 			$gui = 1;
 		}
-		if ($files{'GUI'}->{'value'} != $gui) {
-			$files{'GUI'}->{'mtime'} = time();
-		}
 		$files{'GUI'}->{'value'} = $gui;
+	}
+	if (exists($files{'PLAYING'})) {
+		$files{'GUI'}->{'update'} = $files{'PLAYING'}->{'update'};
 	}
 
 	# Ignore the MOTION file if NO_MOTION is set
