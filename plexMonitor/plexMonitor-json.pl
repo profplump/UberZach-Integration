@@ -46,7 +46,7 @@ if (!-d $DATA_DIR) {
 }
 
 # Build our output file name
-my $OUT_FILE = $DATA_DIR . '/PLEX';
+my $OUT_FILE = $DATA_DIR . '/PLAYING';
 
 # Loop forever (unless no delay is set)
 my %data     = ();
@@ -70,6 +70,7 @@ do {
 		'fanart',    => '',
 		'album'      => '',
 		'artist',    => '',
+		'year',      => '',
 		'type'       => '',
 		'windowid'   => '',
 		'window'     => '',
@@ -85,20 +86,25 @@ do {
 
 	# Get details about the playing item
 	if ($data{'playing'}) {
-		$result = xbmcJSON('Player.GetProperties', { 'playerid' => $data{'playerid'}, 'properties' => ['time'] });
-		if (defined($result) && exists($result->{'time'})) {
-			$data{'time'} = 0;
-			if (exists($result->{'time'}->{'hours'})) {
-				$data{'time'} += ($result->{'time'}->{'hours'} * 3600);
+		$result = xbmcJSON('Player.GetProperties', { 'playerid' => $data{'playerid'}, 'properties' => [ 'time', 'type' ] });
+		if (defined($result)) {
+			if (exists($result->{'time'})) {
+				$data{'time'} = 0;
+				if (exists($result->{'time'}->{'hours'})) {
+					$data{'time'} += ($result->{'time'}->{'hours'} * 3600);
+				}
+				if (exists($result->{'time'}->{'minutes'})) {
+					$data{'time'} += ($result->{'time'}->{'minutes'} * 60);
+				}
+				if (exists($result->{'time'}->{'seconds'})) {
+					$data{'time'} += $result->{'time'}->{'seconds'};
+				}
+				if (exists($result->{'time'}->{'milliseconds'})) {
+					$data{'time'} += ($result->{'time'}->{'milliseconds'} / 1000);
+				}
 			}
-			if (exists($result->{'time'}->{'minutes'})) {
-				$data{'time'} += ($result->{'time'}->{'minutes'} * 60);
-			}
-			if (exists($result->{'time'}->{'seconds'})) {
-				$data{'time'} += $result->{'time'}->{'seconds'};
-			}
-			if (exists($result->{'time'}->{'milliseconds'})) {
-				$data{'time'} += ($result->{'time'}->{'milliseconds'} / 1000);
+			if (exists($result->{'type'})) {
+				$data{'type'} = $result->{'type'};
 			}
 		}
 
@@ -106,11 +112,11 @@ do {
 			'Player.GetItem',
 			{
 				'playerid'   => $data{'playerid'},
-				'properties' => [ 'title', 'season', 'episode', 'duration', 'showtitle', 'thumbnail', 'file', 'fanart', 'album', 'artist' ]
+				'properties' => [ 'title', 'season', 'episode', 'duration', 'showtitle', 'thumbnail', 'file', 'fanart', 'album', 'artist', 'year' ]
 			}
 		);
 		if (defined($result) && exists($result->{'item'})) {
-			foreach my $key ('title', 'season', 'episode', 'duration', 'showtitle', 'thumbnail', 'file', 'fanart', 'album', 'type') {
+			foreach my $key ('title', 'season', 'episode', 'duration', 'showtitle', 'thumbnail', 'file', 'fanart', 'album', 'year') {
 				if (exists($result->{'item'}->{$key})) {
 					$data{$key} = $result->{'item'}->{$key};
 				}
@@ -160,7 +166,7 @@ do {
 	if ($changed) {
 		my $str = '';
 		foreach my $key (keys(%data)) {
-			$str .= $key . ' => ' . $data{$key} . "\n";
+			$str .= $key . ':' . $data{$key} . "\n";
 		}
 		if ($DEBUG) {
 			print STDERR $str;
