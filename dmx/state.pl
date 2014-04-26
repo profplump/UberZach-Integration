@@ -47,6 +47,7 @@ if ($HOST =~ /loki/i) {
 
 	# Plex
 	$MON_FILES{'PLEX'}    = 'NONE';
+	$MON_FILES{'GUI'}     = 'NONE';
 	$MON_FILES{'PLAYING'} = 'PLAYING';
 
 	# RiffTrax
@@ -416,6 +417,18 @@ while (1) {
 				}
 			}
 		}
+	}
+
+	# Simulate the old GUI indicator
+	{
+	my $gui = 0;
+		if (exists($files{'PLAYING_WINDOW'}) && $files{'PLAYING_WINDOW'}->{'value'} ne 'Fullscreen video') {
+			$gui = 1;
+		}
+		if ($files{'GUI'}->{'value'} != $gui) {
+			$files{'GUI'}->{'mtime'} = time();
+		}
+		$files{'GUI'}->{'value'} = $gui;
 	}
 
 	# Ignore the MOTION file if NO_MOTION is set
