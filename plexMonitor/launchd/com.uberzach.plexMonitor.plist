@@ -27,7 +27,7 @@
 	</dict>
 	<key>ProgramArguments</key>
 	<array>
-		<string>/Users/tv/bin/video/plexMonitor/plexMonitor-playing</string>
+		<string>/Users/tv/bin/video/plexMonitor/plexMonitor.pl</string>
 		<string>0.25</string>
 	</array>
 </dict>
