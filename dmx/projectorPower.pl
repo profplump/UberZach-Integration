@@ -193,7 +193,7 @@ while (1) {
 	my $playLights = 0;
 	if ($newState eq 'PLAY') {
 		$playLights = 1;
-	} elsif ($exists{'PLAYING_TYPE'} eq 'Audio') {
+	} elsif ($exists{'PLAYING_TYPE'} eq 'audio') {
 		$color = $COLORS{$color_set}{'low'};
 	} elsif ($elapsed > $TIMEOUT / 2) {
 		$color = $COLORS{$color_set}{'low'};

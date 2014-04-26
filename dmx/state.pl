@@ -47,7 +47,6 @@ if ($HOST =~ /loki/i) {
 
 	# Plex
 	$MON_FILES{'PLEX'}    = 'NONE';
-	$MON_FILES{'GUI'}     = 'GUI';
 	$MON_FILES{'PLAYING'} = 'PLAYING';
 
 	# RiffTrax
@@ -92,16 +91,22 @@ if ($HOST =~ /loki/i) {
 }
 my %EXTRAS = (
 	'PLAYING' => {
-		'URL'      => qr/^\<li\>Filename\:(.+)$/m,
-		'YEAR'     => qr/^\<li\>Year\:(\d+)/m,
-		'SERIES'   => qr/^\<li\>Show Title\:(.+)$/m,
-		'SEASON'   => qr/^\<li\>Season\:(\d+)/m,
-		'EPISODE'  => qr/^\<li\>Episode\:(\d+)/m,
-		'TITLE'    => qr/^\<li\>Title\:(.+)$/m,
-		'LENGTH'   => qr/^\<li\>Duration\:([\d\:]+)/m,
-		'POSITION' => qr/^\<li\>Time\:([\d\:]+)/m,
-		'SIZE'     => qr/^\<li\>File size\:(\d+)/m,
-		'TYPE'     => qr/^\<li\>Type\:(.+)$/m,
+		'URL'       => qr/^file:(.+)$/m,
+		'YEAR'      => qr/^year:(\d+)/m,
+		'SERIES'    => qr/^showtitle:(.+)$/m,
+		'SEASON'    => qr/^season:(\d+)/m,
+		'EPISODE'   => qr/^episode:(\d+)/m,
+		'TITLE'     => qr/^title:(.+)$/m,
+		'LENGTH'    => qr/^duration:(\d+)/m,
+		'POSITION'  => qr/^time:(\d+(?:\.\d+)?)/m,
+		'TYPE'      => qr/^type:(.+)$/m,
+		'IMAGE'     => qr/^fanart:(.+)$/m,
+		'THUMB'     => qr/^thumbnail:(.+)$/m,
+		'ALBUM'     => qr/^album:(.+)$/m,
+		'ARTIST'    => qr/^artist:(.+)$/m,
+		'SELECTION' => qr/^selection:(.+)$/m,
+		'WINDOW'    => qr/^window:(.+)$/m,
+		'WINDOWID'  => qr/^windowid:(\d+)/m,
 	}
 );
 
@@ -166,7 +171,6 @@ foreach my $name (keys(%MON_FILES)) {
 		'clear'     => 0,
 		'clear_off' => 0,
 		'mtime'     => 0,
-		'gui'       => 0,
 		'playing'   => 0,
 		'no_update' => 0,
 	);
@@ -191,9 +195,6 @@ foreach my $name (keys(%MON_FILES)) {
 	if ($file{'type'} =~ /\bMTIME\b/i) {
 		$attr{'mtime'} = 1;
 	}
-	if ($file{'type'} =~ /\bGUI\b/i) {
-		$attr{'gui'} = 1;
-	}
 	if ($file{'type'} =~ /\bPLAYING\b/i) {
 		$attr{'playing'} = 1;
 	}
@@ -202,7 +203,7 @@ foreach my $name (keys(%MON_FILES)) {
 	}
 
 	# Cross-match some data types for easy of use
-	if ($attr{'value'} || $attr{'gui'} || $attr{'playing'}) {
+	if ($attr{'value'} || $attr{'playing'}) {
 		$attr{'status'} = 1;
 	}
 	if ($attr{'status'} || $attr{'exists'}) {
@@ -384,11 +385,7 @@ while (1) {
 				$text =~ s/\n$//;
 				$file->{'value'} = $text;
 			} elsif ($file->{'attr'}->{'playing'}) {
-				if ($text =~ /PlayStatus\:Playing/) {
-					$file->{'value'} = 1;
-				}
-			} elsif ($file->{'attr'}->{'gui'}) {
-				if (!($text =~ /ActiveWindowName\:Fullscreen video/)) {
+				if ($text =~ /^playing:1/m) {
 					$file->{'value'} = 1;
 				}
 			} else {
@@ -438,7 +435,7 @@ while (1) {
 	$timeSinceUpdate = time() - $updateLast;
 
 	# Calculate the PLEX state
-	$files{'PLEX'}->{'last'} = $files{'PLEX'}->{'value'};
+	$files{'PLEX'}->{'last'}  = $files{'PLEX'}->{'value'};
 	$files{'PLEX'}->{'value'} = 0;
 	if (exists($files{'FRONT_APP'})) {
 		if (   $files{'FRONT_APP'}->{'value'} eq 'com.plexapp.plex'
@@ -457,7 +454,7 @@ while (1) {
 		$playing = 1;
 	}
 	my $video = 0;
-	if (exists($files{'PLAYING_TYPE'}) && $files{'PLAYING_TYPE'}->{'value'} ne 'Audio') {
+	if (exists($files{'PLAYING_TYPE'}) && $files{'PLAYING_TYPE'}->{'value'} ne 'audio') {
 		$video = 1;
 	} elsif (!exists($files{'PLAYING_TYPE'})) {
 		$video = 1;
@@ -466,7 +463,7 @@ while (1) {
 	# Non-plex apps are always "playing" and "video"
 	if (exists($files{'PLEX'}) && !$files{'PLEX'}->{'value'}) {
 		$playing = 1;
-		$video = 1;
+		$video   = 1;
 	}
 
 	# Calculate the new state

@@ -76,7 +76,7 @@ while (1) {
 	}
 
 	# Calculate the channel mode
-	if ($exists{'STEREO_CMD'} || $exists{'PLAYING_TYPE'} eq 'Audio' || $state eq 'RAVE') {
+	if ($exists{'STEREO_CMD'} || $exists{'PLAYING_TYPE'} eq 'audio' || $state eq 'RAVE') {
 		$mode = 'STEREO';
 	} else {
 		$mode = 'SURROUND';
