@@ -21,7 +21,7 @@ my $OUTPUT_FILE  = $DATA_DIR . $STATE_SOCK;
 my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
 my $DELAY        = $PULL_TIMEOUT / 2;
-my $CMD_DELAY    = 1.0;
+my $CMD_DELAY    = 5.0;
 my $AUTO_CMD     = 'INPUT_AUTO';
 
 # Debug
@@ -44,6 +44,9 @@ my %exists    = ();
 my $pushLast  = 0;
 my $pullLast  = time();
 my $update    = 0;
+my $lastMode  = 0;
+my $lastInput = 0;
+my $lastPower = 0;
 
 # Loop forever
 while (1) {
@@ -111,11 +114,12 @@ while (1) {
 	}
 
 	# Set the channel mode as needed
-	if ($exists{'AMPLIFIER'} && $exists{'AMPLIFIER_MODE'} ne $mode) {
+	if ($exists{'AMPLIFIER'} && $exists{'AMPLIFIER_MODE'} ne $mode && $lastMode < time() - $CMD_DELAY) {
+		$lastMode = time();
 		if ($DEBUG) {
 			print STDERR 'Setting mode to: ' . $mode . "\n";
 		}
-		DMX::say('Amplifier: ' . $mode);
+		DMX::say('Amplifier mode: ' . $mode);
 		sendCmd($amp, $mode);
 
 		# Reset the input mode anytime we switch to SURROUND
@@ -125,11 +129,12 @@ while (1) {
 	}
 
 	# Set the amplifier input as needed
-	if ($exists{'AMPLIFIER'} && $exists{'AMPLIFIER_INPUT'} ne $input) {
+	if ($exists{'AMPLIFIER'} && $exists{'AMPLIFIER_INPUT'} ne $input && $lastInput < time() - $CMD_DELAY) {
+		$lastInput = time();
 		if ($DEBUG) {
 			print STDERR 'Setting input to: ' . $input . "\n";
 		}
-		DMX::say('Amplifier: ' . $input);
+		DMX::say('Amplifier input: ' . $input);
 		sendCmd($amp, $input);
 	}
 
@@ -148,7 +153,8 @@ while (1) {
 		} elsif ($state eq 'RAVE') {
 			$cmd = 'ON';
 		}
-		if (defined($cmd)) {
+		if (defined($cmd) && $lastPower < time() - $CMD_DELAY) {
+			$lastPower = time();
 			sendCmd($amp, $cmd);
 		}
 
@@ -169,5 +175,7 @@ sub sendCmd($$) {
 	# Send the command
 	$amp->send($cmd)
 	  or die('Unable to write command to amp socket: ' . $cmd . ": ${!}\n");
-	sleep($CMD_DELAY);
+
+	# A tiny delay to keep the serial port stable in repeated calls
+	sleep(0.1);
 }
