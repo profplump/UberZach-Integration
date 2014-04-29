@@ -16,9 +16,9 @@ if ($ENV{'DEBUG'}) {
 }
 
 # Parameters
-my ($host, $section, $series, $season) = @ARGV;
-if (!$host || (!$section && !$series && !$season)) {
-	die('Usage: ' . basename($0) . ' host[:port] [section_number] [series_metadata_number] [season_metadata_number]');
+my ($host, $section, $series, $season, $episode) = @ARGV;
+if (!$host || (!$section && !$series && !$season && !$episode)) {
+	die('Usage: ' . basename($0) . ' host[:port] [section_number] [series_metadata_id] [season_metadata_id] [episode_metadata_id]');
 }
 
 # Globals
@@ -28,8 +28,8 @@ if (!($host =~ /\:\d+$/)) {
 my $baseURL = 'http://' . $host;
 my $xml     = new XML::Simple;
 
-my @shows = ();	
-if (!$season) {
+my @shows = ();
+if (!$season && !$episode) {
 	if ($series) {
 
 		# Fetch just the provided show
@@ -59,69 +59,78 @@ if (!$season) {
 }
 
 my @seasons = ();
-if ($season) {
+if (!$episode) {
+	if ($season) {
 
-	# Fetch just the provided season
-	print STDERR 'Fetching season ' . $season . "\n";
-	@seasons = ('/library/metadata/' . $season . '/children');
-} else {
+		# Fetch just the provided season
+		print STDERR 'Fetching season ' . $season . "\n";
+		@seasons = ('/library/metadata/' . $season . '/children');
+	} else {
 
-	# Fetch the list of all seasons in each show
-	print STDERR "Fetching seasons...\n";
-	foreach my $show (@shows) {
-		my $content = get($baseURL . $show);
-		if ($DEBUG) {
-			print STDERR $baseURL . $show . "\n";
-		}
-		if (!$content) {
-			warn(basename($0) . ': Could not fetch seasons for show: ' . $show . "\n");
-			next;
-		}
+		# Fetch the list of all seasons in each show
+		print STDERR "Fetching seasons...\n";
+		foreach my $show (@shows) {
+			my $content = get($baseURL . $show);
+			if ($DEBUG) {
+				print STDERR $baseURL . $show . "\n";
+			}
+			if (!$content) {
+				warn(basename($0) . ': Could not fetch seasons for show: ' . $show . "\n");
+				next;
+			}
 
-		# Find all seasons in the show
-		{
-			my $tree = $xml->XMLin($content);
+			# Find all seasons in the show
+			{
+				my $tree = $xml->XMLin($content);
 
-			# XML::Simple retuns different structure depending on the number of same-named child elements
-			if ($tree->{'Directory'}->{'key'}) {
-				push(@seasons, $tree->{'Directory'}->{'key'});
-			} else {
-				push(@seasons, keys(%{ $tree->{'Directory'} }));
+				# XML::Simple retuns different structure depending on the number of same-named child elements
+				if ($tree->{'Directory'}->{'key'}) {
+					push(@seasons, $tree->{'Directory'}->{'key'});
+				} else {
+					push(@seasons, keys(%{ $tree->{'Directory'} }));
+				}
 			}
 		}
 	}
+	print STDERR 'Found ' . scalar(@seasons) . " seasons\n";
 }
-print STDERR 'Found ' . scalar(@seasons) . " seasons\n";
 
 # Forget the list of shows
 undef(@shows);
 
 # Fetch the list of all episodes in each season
 my @episodes = ();
-print STDERR "Fetching episodes...\n";
-foreach my $season (@seasons) {
-	my $content = get($baseURL . $season);
-	if ($DEBUG) {
-		print STDERR $baseURL . $season . "\n";
-	}
-	if (!$content) {
-		warn(basename($0) . ': Could not fetch episodes for season: ' . $season . "\n");
-		next;
-	}
+if ($episode) {
 
-	# Find all episodes in the season
-	{
-		my $tree = $xml->XMLin($content);
+	# Fetch just the provided episode
+	print STDERR 'Fetching episode ' . $episode . "\n";
+	@episodes = ('/library/metadata/' . $episode);
+} else {
+	print STDERR "Fetching episodes...\n";
+	foreach my $season (@seasons) {
+		my $content = get($baseURL . $season);
+		if ($DEBUG) {
+			print STDERR $baseURL . $season . "\n";
+		}
+		if (!$content) {
+			warn(basename($0) . ': Could not fetch episodes for season: ' . $season . "\n");
+			next;
+		}
 
-		# XML::Simple retuns different structure depending on the number of same-named child elements
-		if ($tree->{'Video'}->{'key'}) {
-			push(@episodes, $tree->{'Video'}->{'key'});
-		} else {
-			push(@episodes, keys(%{ $tree->{'Video'} }));
+		# Find all episodes in the season
+		{
+			my $tree = $xml->XMLin($content);
+
+			# XML::Simple retuns different structure depending on the number of same-named child elements
+			if ($tree->{'Video'}->{'key'}) {
+				push(@episodes, $tree->{'Video'}->{'key'});
+			} else {
+				push(@episodes, keys(%{ $tree->{'Video'} }));
+			}
 		}
 	}
+	print STDERR 'Found ' . scalar(@episodes) . " episodes\n";
 }
-print STDERR 'Found ' . scalar(@episodes) . " episodes\n";
 
 # Forget the list of seasons
 undef(@seasons);
@@ -140,8 +149,8 @@ foreach my $episode (@episodes) {
 
 	# Parse the metadata
 	{
-		my $tree  = $xml->XMLin($content);
-		my $title = $tree->{'Video'}->{'title'};
+		my $tree    = $xml->XMLin($content);
+		my $title   = $tree->{'Video'}->{'title'};
 		my $summary = $tree->{'Video'}->{'summary'};
 		my $file    = $tree->{'Video'}->{'Media'}->{'Part'}->{'file'};
 
