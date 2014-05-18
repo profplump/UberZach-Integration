@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# Skip
+if [ -z "${2}" ]; then
+	echo "CLI optimization disabled" 1>&2
+	exit 1
+fi
+
 # Defaults
 DELAY=5
 MAX_WAIT=600
