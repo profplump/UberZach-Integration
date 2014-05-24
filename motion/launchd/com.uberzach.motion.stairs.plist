@@ -21,6 +21,8 @@
 	<key>ProgramArguments</key>
 	<array>
 		<string>/Users/tv/bin/video/motion/USBMicroX</string>
+		<string>101128155210</string>
+		<string>MOTION_STAIRS</string>
 	</array>
 </dict>
 </plist>
