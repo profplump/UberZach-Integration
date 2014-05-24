@@ -88,6 +88,9 @@ if ($HOST =~ /loki/i) {
 	$MON_FILES{'AUDIO'}       = 'VALUE-NOUPDATE';
 	$MON_FILES{'AUDIO_STATE'} = 'VALUE-NOUPDATE';
 
+	# Light State
+	$MON_FILES{'STAIRS'} = 'VALUE-NOUPDATE';
+
 	# TV
 	$MON_FILES{'TV'}     = 'STATUS';
 	$MON_FILES{'TV_VOL'} = 'VALUE';
