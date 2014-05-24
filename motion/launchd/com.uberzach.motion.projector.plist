@@ -12,7 +12,7 @@
 	<key>RunAtLoad</key>
 	<true/>
 	<key>Label</key>
-	<string>com.uberzach.motion</string>
+	<string>com.uberzach.motion.projector</string>
 	<key>KeepAlive</key>
 	<dict>
 		<key>NetworkState</key>
