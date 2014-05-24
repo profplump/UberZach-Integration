@@ -13,7 +13,7 @@ my $MOTION_TIMEOUT = 15;
 my %DIM            = (
 	'OFF'    => [ { 'channel' => 3, 'value' => 0,   'time' => 60000 }, ],
 	'PLAY'   => [ { 'channel' => 3, 'value' => 80,  'time' => 5000 }, ],
-	'MOTION' => [ { 'channel' => 3, 'value' => 192, 'time' => 500 }, ],
+	'MOTION' => [ { 'channel' => 3, 'value' => 192, 'time' => 750 }, ],
 	'BRIGHT' => [ { 'channel' => 3, 'value' => 255, 'time' => 1000 }, ],
 	'ERROR'  => [ { 'channel' => 3, 'value' => 255, 'time' => 0 }, ],
 );
@@ -31,13 +31,6 @@ my $DEBUG = 0;
 if ($ENV{'DEBUG'}) {
 	$DEBUG = 1;
 }
-
-# Construct a list of valid states
-my %VALID = ();
-foreach my $key (keys(%DIM)) {
-	$VALID{$key} = 1;
-}
-$VALID{'PAUSE'} = 1;
 
 # State
 my $state     = 'OFF';
@@ -63,7 +56,7 @@ while (1) {
 	my $newState = $state;
 
 	# Wait for state updates
-	my $cmdState = DMX::readState($DELAY, \%exists, \%mtime, \%VALID);
+	my $cmdState = DMX::readState($DELAY, \%exists, \%mtime, undef());
 	if (defined($cmdState)) {
 		$newState = $cmdState;
 		$pullLast = time();
@@ -87,7 +80,7 @@ while (1) {
 	$stateLast = $state;
 	if ($exists{'BRIGHT'}) {
 		$newState = 'BRIGHT';
-	} elsif ($exists{'MOTION_STAIRS'} || $mtime{'MOTION_STAIRS'} > time() - $MOTION_TIMEOUT) {
+	} elsif ($mtime{'MOTION_STAIRS'} > time() - $MOTION_TIMEOUT) {
 		$newState = 'MOTION';
 	} elsif ($newState eq 'PAUSE') {
 		$newState = 'PLAY';
