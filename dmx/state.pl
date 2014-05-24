@@ -80,6 +80,7 @@ if ($HOST =~ /loki/i) {
 	$MON_FILES{'EFFECT'} = 'EXISTS';
 
 	# Equipment
+	$MON_FILES{'FAN'}     = 'VALUE-NOUPDATE';
 	$MON_FILES{'FAN_CMD'} = 'EXISTS-ON';
 
 	# OS State
@@ -88,8 +89,11 @@ if ($HOST =~ /loki/i) {
 	$MON_FILES{'AUDIO'}       = 'VALUE-NOUPDATE';
 	$MON_FILES{'AUDIO_STATE'} = 'VALUE-NOUPDATE';
 
-	# Light State
-	$MON_FILES{'STAIRS'} = 'VALUE-NOUPDATE';
+	# Lights
+	$MON_FILES{'LED'}      = 'VALUE-NOUPDATE';
+	$MON_FILES{'OVERHEAD'} = 'VALUE-NOUPDATE';
+	$MON_FILES{'ROPE'}     = 'VALUE-NOUPDATE';
+	$MON_FILES{'STAIRS'}   = 'VALUE-NOUPDATE';
 
 	# TV
 	$MON_FILES{'TV'}     = 'STATUS';
