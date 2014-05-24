@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>LimitLoadToSessionType</key>
+	<string>Aqua</string>
+	<key>LimitLoadToHosts</key>
+	<array>
+		<string>Loki.local</string>
+		<string>loki.uberzach.com</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>Label</key>
+	<string>com.uberzach.ola.stairs</string>
+	<key>KeepAlive</key>
+	<dict>
+		<key>OtherJobEnabled</key>
+		<dict>
+			<key>com.uberzach.ola.dmx</key>
+			<true/>
+			<key>com.uberzach.state</key>
+			<true/>
+		</dict>
+	</dict>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/Users/tv/bin/video/dmx/stairs.pl</string>
+	</array>
+</dict>
+</plist>
