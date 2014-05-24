@@ -21,6 +21,7 @@ my %DISPLAY_DEVS   = ('TV' => 1, 'PROJECTOR' => 1);
 my $DISPLAY        = undef();
 my $STATE_TIMEOUT  = 180;
 my $EXISTS_TIMEOUT = 900;
+my $START_DELAY    = 15;
 my %MON_FILES      = ();
 
 # Host-specific config
@@ -242,6 +243,7 @@ my $status          = '';
 my $statusLast      = $status;
 my $updateLast      = 0;
 my $timeSinceUpdate = 0;
+my $startTime       = time() + $START_DELAY;
 my $pushLast        = 0;
 
 # Loop forever
@@ -442,7 +444,10 @@ while (1) {
 
 	# Set the global update timestamp, excluding files marked NOUPDATE
 	foreach my $file (values(%files)) {
-		if ($file->{'update'} > $updateLast && !$file->{'attr'}->{'no_update'}) {
+		if (   $file->{'update'} > $updateLast
+			&& !$file->{'attr'}->{'no_update'}
+			&& $file->{'update'} > $startTime)
+		{
 			$updateLast = $file->{'update'};
 		}
 	}
