@@ -12,7 +12,6 @@ use DMX;
 my $MOTION_TIMEOUT = 30;
 my %DIM            = (
 	'OFF'       => [ { 'channel' => 3, 'value' => 0,   'time' => 60000 }, ],
-	'PLAY'      => [ { 'channel' => 3, 'value' => 80,  'time' => 5000  }, ],
 	'PREMOTION' => [ { 'channel' => 3, 'value' => 32,  'time' => 2500  }, ],
 	'MOTION'    => [ { 'channel' => 3, 'value' => 192, 'time' => 750   }, ],
 	'BRIGHT'    => [ { 'channel' => 3, 'value' => 255, 'time' => 1000  }, ],
@@ -83,9 +82,7 @@ while (1) {
 		$newState = 'BRIGHT';
 	} elsif ($mtime{'MOTION_STAIRS'} > time() - $MOTION_TIMEOUT) {
 		$newState = 'MOTION';
-	} elsif ($newState eq 'PAUSE') {
-		$newState = 'PLAY';
-	} elsif ($newState eq 'MOTION') {
+	} elsif ($newState eq 'PLAY' || $newState eq 'PAUSE' || $newState eq 'MOTION') {
 		$newState = 'PREMOTION';
 	} else {
 		$newState = 'OFF';
