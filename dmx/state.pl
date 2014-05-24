@@ -55,7 +55,7 @@ if ($HOST =~ /loki/i) {
 
 	# Motion detection
 	$MON_FILES{'MOTION'}        = 'MTIME';
-	$MON_FILES{'MOTION_STAIRS'} = 'MTIME';
+	$MON_FILES{'MOTION_STAIRS'} = 'MTIME-NOUPDATE';
 	$MON_FILES{'NO_MOTION'}     = 'EXISTS-NOUPDATE';
 
 	# Projector
