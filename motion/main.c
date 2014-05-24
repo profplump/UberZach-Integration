@@ -1,13 +1,13 @@
 #include "USBMicroX.h"
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 
 #define DATA_DIR "plexMonitor/"
-#define OUT_FILE "MOTION"
-#define NUM_DEVICES 2
-#define SERIALS { "101128160542", "101128155210" }
+#define OUT_FILE_DEFAULT "MOTION"
 #define SLEEP_DELAY 250000
 #define TIMEOUT 2
+#define MAX_STR_LEN 4096
 
 //#define DEBUG
 
@@ -18,7 +18,7 @@ typedef unsigned char u8;
 void timeout(int sig);
 USBmX_DeviceRef init();
 u8 readDev(USBmX_DeviceRef dev);
-char * initPaths();
+char * initPaths(const char *name);
 
 // Globals
 USBmX_ContextRef ctx;
@@ -26,30 +26,35 @@ USBmX_ContextRef ctx;
 int main(int argc, const char * argv[])
 {
 	char *outfile;
-	unsigned int i, motion;
-	USBmX_DeviceRef device[NUM_DEVICES];
-	const char *serials[NUM_DEVICES] = SERIALS;
+	const char *serial;
+	unsigned int motion;
+	USBmX_DeviceRef device;
+
+	// Sanity check
+	if (argc < 2) {
+		fprintf(stderr, "Usage: %s SERIAL [NAME]\n", argv[0]);
+		exit(-1);
+	}
 
 	// Setup the output file
-	outfile = initPaths();
+	if (argc > 2) {
+		outfile = initPaths(argv[2]);
+	} else {
+		outfile = initPaths(OUT_FILE_DEFAULT);
+	}
 
 	// Monitor for alarms
 	signal(SIGALRM, timeout);
 
 	// Setup the USB devices
-	for (i = 0; i < NUM_DEVICES; i++) {
-		device[i] = init(serials[i]);
-	}
+	device = init(argv[1]);
 	
 	// Read forever
 	while (1) {
 		// Check for motion in any device
 		motion = 0;
-		for (i = 0; i < NUM_DEVICES; i++) {
-			if (readDev(device[i])) {
-				motion = 1;
-				break;
-			}
+		if (readDev(device)) {
+			motion = 1;
 		}
 
 		// If we detected motion
@@ -125,25 +130,26 @@ u8 readDev(USBmX_DeviceRef dev) {
 }
 
 // Setup the data directory and output file
-char * initPaths() {
+char * initPaths(const char *name) {
 	int fd;
-	size_t len;
+	size_t dirLen, fileLen;
 	char *datadir, *outfile;
 	struct stat statbuf;
 
 	// Construct the data directory and output file paths
-	len = confstr(_CS_DARWIN_USER_TEMP_DIR, NULL, (size_t) 0);
-	len += sizeof(DATA_DIR);
-	datadir = malloc(len);
-	outfile = malloc(len + sizeof(OUT_FILE));
+	dirLen = confstr(_CS_DARWIN_USER_TEMP_DIR, NULL, (size_t) 0);
+	dirLen += sizeof(DATA_DIR);
+	fileLen = strnlen(name, MAX_STR_LEN);
+	datadir = malloc(dirLen);
+	outfile = malloc(fileLen);
 	if (datadir == NULL || outfile == NULL) {
 		fprintf(stderr, "Out of memory\n");
 		exit(1);
 	}
-	confstr(_CS_DARWIN_USER_TEMP_DIR, datadir, len);
-	strlcat(datadir, DATA_DIR, len);
-	strlcpy(outfile, datadir, len);
-	strlcat(outfile, OUT_FILE, len + sizeof(OUT_FILE));
+	confstr(_CS_DARWIN_USER_TEMP_DIR, datadir, dirLen);
+	strlcat(datadir, DATA_DIR, dirLen);
+	strlcpy(outfile, datadir, dirLen + fileLen);
+	strlcat(outfile, name, dirLen + fileLen);
 
 	// Create the datadir as needed
 	stat(datadir, &statbuf);
