@@ -10,22 +10,12 @@ use DMX;
 
 # User config
 my $MOTION_TIMEOUT = 15;
-my %DIM = (
-	'OFF'    => [
-		{ 'channel' => 3,  'value' => 0,   'time' => 60000 },
-	],
-	'PLAY'      => [
-		{ 'channel' => 3,  'value' => 80,  'time' => 5000  },
-	],
-	'MOTION'    => [
-		{ 'channel' => 3,  'value' => 192, 'time' => 500  },
-	],
-	'BRIGHT'    => [
-		{ 'channel' => 3,  'value' => 255, 'time' => 1000  },
-	],
-	'ERROR'    => [
-		{ 'channel' => 3,  'value' => 255, 'time' => 0  },
-	],
+my %DIM            = (
+	'OFF'    => [ { 'channel' => 3, 'value' => 0,   'time' => 60000 }, ],
+	'PLAY'   => [ { 'channel' => 3, 'value' => 80,  'time' => 5000 }, ],
+	'MOTION' => [ { 'channel' => 3, 'value' => 192, 'time' => 500 }, ],
+	'BRIGHT' => [ { 'channel' => 3, 'value' => 255, 'time' => 1000 }, ],
+	'ERROR'  => [ { 'channel' => 3, 'value' => 255, 'time' => 0 }, ],
 );
 
 # App config
@@ -78,7 +68,7 @@ while (1) {
 		$newState = $cmdState;
 		$pullLast = time();
 	}
-	
+
 	# Die if we don't see regular updates
 	if (time() - $pullLast > $PULL_TIMEOUT) {
 		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");

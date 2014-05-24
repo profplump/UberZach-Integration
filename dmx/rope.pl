@@ -123,7 +123,7 @@ while (1) {
 		$newState = $cmdState;
 		$pullLast = time();
 	}
-	
+
 	# Die if we don't see regular updates
 	if (time() - $pullLast > $PULL_TIMEOUT) {
 		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
