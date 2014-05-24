@@ -11,12 +11,12 @@ use DMX;
 # User config
 my %DIM = (
 	'OFF'       => [ { 'channel' => 4, 'value' => 0,   'time' => 60000 }, ],
-	'PLAY'      => [ { 'channel' => 4, 'value' => 32,  'time' => 500 }, ],
-	'PLAY_HIGH' => [ { 'channel' => 4, 'value' => 48,  'time' => 500 }, ],
+	'PLAY'      => [ { 'channel' => 4, 'value' => 32,  'time' => 500   }, ],
+	'PLAY_HIGH' => [ { 'channel' => 4, 'value' => 48,  'time' => 500   }, ],
 	'PAUSE'     => [ { 'channel' => 4, 'value' => 96,  'time' => 6000, 'delay' => 9000 }, ],
-	'MOTION'    => [ { 'channel' => 4, 'value' => 128, 'time' => 2500 }, ],
-	'BRIGHT'    => [ { 'channel' => 4, 'value' => 255, 'time' => 2500 }, ],
-	'ERROR'     => [ { 'channel' => 4, 'value' => 255, 'time' => 0 }, ],
+	'MOTION'    => [ { 'channel' => 4, 'value' => 128, 'time' => 2500  }, ],
+	'BRIGHT'    => [ { 'channel' => 4, 'value' => 255, 'time' => 2500  }, ],
+	'ERROR'     => [ { 'channel' => 4, 'value' => 255, 'time' => 100   }, ],
 );
 
 # App config

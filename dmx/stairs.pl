@@ -11,11 +11,12 @@ use DMX;
 # User config
 my $MOTION_TIMEOUT = 30;
 my %DIM            = (
-	'OFF'    => [ { 'channel' => 3, 'value' => 0,   'time' => 60000 }, ],
-	'PLAY'   => [ { 'channel' => 3, 'value' => 80,  'time' => 5000 }, ],
-	'MOTION' => [ { 'channel' => 3, 'value' => 192, 'time' => 750 }, ],
-	'BRIGHT' => [ { 'channel' => 3, 'value' => 255, 'time' => 1000 }, ],
-	'ERROR'  => [ { 'channel' => 3, 'value' => 255, 'time' => 0 }, ],
+	'OFF'       => [ { 'channel' => 3, 'value' => 0,   'time' => 60000 }, ],
+	'PLAY'      => [ { 'channel' => 3, 'value' => 80,  'time' => 5000  }, ],
+	'PREMOTION' => [ { 'channel' => 3, 'value' => 32,  'time' => 2500  }, ],
+	'MOTION'    => [ { 'channel' => 3, 'value' => 192, 'time' => 750   }, ],
+	'BRIGHT'    => [ { 'channel' => 3, 'value' => 255, 'time' => 1000  }, ],
+	'ERROR'     => [ { 'channel' => 3, 'value' => 255, 'time' => 100   }, ],
 );
 
 # App config
@@ -84,6 +85,8 @@ while (1) {
 		$newState = 'MOTION';
 	} elsif ($newState eq 'PAUSE') {
 		$newState = 'PLAY';
+	} elsif ($newState eq 'MOTION') {
+		$newState = 'PREMOTION';
 	} else {
 		$newState = 'OFF';
 	}

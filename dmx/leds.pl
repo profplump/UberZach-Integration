@@ -51,9 +51,9 @@ my %DIM            = (
 		{ 'channel' => 15, 'value' => 255, 'time' => 1000 },
 	],
 	'ERROR'    => [
-		{ 'channel' => 13, 'value' => 144, 'time' => 0 },
-		{ 'channel' => 14, 'value' => 255, 'time' => 0 },
-		{ 'channel' => 15, 'value' => 144, 'time' => 0 },
+		{ 'channel' => 13, 'value' => 144, 'time' => 100 },
+		{ 'channel' => 14, 'value' => 255, 'time' => 100 },
+		{ 'channel' => 15, 'value' => 144, 'time' => 100 },
 	],
 );
 
