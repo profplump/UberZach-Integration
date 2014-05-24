@@ -9,7 +9,7 @@ use lib dirname(abs_path($0));
 use DMX;
 
 # User config
-my $MOTION_TIMEOUT = 15;
+my $MOTION_TIMEOUT = 30;
 my %DIM            = (
 	'OFF'    => [ { 'channel' => 3, 'value' => 0,   'time' => 60000 }, ],
 	'PLAY'   => [ { 'channel' => 3, 'value' => 80,  'time' => 5000 }, ],
