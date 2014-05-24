@@ -20,22 +20,22 @@ my %DIM = (
 		{ 'channel' => 9,  'value' => 0,   'time' => 60000 },
 	],
 	'PLAY'      => [
-		{ 'channel' => 1,  'value' => 64,  'time' => 500   },
-		{ 'channel' => 2,  'value' => 32,  'time' => 500   },
-		{ 'channel' => 5,  'value' => 64,  'time' => 500   },
-		{ 'channel' => 6,  'value' => 36,  'time' => 500   },
-		{ 'channel' => 7,  'value' => 32,  'time' => 500   },
-		{ 'channel' => 8,  'value' => 16,  'time' => 500   },
-		{ 'channel' => 9,  'value' => 16,  'time' => 500   },
+		{ 'channel' => 1,  'value' => 64,  'time' => 500 },
+		{ 'channel' => 2,  'value' => 32,  'time' => 500 },
+		{ 'channel' => 5,  'value' => 64,  'time' => 500 },
+		{ 'channel' => 6,  'value' => 36,  'time' => 500 },
+		{ 'channel' => 7,  'value' => 32,  'time' => 500 },
+		{ 'channel' => 8,  'value' => 16,  'time' => 500 },
+		{ 'channel' => 9,  'value' => 16,  'time' => 500 },
 	],
 	'PLAY_HIGH' => [
-		{ 'channel' => 1,  'value' => 255, 'time' => 500   },
-		{ 'channel' => 2,  'value' => 128, 'time' => 500   },
-		{ 'channel' => 5,  'value' => 128, 'time' => 500   },
-		{ 'channel' => 6,  'value' => 36,  'time' => 500   },
-		{ 'channel' => 7,  'value' => 128, 'time' => 500   },
-		{ 'channel' => 8,  'value' => 16,  'time' => 500   },
-		{ 'channel' => 9,  'value' => 96,  'time' => 500   },
+		{ 'channel' => 1,  'value' => 255, 'time' => 500 },
+		{ 'channel' => 2,  'value' => 128, 'time' => 500 },
+		{ 'channel' => 5,  'value' => 128, 'time' => 500 },
+		{ 'channel' => 6,  'value' => 36,  'time' => 500 },
+		{ 'channel' => 7,  'value' => 128, 'time' => 500 },
+		{ 'channel' => 8,  'value' => 16,  'time' => 500 },
+		{ 'channel' => 9,  'value' => 96,  'time' => 500 },
 	],
 	'PAUSE'     => [
 		{ 'channel' => 1,  'value' => 255, 'time' => 1000  },
@@ -47,31 +47,40 @@ my %DIM = (
 		{ 'channel' => 9,  'value' => 96,  'time' => 6000, 'delay' => 3000 },
 	],
 	'MOTION'    => [
-		{ 'channel' => 1,  'value' => 255, 'time' => 1000  },
-		{ 'channel' => 2,  'value' => 192, 'time' => 1000  },
-		{ 'channel' => 5,  'value' => 192, 'time' => 1000  },
-		{ 'channel' => 6,  'value' => 104, 'time' => 1000  },
-		{ 'channel' => 7,  'value' => 192, 'time' => 1000  },
-		{ 'channel' => 8,  'value' => 96,  'time' => 2000  },
-		{ 'channel' => 9,  'value' => 96,  'time' => 1500  },
+		{ 'channel' => 1,  'value' => 255, 'time' => 750  },
+		{ 'channel' => 2,  'value' => 192, 'time' => 1000 },
+		{ 'channel' => 5,  'value' => 192, 'time' => 750  },
+		{ 'channel' => 6,  'value' => 104, 'time' => 1000 },
+		{ 'channel' => 7,  'value' => 192, 'time' => 1000 },
+		{ 'channel' => 8,  'value' => 96,  'time' => 2000 },
+		{ 'channel' => 9,  'value' => 96,  'time' => 1500 },
+	],
+	'PREMOTION' => [
+		{ 'channel' => 1,  'value' => 128, 'time' => 750  },
+		{ 'channel' => 2,  'value' => 48,  'time' => 1000 },
+		{ 'channel' => 5,  'value' => 96,  'time' => 750  },
+		{ 'channel' => 6,  'value' => 0,   'time' => 1000 },
+		{ 'channel' => 7,  'value' => 48,  'time' => 1000 },
+		{ 'channel' => 8,  'value' => 0,   'time' => 2000 },
+		{ 'channel' => 9,  'value' => 0,   'time' => 1500 },
 	],
 	'BRIGHT'    => [
-		{ 'channel' => 1,  'value' => 255, 'time' => 1000  },
-		{ 'channel' => 2,  'value' => 255, 'time' => 1000  },
-		{ 'channel' => 5,  'value' => 255, 'time' => 1000  },
-		{ 'channel' => 6,  'value' => 255, 'time' => 1000  },
-		{ 'channel' => 7,  'value' => 255, 'time' => 1000  },
-		{ 'channel' => 8,  'value' => 255,  'time' => 2000  },
-		{ 'channel' => 9,  'value' => 255,  'time' => 1500  },
+		{ 'channel' => 1,  'value' => 255, 'time' => 1000 },
+		{ 'channel' => 2,  'value' => 255, 'time' => 1000 },
+		{ 'channel' => 5,  'value' => 255, 'time' => 1000 },
+		{ 'channel' => 6,  'value' => 255, 'time' => 1000 },
+		{ 'channel' => 7,  'value' => 255, 'time' => 1000 },
+		{ 'channel' => 8,  'value' => 255, 'time' => 2000 },
+		{ 'channel' => 9,  'value' => 255, 'time' => 1500 },
 	],
 	'ERROR'    => [
-		{ 'channel' => 1,  'value' => 0,   'time' => 0  },
-		{ 'channel' => 2,  'value' => 0,   'time' => 0  },
-		{ 'channel' => 5,  'value' => 0,   'time' => 0  },
-		{ 'channel' => 6,  'value' => 0,   'time' => 0  },
-		{ 'channel' => 7,  'value' => 0,   'time' => 0  },
-		{ 'channel' => 8,  'value' => 0,   'time' => 0  },
-		{ 'channel' => 9,  'value' => 0,   'time' => 0  },
+		{ 'channel' => 1,  'value' => 0,   'time' => 0 },
+		{ 'channel' => 2,  'value' => 0,   'time' => 0 },
+		{ 'channel' => 5,  'value' => 0,   'time' => 0 },
+		{ 'channel' => 6,  'value' => 0,   'time' => 0 },
+		{ 'channel' => 7,  'value' => 0,   'time' => 0 },
+		{ 'channel' => 8,  'value' => 0,   'time' => 0 },
+		{ 'channel' => 9,  'value' => 0,   'time' => 0 },
 	],
 );
 
@@ -150,6 +159,9 @@ while (1) {
 				$newState = 'MOTION';
 			}
 		}
+	}
+	if ($newState eq 'OFF' && $exists{'STAIRS'} =~ /MOTION/) {
+		$newState = 'PREMOTION';
 	}
 	$state = $newState;
 
