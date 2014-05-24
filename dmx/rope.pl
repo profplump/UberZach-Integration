@@ -160,7 +160,7 @@ while (1) {
 			}
 		}
 	}
-	if ($newState eq 'OFF' && $exists{'STAIRS'} =~ /MOTION/) {
+	if ($newState eq 'OFF' && $exists{'STAIRS'} =~ /^State: MOTION\b/) {
 		$newState = 'PREMOTION';
 	}
 	$state = $newState;
