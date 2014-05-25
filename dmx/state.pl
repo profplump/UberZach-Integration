@@ -90,10 +90,10 @@ if ($HOST =~ /loki/i) {
 	$MON_FILES{'AUDIO_STATE'} = 'VALUE-NOUPDATE';
 
 	# Lights
-	$MON_FILES{'LED'}      = 'VALUE-NOUPDATE';
-	$MON_FILES{'OVERHEAD'} = 'VALUE-NOUPDATE';
-	$MON_FILES{'ROPE'}     = 'VALUE-NOUPDATE';
-	$MON_FILES{'STAIRS'}   = 'VALUE-NOUPDATE';
+	$MON_FILES{'LED'}      = 'LINE-NOUPDATE';
+	$MON_FILES{'OVERHEAD'} = 'LINE-NOUPDATE';
+	$MON_FILES{'ROPE'}     = 'LINE-NOUPDATE';
+	$MON_FILES{'STAIRS'}   = 'LINE-NOUPDATE';
 
 	# TV
 	$MON_FILES{'TV'}     = 'STATUS';
@@ -110,8 +110,8 @@ my %EXTRAS = (
 		'LENGTH'    => qr/^duration:(\d+)/m,
 		'POSITION'  => qr/^time:(\d+(?:\.\d+)?)/m,
 		'TYPE'      => qr/^type:(.+)$/m,
-		'IMAGE'     => qr/^fanart:(.+)$/m,
-		'THUMB'     => qr/^thumbnail:(.+)$/m,
+		#'IMAGE'     => qr/^fanart:(.+)$/m,
+		#'THUMB'     => qr/^thumbnail:(.+)$/m,
 		'ALBUM'     => qr/^album:(.+)$/m,
 		'ARTIST'    => qr/^artist:(.+)$/m,
 		'SELECTION' => qr/^selection:(.+)$/m,
@@ -124,7 +124,7 @@ my %EXTRAS = (
 my $SOCK_TIMEOUT = 5;
 my $DATA_DIR     = DMX::dataDir();
 my $CMD_FILE     = 'STATE';
-my $MAX_CMD_LEN  = 4096;
+my $MAX_CMD_LEN  = DMX::maxCmdLen();
 my $RESET_CMD    = $ENV{'HOME'} . '/bin/video/dmx/reset.sh';
 my $PUSH_TIMEOUT = 20;
 
@@ -178,6 +178,7 @@ foreach my $name (keys(%MON_FILES)) {
 		'status'    => 0,
 		'exists'    => 0,
 		'value'     => 0,
+		'line'      => 0,
 		'clear'     => 0,
 		'clear_off' => 0,
 		'mtime'     => 0,
@@ -192,6 +193,9 @@ foreach my $name (keys(%MON_FILES)) {
 	}
 	if ($file{'type'} =~ /\bVALUE\b/i) {
 		$attr{'value'} = 1;
+	}
+	if ($file{'type'} =~ /\bLINE\b/i) {
+		$attr{'line'} = 1;
 	}
 	if ($file{'type'} =~ /\bCLEAR\b/i) {
 		$attr{'clear'} = 1;
@@ -213,6 +217,9 @@ foreach my $name (keys(%MON_FILES)) {
 	}
 
 	# Cross-match some data types for easy of use
+	if ($attr{'line'}) {
+		$attr{'value'} = 1;
+	}
 	if ($attr{'value'} || $attr{'playing'}) {
 		$attr{'status'} = 1;
 	}
@@ -393,7 +400,11 @@ while (1) {
 
 			# Parse the value for the file
 			if ($file->{'attr'}->{'value'}) {
-				$text =~ s/\n$//;
+				if ($file->{'attr'}->{'line'}) {
+					($text) = $text =~ /^([^\n]+)\s*\n/;
+				} else {
+					$text =~ s/\s+$//;
+				}
 				$file->{'value'} = $text;
 			} elsif ($file->{'attr'}->{'playing'}) {
 				if ($text =~ /^playing:1/m) {
@@ -609,10 +620,15 @@ while (1) {
 		$pushLast = time();
 
 		# Send notifications to all subscribers
+		my $msg = $state . $status;
+		if ($DEBUG) {
+			print STDERR '<STATE (' . length($msg) . ")>\n" . $msg . "\n<END STATE>\n\n";
+		}
 		foreach my $sub (@subscribers) {
 
 			# Drop subscribers that are not available
-			if (!eval { $sub->{'socket'}->send($state . $status) }) {
+			my $send = $sub->{'socket'}->send($msg);
+			if (!defined($send) || $send < 1) {
 				print STDERR 'Dropping bad socket from subscriber list: ' . $sub->{'path'} . "\n";
 
 				my @new_subscribers = ();
