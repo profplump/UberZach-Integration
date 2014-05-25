@@ -17,7 +17,7 @@ if ($ENV{'DEBUG'}) {
 
 # Config
 my $SOCK_TIMEOUT = 5;
-my $MAX_CMD_LEN  = 16384;
+my $MAX_CMD_LEN  = 2048;
 my $TEMP_DIR     = `getconf DARWIN_USER_TEMP_DIR`;
 chomp($TEMP_DIR);
 my $DATA_DIR    = $TEMP_DIR . 'plexMonitor/';
