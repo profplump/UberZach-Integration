@@ -139,7 +139,7 @@ char * initPaths(const char *name) {
 	// Construct the data directory and output file paths
 	dirLen = confstr(_CS_DARWIN_USER_TEMP_DIR, NULL, (size_t) 0);
 	dirLen += sizeof(DATA_DIR);
-	fileLen = strnlen(name, MAX_STR_LEN);
+	fileLen = dirLen + strnlen(name, MAX_STR_LEN);
 	datadir = malloc(dirLen);
 	outfile = malloc(fileLen);
 	if (datadir == NULL || outfile == NULL) {
@@ -148,15 +148,15 @@ char * initPaths(const char *name) {
 	}
 	confstr(_CS_DARWIN_USER_TEMP_DIR, datadir, dirLen);
 	strlcat(datadir, DATA_DIR, dirLen);
-	strlcpy(outfile, datadir, dirLen + fileLen);
-	strlcat(outfile, name, dirLen + fileLen);
+	strlcpy(outfile, datadir, fileLen);
+	strlcat(outfile, name, fileLen);
 
 	// Create the datadir as needed
 	stat(datadir, &statbuf);
 	if (!S_ISDIR(statbuf.st_mode)) {
 		fprintf(stderr, "Creating data directory: %s\n", datadir);
 		if (mkdir(datadir, S_IRUSR | S_IWUSR | S_IXUSR) != 0) {
-			fprintf(stderr, "Error creating data directory (%s): %s\n", strerror(errno), outfile);
+			fprintf(stderr, "Error creating data directory (%s): %s\n", strerror(errno), datadir);
 			exit(1);
 		}
 	}
