@@ -173,13 +173,13 @@ foreach my $episode (@episodes) {
 		$file =~ s/^\d+\s+\-\s*//;
 		$file =~ s/S\d+E\d+\s+\-\s*//i;
 		$file =~ s/\.\w{2,4}//;
-		if (!$file || length($file) < 2 || $file =~ /NoName/i || $file =~ /Episode\s+\d+/i) {
+		if (!$file || length($file) < 2 || $file =~ /NoName/i || $file =~ /Episode\s+\d+/i || $file =~ /Disc\s+\d+/i) {
 			next;
 		}
 		if ($file =~ /\s+S\d+D\d+\-\d+$/) {
 			print STDERR 'Skipping encoder-named file: ' . $file . "\n";
 		}
-		if ($title =~ /^Episode\s+\d+$/ || $title =~ /^\d{4}\-\d{2}\-\d{2}$/) {
+		if ($title =~ /^Episode\s+\d+$/ || $title =~ /^\d{4}\-\d{2}\-\d{2}$/ || $title =~ /Disc\s+\d+/i) {
 			my $ua      = LWP::UserAgent->new();
 			my $encoded = uri_escape($file);
 
