@@ -110,13 +110,15 @@ my %EXTRAS = (
 		'LENGTH'    => qr/^duration:(\d+)/m,
 		'POSITION'  => qr/^time:(\d+(?:\.\d+)?)/m,
 		'TYPE'      => qr/^type:(.+)$/m,
-		#'IMAGE'     => qr/^fanart:(.+)$/m,
-		#'THUMB'     => qr/^thumbnail:(.+)$/m,
 		'ALBUM'     => qr/^album:(.+)$/m,
 		'ARTIST'    => qr/^artist:(.+)$/m,
 		'SELECTION' => qr/^selection:(.+)$/m,
 		'WINDOW'    => qr/^window:(.+)$/m,
 		'WINDOWID'  => qr/^windowid:(\d+)/m,
+
+		# Available, but big and mostly useless
+		#'IMAGE'     => qr/^fanart:(.+)$/m,
+		#'THUMB'     => qr/^thumbnail:(.+)$/m,
 	}
 );
 
