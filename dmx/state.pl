@@ -149,7 +149,7 @@ my $select = DMX::stateSocket($CMD_FILE);
 foreach my $file (keys(%EXTRAS)) {
 	if (exists($MON_FILES{$file})) {
 		foreach my $extra (keys(%{ $EXTRAS{$file} })) {
-			$MON_FILES{ $file . '_' . $extra } = 'NONE';
+			$MON_FILES{ $file . '_' . $extra } = 'EXTRA';
 		}
 	}
 }
@@ -186,6 +186,8 @@ foreach my $name (keys(%MON_FILES)) {
 		'mtime'     => 0,
 		'playing'   => 0,
 		'no_update' => 0,
+		'no_value'  => 0,
+		'extra'     => 0,
 	);
 	if ($file{'type'} =~ /\bSTATUS\b/i) {
 		$attr{'status'} = 1;
@@ -217,8 +219,17 @@ foreach my $name (keys(%MON_FILES)) {
 	if ($file{'type'} =~ /\bNOUPDATE\b/i) {
 		$attr{'no_update'} = 1;
 	}
+	if ($file{'type'} =~ /\bNONE\b/i) {
+		$attr{'no_value'} = 1;
+	}
+	if ($file{'type'} =~ /\bEXTRA\b/i) {
+		$attr{'extra'} = 1;
+	}
 
 	# Cross-match some data types for easy of use
+	if ($attr{'extra'}) {
+		$attr{'no_value'} = 1;
+	}
 	if ($attr{'line'}) {
 		$attr{'value'} = 1;
 	}
@@ -296,8 +307,13 @@ while (1) {
 		);
 		push(@subscribers, \%tmp);
 
-		# Force an update
-		$update = 1;
+		# Send immediately when someone subscribes
+		if (!$update) {
+			if ($DEBUG) {
+				print STDERR "New subscriber\n";
+			}
+			$update = 1;
+		}
 	}
 
 	# Use opendir/readdir in each folder to ensure fresh results
@@ -319,14 +335,16 @@ while (1) {
 	# Monitor files of all types
 	foreach my $file (values(%files)) {
 
-		# Skip "NONE" files -- they are data stores handled in other actions
-		if ($file->{'type'} eq 'NONE') {
-			next;
+		# Record the previous status and clear the new one, unless the file is type EXTRA
+		if (!$file->{'attr'}->{'extra'}) {
+			$file->{'last'}  = $file->{'value'};
+			$file->{'value'} = 0;
 		}
 
-		# Always record the previous status and clear the new one
-		$file->{'last'}  = $file->{'value'};
-		$file->{'value'} = 0;
+		# Skip NO_VALUE files -- their values are abstracted from other data
+		if ($file->{'attr'}->{'no_value'}) {
+			next;
+		}
 
 		# Track available/unavailable status in each cycle
 		{
@@ -435,7 +453,7 @@ while (1) {
 					}
 
 					if ($DEBUG) {
-						print STDERR 'Status (extra): ' . $name . ': ' . $files{$name}{'value'} . "\n";
+						print STDERR "\t" . $name . ': ' . $files{$name}{'value'} . "\n";
 					}
 				}
 			}
@@ -474,8 +492,6 @@ while (1) {
 	$timeSinceUpdate = time() - $updateLast;
 
 	# Calculate the PLEX state
-	$files{'PLEX'}->{'last'}  = $files{'PLEX'}->{'value'};
-	$files{'PLEX'}->{'value'} = 0;
 	if (exists($files{'FRONT_APP'})) {
 		if (   $files{'FRONT_APP'}->{'value'} =~ 'com.plexapp.plexhometheater'
 			|| $files{'FRONT_APP'}->{'value'} eq 'com.apple.ScreenSaver.Engine')
@@ -594,25 +610,50 @@ while (1) {
 		}
 	}
 
-	# Force updates on a periodic basis
-	if (time() - $pushLast > $PUSH_TIMEOUT) {
-		$update = 1;
-	}
-
-	# Update on any status change
-	foreach my $file (values(%files)) {
-		if ($file->{'value'} ne $file->{'last'}) {
+	# Update on a periodic basis, so we don't timeout
+	if (!$update) {
+		if (time() - $pushLast > $PUSH_TIMEOUT) {
+			if ($DEBUG) {
+				print STDERR "Periodic update\n";
+			}
 			$update = 1;
-			last;
 		}
 	}
 
-	# Force updates on any state change
-	if ($stateLast ne $state || $statusLast ne $status) {
-		if ($DEBUG) {
-			print STDERR 'State change: ' . $stateLast . $statusLast . ' => ' . $state . $status . "\n";
+	# Update on a master state change
+	if (!$update) {
+		if ($stateLast ne $state) {
+			if ($DEBUG) {
+				print STDERR 'State change: ' . $stateLast . ' => ' . $state . "\n";
+			}
+			$update = 1;
 		}
-		$update = 1;
+	}
+
+	# Update on any mtime change
+	if (!$update) {
+		foreach my $file (values(%files)) {
+			if ($file->{'update'} > $pushLast) {
+				if ($DEBUG) {
+					print STDERR 'Mtime change: ' . $file->{'name'} . ' (' . $file->{'update'} . ")\n";
+				}
+				$update = 1;
+				last;
+			}
+		}
+	}
+
+	# Update on any value change
+	if (!$update) {
+		foreach my $file (values(%files)) {
+			if ($file->{'value'} ne $file->{'last'}) {
+				if ($DEBUG) {
+					print STDERR 'Value change: ' . $file->{'name'} . ' (' . $file->{'last'} . ' => ' . $file->{'value'} . ")\n";
+				}
+				$update = 1;
+				last;
+			}
+		}
 	}
 
 	# Push the update
