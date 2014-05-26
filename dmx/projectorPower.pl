@@ -135,7 +135,7 @@ while (1) {
 			print STDERR "Recorded shutdown timestamp\n";
 		}
 		$shutdown = $now;
-		$lastUser = $shutdown;
+		$lastUser = $now;
 	}
 
 	# Calculate the elapsed time
