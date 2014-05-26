@@ -413,8 +413,12 @@ while (1) {
 			}
 		}
 
-		# Grab the state from STATUS files
+		# Grab the state from STATUS files (including VALUE files)
 		if ($file->{'attr'}->{'status'}) {
+
+			# Overwrite the mtime-based value
+			$file->{'value'} = 0;
+
 			my $text = '';
 			{
 				if (!open(my $fh, $file->{'path'})) {
