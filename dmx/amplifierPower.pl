@@ -36,7 +36,7 @@ DMX::stateSubscribe($STATE_SOCK);
 my $amp = DMX::clientSock($AMP_SOCK);
 
 # State
-my $state     = 'ON';
+my $state     = 'OFF';
 my $mode      = 'SURROUND';
 my $input     = 'TV';
 my $stateLast = $state;
