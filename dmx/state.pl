@@ -279,7 +279,7 @@ while (1) {
 	# Provide a method to force updates
 	my $update = 0;
 
-	# Avoid repeated called to time()
+	# Avoid repeated calls to time()
 	my $now = time();
 
 	# Check for queued commands

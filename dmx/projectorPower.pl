@@ -89,18 +89,21 @@ while (1) {
 
 	# State is calculated; use newState to gather data
 	my $newState = $state;
+	
+	# Avoid repeated calls to time()
+	my $now = time();
 
 	# Wait for state updates
 	{
 		my $cmdState = DMX::readState($DELAY, \%exists, \%mtime, undef());
 		if (defined($cmdState)) {
 			$newState = $cmdState;
-			$pullLast = time();
+			$pullLast = $now;
 		}
 	}
 
 	# Die if we don't see regular updates
-	if (time() - $pullLast > $PULL_TIMEOUT) {
+	if ($now - $pullLast > $PULL_TIMEOUT) {
 		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
 	}
 
@@ -113,12 +116,12 @@ while (1) {
 	if ($exists{'PROJECTOR'} && $lastUser < $mtime{'PROJECTOR'}) {
 		$lastUser = $mtime{'PROJECTOR'};
 	} elsif ($newState eq 'ON') {
-		$lastUser = time();
+		$lastUser = $now;
 	}
 
 	# Playing counts as activity
-	if ($exists{'PLAYING'} && $lastUser < time()) {
-		$lastUser = time();
+	if ($exists{'PLAYING'} && $lastUser < $now) {
+		$lastUser = $now;
 	}
 
 	# Clear the shutdown timestamp if there is new user activity
@@ -131,12 +134,12 @@ while (1) {
 		if ($DEBUG) {
 			print STDERR "Recorded shutdown timestamp\n";
 		}
-		$shutdown = time();
+		$shutdown = $now;
 		$lastUser = $shutdown;
 	}
 
 	# Calculate the elapsed time
-	my $elapsed = time() - $lastUser;
+	my $elapsed = $now - $lastUser;
 	if ($DEBUG) {
 		print STDERR 'Time since last user action: ' . $elapsed . "\n";
 	}
@@ -215,7 +218,7 @@ while (1) {
 	}
 
 	# Force updates on a periodic basis
-	if (!$update && time() - $pushLast > $PUSH_TIMEOUT) {
+	if (!$update && $now - $pushLast > $PUSH_TIMEOUT) {
 
 		# Not for the projector
 		#if ($DEBUG) {
@@ -271,7 +274,7 @@ while (1) {
 	}
 
 	# Only allow updates every few seconds -- the projector goes dumb during power state changes
-	if ($update && time() < $pushLast + $CMD_DELAY) {
+	if ($update && $now < $pushLast + $CMD_DELAY) {
 		if ($DEBUG) {
 			print STDERR 'Ignoring overrate update: ' . $state . "\n";
 		}
@@ -306,7 +309,7 @@ while (1) {
 		# No output file
 
 		# Update the push time
-		$pushLast = time();
+		$pushLast = $now;
 
 		# Clear the lastAnnounce timer
 		$lastAnnounce = 0;
@@ -320,10 +323,11 @@ sub sayShutdown($) {
 	my ($minutesLeft) = @_;
 
 	# Only allow annoucements once per minute
-	if (time() < $lastAnnounce + 60) {
+	my $now = time();
+	if ($now < $lastAnnounce + 60) {
 		return;
 	}
-	$lastAnnounce = time();
+	$lastAnnounce = $now;
 
 	# Determine the unit
 	my $unit     = 'minute';

@@ -53,16 +53,19 @@ while (1) {
 
 	# State is calculated; use newState to gather data
 	my $newState = $state;
+	
+	# Avoid repeated calls to time()
+	my $now = time();
 
 	# Wait for state updates
 	my $cmdState = DMX::readState($DELAY, \%exists, undef(), undef());
 	if (defined($cmdState)) {
 		$newState = $cmdState;
-		$pullLast = time();
+		$pullLast = $now;
 	}
 
 	# Die if we don't see regular updates
-	if (time() - $pullLast > $PULL_TIMEOUT) {
+	if ($now - $pullLast > $PULL_TIMEOUT) {
 		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
 	}
 
@@ -86,7 +89,7 @@ while (1) {
 	}
 
 	# Force updates on a periodic basis
-	if (!$update && time() - $pushLast > $PUSH_TIMEOUT) {
+	if (!$update && $now - $pushLast > $PUSH_TIMEOUT) {
 
 		# Not for the amp
 		#if ($DEBUG) {
@@ -114,8 +117,8 @@ while (1) {
 	}
 
 	# Set the channel mode as needed
-	if ($exists{'AMPLIFIER'} && $exists{'AMPLIFIER_MODE'} ne $mode && $lastMode < time() - $CMD_DELAY) {
-		$lastMode = time();
+	if ($exists{'AMPLIFIER'} && $exists{'AMPLIFIER_MODE'} ne $mode && $lastMode < $now - $CMD_DELAY) {
+		$lastMode = $now;
 		if ($DEBUG) {
 			print STDERR 'Setting mode to: ' . $mode . "\n";
 		}
@@ -129,8 +132,8 @@ while (1) {
 	}
 
 	# Set the amplifier input as needed
-	if ($exists{'AMPLIFIER'} && $exists{'AMPLIFIER_INPUT'} ne $input && $lastInput < time() - $CMD_DELAY) {
-		$lastInput = time();
+	if ($exists{'AMPLIFIER'} && $exists{'AMPLIFIER_INPUT'} ne $input && $lastInput < $now - $CMD_DELAY) {
+		$lastInput = $now;
 		if ($DEBUG) {
 			print STDERR 'Setting input to: ' . $input . "\n";
 		}
@@ -153,15 +156,15 @@ while (1) {
 		} elsif ($state eq 'RAVE') {
 			$cmd = 'ON';
 		}
-		if (defined($cmd) && $lastPower < time() - $CMD_DELAY) {
-			$lastPower = time();
+		if (defined($cmd) && $lastPower < $now - $CMD_DELAY) {
+			$lastPower = $now;
 			sendCmd($amp, $cmd);
 		}
 
 		# No output file
 
 		# Update the push time
-		$pushLast = time();
+		$pushLast = $now;
 
 		# Clear the update flag
 		$update = 0;
