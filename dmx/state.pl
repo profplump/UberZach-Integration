@@ -276,8 +276,11 @@ my $pushLast        = 0;
 # Loop forever
 while (1) {
 
-	# Provide a method to force updates even when the state does not change
+	# Provide a method to force updates
 	my $update = 0;
+
+	# Avoid repeated called to time()
+	my $now = time();
 
 	# Check for queued commands
 	my @ready_clients = $select->can_read($DELAY);
@@ -394,10 +397,15 @@ while (1) {
 					$file->{'update'} = $mtime;
 					$file->{'value'}  = 1;
 				} elsif ($file->{'last'}) {
-					$file->{'update'} = time();
+					$file->{'update'} = $now;
 				}
 			} else {
 				$file->{'update'} = $mtime;
+
+				# Set the value if the update is recent -- VALUE and STATUS will overwrite as needed
+				if ($mtime >= $now) {
+					$file->{'value'} = 1;
+				}
 			}
 
 			if ($DEBUG) {
@@ -489,7 +497,7 @@ while (1) {
 			$updateLast = $file->{'update'};
 		}
 	}
-	$timeSinceUpdate = time() - $updateLast;
+	$timeSinceUpdate = $now - $updateLast;
 
 	# Calculate the PLEX state
 	if (exists($files{'FRONT_APP'})) {
@@ -500,7 +508,7 @@ while (1) {
 		}
 	}
 	if ($files{'PLEX'}->{'last'} != $files{'PLEX'}->{'value'}) {
-		$files{'PLEX'}->{'update'} = time();
+		$files{'PLEX'}->{'update'} = $now;
 	}
 
 	# Determine some intermediate state data
@@ -612,7 +620,7 @@ while (1) {
 
 	# Update on a periodic basis, so we don't timeout
 	if (!$update) {
-		if (time() - $pushLast > $PUSH_TIMEOUT) {
+		if ($now - $pushLast > $PUSH_TIMEOUT) {
 			if ($DEBUG) {
 				print STDERR "Periodic update\n";
 			}
@@ -660,7 +668,7 @@ while (1) {
 	if ($update) {
 
 		# Note the push
-		$pushLast = time();
+		$pushLast = $now;
 
 		# Send notifications to all subscribers
 		my $msg = $state . $status;
