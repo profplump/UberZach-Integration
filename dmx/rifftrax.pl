@@ -210,6 +210,12 @@ while (1) {
 		# Warm fuzzies
 		DMX::say('RiffTrax initiated');
 
+		# Enable LEADIN if we're near the beginning of the movie
+		if ($riff->{'offset'} > $LEADIN_TIME && $videoTime < $LEADIN_TIME) {
+			playPausePlex();
+			$leadin = 1;
+		}
+
 		# Load and start the audio file
 		Audio::load('RIFF', $riff->{'file'});
 		playRiff();
@@ -220,17 +226,11 @@ while (1) {
 
 		# Reduce the delay while playing so we sync faster
 		$delay = 1;
-
-		# Enable LEADIN if we're near the beginning of the movie
-		if ($riff->{'offset'} > $LEADIN_TIME && $videoTime < $LEADIN_TIME) {
-			playPausePlex();
-			$leadin = 1;
-		}
 	}
 
 	# If the RIFF has changed, save the state to disk
 	if (   (defined($riff) != defined($riffLast))
-		|| (defined($riff) && ref($riff) && defined($riffLast) && ref($riffLast) && refaddr($riff) == refaddr($riffLast)))
+		|| (defined($riff) && ref($riff) && defined($riffLast) && ref($riffLast) && refaddr($riff) != refaddr($riffLast)))
 	{
 		my $new = '<none>';
 		if ($riff) {
@@ -311,6 +311,11 @@ while (1) {
 
 		# If LEADIN is still active
 		if ($leadin) {
+
+			# Keep Plex awake
+			if (int($riffTime) % 10 == 0) {
+				ticklePlex();
+			}
 
 			# Deactivate LEADIN if the movie advances outside the LEADIN_TIME window
 			if ($videoTime > $LEADIN_TIME) {
@@ -511,6 +516,12 @@ sub parseConfig($) {
 # The PMS playback API would work too, but this script currently knows nothing of the PMS
 sub playPausePlex() {
 	my @cmd = ('tell application "Plex" to activate', 'tell application "System Events" to key code 49');
+	Audio::runApplescript(join("\n", @cmd));
+}
+
+# Send a noop keycode to Plex to fend off the screen saver
+sub ticklePlex() {
+	my @cmd = ('tell application "Plex" to activate', 'tell application "System Events" to key code 1');
 	Audio::runApplescript(join("\n", @cmd));
 }
 
