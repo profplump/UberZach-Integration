@@ -89,7 +89,7 @@ while (1) {
 
 	# State is calculated; use newState to gather data
 	my $newState = $state;
-	
+
 	# Avoid repeated calls to time()
 	my $now = time();
 
@@ -236,13 +236,11 @@ while (1) {
 	}
 
 	# Force updates when there is a physical state mistmatch
-	if (!$update) {
-		if ($state eq 'OFF' && $exists{'PROJECTOR'}) {
-			if ($DEBUG) {
-				print STDERR 'Physical state mismatch: ' . $state . ':' . $exists{'PROJECTOR'} . "\n";
-			}
-			$update = 1;
+	if (!$update && $state eq 'OFF' && $exists{'PROJECTOR'}) {
+		if ($DEBUG) {
+			print STDERR 'Physical state mismatch: ' . $state . ':' . $exists{'PROJECTOR'} . "\n";
 		}
+		$update = 1;
 	}
 
 	# Set the color mode as needed

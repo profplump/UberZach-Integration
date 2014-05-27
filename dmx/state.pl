@@ -623,23 +623,19 @@ while (1) {
 	}
 
 	# Update on a periodic basis, so we don't timeout
-	if (!$update) {
-		if ($now - $pushLast > $PUSH_TIMEOUT) {
-			if ($DEBUG) {
-				print STDERR "Periodic update\n";
-			}
-			$update = 1;
+	if (!$update && $now - $pushLast > $PUSH_TIMEOUT) {
+		if ($DEBUG) {
+			print STDERR "Periodic update\n";
 		}
+		$update = 1;
 	}
 
 	# Update on a master state change
-	if (!$update) {
-		if ($stateLast ne $state) {
-			if ($DEBUG) {
-				print STDERR 'State change: ' . $stateLast . ' => ' . $state . "\n";
-			}
-			$update = 1;
+	if (!$update && $stateLast ne $state) {
+		if ($DEBUG) {
+			print STDERR 'State change: ' . $stateLast . ' => ' . $state . "\n";
 		}
+		$update = 1;
 	}
 
 	# Update on any mtime change
