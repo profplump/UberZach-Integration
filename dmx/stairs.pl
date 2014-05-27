@@ -15,7 +15,7 @@ my %DIM                = (
 	'OFF'        => [ { 'channel' => 3, 'value' => 0,   'time' => 60000 }, ],
 	'PREMOTION'  => [ { 'channel' => 3, 'value' => 32,  'time' => 2500 }, ],
 	'MOTION'     => [ { 'channel' => 3, 'value' => 192, 'time' => 750 }, ],
-	'POSTMOTION' => [ { 'channel' => 3, 'value' => 32,  'time' => $POST_MOTION_TIMEOUT * 1000 }, ],
+	'POSTMOTION' => [ { 'channel' => 3, 'value' => 32,  'time' => $POSTMOTION_TIMEOUT * 1000 }, ],
 	'BRIGHT'     => [ { 'channel' => 3, 'value' => 255, 'time' => 1000 }, ],
 	'ERROR'      => [ { 'channel' => 3, 'value' => 255, 'time' => 100 }, ],
 );
@@ -90,7 +90,7 @@ while (1) {
 		$newState   = 'MOTION';
 		$lastMotion = $now;
 	} elsif ($newState eq 'PLAY' || $newState eq 'PAUSE' || $newState eq 'MOTION') {
-		if ($now > $lastMotion + $POST_MOTION_TIMEOUT) {
+		if ($now > $lastMotion + $POSTMOTION_TIMEOUT) {
 			$newState = 'PREMOTION';
 		} else {
 			$newState = 'POSTMOTION';
