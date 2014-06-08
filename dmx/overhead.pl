@@ -99,22 +99,6 @@ while (1) {
 	}
 	$state = $newState;
 
-	# Speak when LIGHTS or BRIGHT changes
-	if (exists($exists{'BRIGHT'}) && exists($last{'BRIGHT'}) && $exists{'BRIGHT'} ne $last{'BRIGHT'}) {
-		if ($exists{'BRIGHT'}) {
-			DMX::say('Lights - Full power');
-		} else {
-			DMX::say('Lights - Nominal power');
-		}
-	}
-	if (exists($exists{'LIGHTS'}) && exists($last{'LIGHTS'}) && $exists{'LIGHTS'} ne $last{'LIGHTS'}) {
-		if ($exists{'LIGHTS'}) {
-			DMX::say('Lights up');
-		} else {
-			DMX::say('Lights down');
-		}
-	}
-
 	# Force updates on a periodic basis
 	if (!$update && time() - $pushLast > $PUSH_TIMEOUT) {
 		if ($DEBUG) {
