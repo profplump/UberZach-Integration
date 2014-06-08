@@ -34,14 +34,12 @@ DMX::stateSubscribe($STATE_SOCK);
 # Loop forever
 while (1) {
 
-	# State is calculated; use newState to gather data
-	my $newState = $state;
+	# Remember the last state, for comparison
 	%last = %exists;
 
 	# Wait for state updates
 	my $cmdState = DMX::readState($DELAY, \%exists, undef(), undef());
 	if (defined($cmdState)) {
-		$newState = $cmdState;
 		$pullLast = time();
 	}
 
