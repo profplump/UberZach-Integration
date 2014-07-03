@@ -678,8 +678,7 @@ while (1) {
 		foreach my $sub (@subscribers) {
 
 			# Drop subscribers that are not available
-			my $send = $sub->{'socket'}->send($msg);
-			if (!defined($send) || $send < 1) {
+			if (!eval { $sub->{'socket'}->send($state . $status) }) {
 				print STDERR 'Dropping bad socket from subscriber list: ' . $sub->{'path'} . "\n";
 
 				my @new_subscribers = ();
