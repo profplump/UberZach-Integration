@@ -9,10 +9,11 @@ use lib dirname(abs_path($0));
 use DMX;
 
 # Config
-my $TIMEOUT   = 900;
-my $COUNTDOWN = 119;
-my $OFF_DELAY = 15;
-my $CMD_DELAY = 20;
+my $TIMEOUT     = 900;
+my $COUNTDOWN   = 119;
+my $OFF_DELAY   = 15;
+my $CMD_DELAY   = 20;
+my $PAUSE_DELAY = 12;
 
 # Available color modes, bright to dark:
 #	DYNAMIC
@@ -83,6 +84,7 @@ my $life         = 0;
 my @color_sets   = sort { $a <=> $b } keys(%COLORS);
 my $color_set    = $color_sets[0];
 my $color        = $COLORS{$color_set}{'low'};
+my $lastPlay     = 0;
 
 # Loop forever
 while (1) {
@@ -195,6 +197,9 @@ while (1) {
 	# PLAY if we haven't figured out what else to do
 	my $playLights = 0;
 	if ($newState eq 'PLAY') {
+		$lastPlay   = $now;
+		$playLights = 1;
+	} elsif ($newState eq 'PAUSE' && $lastPlay + $PAUSE_DELAY > $now) {
 		$playLights = 1;
 	} elsif ($exists{'PLAYING_TYPE'} eq 'audio') {
 		$color = $COLORS{$color_set}{'low'};
