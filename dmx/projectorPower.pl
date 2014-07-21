@@ -13,7 +13,7 @@ my $TIMEOUT     = 900;
 my $COUNTDOWN   = 119;
 my $OFF_DELAY   = 15;
 my $CMD_DELAY   = 20;
-my $PAUSE_DELAY = 12;
+my $PAUSE_DELAY = 10;
 
 # Available color modes, bright to dark:
 #	DYNAMIC
