@@ -21,7 +21,7 @@ my $CMD_DELAY = 20;
 #	THEATER_BLACK_1
 #
 # Color modes by proportion of lamp life
-my $LAMP_LIFE = 1500;
+my $LAMP_LIFE = 1625;
 my %COLORS    = (
 	'0.500' => {
 		'high' => 'THEATER',
