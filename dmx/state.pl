@@ -81,7 +81,7 @@ if ($HOST =~ /loki/i) {
 
 	# Equipment
 	$MON_FILES{'FAN'}     = 'LINE-NOUPDATE';
-	$MON_FILES{'FAN_CMD'} = 'EXISTS-ON';
+	$MON_FILES{'FAN_CMD'} = 'EXISTS-TIMEOUT';
 
 	# OS State
 	$MON_FILES{'FRONT_APP'}   = 'LINE-NOUPDATE';
