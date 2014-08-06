@@ -49,7 +49,7 @@ while [ $LOOP -ne 0 ]; do
 	# Ask Plex for a list of unwatched TV series
 	UNWATCHED_TIMEOUT=$(( $CURL_TIMEOUT ))
 	if [ -z "${FAILED}" ]; then
-		UNWATCHED_URL="${PMS_URL}library/sections/${UNWATCHED_SECTION}/all?unwatchedLeaves=1"
+		UNWATCHED_URL="${PMS_URL}library/sections/${UNWATCHED_SECTION}/all?type=2&unwatched=1&sort=titleSort:asc&X-Plex-Container-Start=0&X-Plex-Container-Size=10000"
 		TRY=1
 		FAILED="Too few unwatched series"
 		while [ $TRY -le $UNWATCHED_RETRIES ] && [ -n "${FAILED}" ]; do
