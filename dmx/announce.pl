@@ -15,6 +15,7 @@ my $OUTPUT_FILE  = $DATA_DIR . $STATE_SOCK;
 my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
 my $DELAY        = $PULL_TIMEOUT / 2;
+my $SPEAK_DELAY  = 5;
 
 # Debug
 my $DEBUG = 0;
@@ -26,6 +27,7 @@ if ($ENV{'DEBUG'}) {
 my %exists    = ();
 my %last      = ();
 my $pullLast  = time();
+my $speakLast = time();
 
 # Sockets
 DMX::stateSocket($STATE_SOCK);
@@ -37,14 +39,17 @@ while (1) {
 	# Remember the last state, for comparison
 	%last = %exists;
 
+	# Avoid repeated system calls
+	my $now = time();
+
 	# Wait for state updates
 	my $cmdState = DMX::readState($DELAY, \%exists, undef(), undef());
 	if (defined($cmdState)) {
-		$pullLast = time();
+		$pullLast = $now;
 	}
 
 	# Die if we don't see regular updates
-	if (time() - $pullLast > $PULL_TIMEOUT) {
+	if ($now - $pullLast > $PULL_TIMEOUT) {
 		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
 	}
 
@@ -72,6 +77,23 @@ while (1) {
 			DMX::say('Motion detectors: Disabled');
 		} else {
 			DMX::say('Motion detectors: Enabled');
+		}
+	}
+
+	# Speak when LOCK changes
+	if (exists($exists{'LOCK'}) && exists($last{'LOCK'}) && $exists{'LOCK'} ne $last{'LOCK'}) {
+		if ($exists{'LOCK'}) {
+			DMX::say('System locked');
+		} else {
+			DMX::say('System unlocked');
+		}
+	}
+
+	# Ongoing ALARM
+	if (exists($exists{'ALARM'}) && $exists{'ALARM'}) {
+		if ($now - $speakLast > $SPEAK_DELAY) {
+			$speakLast = $now;
+			DMX::say('Unauthorized access detected.');
 		}
 	}
 }
