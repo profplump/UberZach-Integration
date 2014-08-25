@@ -275,6 +275,9 @@ my $timeSinceUpdate = 0;
 my $startTime       = time() + $START_DELAY;
 my $pushLast        = 0;
 
+# Announce startup
+DMX::say('Automation system initiated');
+
 # Loop forever
 while (1) {
 
