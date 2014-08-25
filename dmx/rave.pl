@@ -161,7 +161,7 @@ while (1) {
 	}
 
 	# Alert continuously on ALARM
-	if (exists($exists{'ALARM'}) && $exists{'ALARM'}) {
+	if ($exists{'ALARM'}) {
 		$newState = 'RED_ALERT';
 	}
 

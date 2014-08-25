@@ -90,7 +90,7 @@ while (1) {
 	}
 
 	# Ongoing ALARM
-	if (exists($exists{'ALARM'}) && $exists{'ALARM'}) {
+	if ($exists{'ALARM'}) {
 		if ($now - $speakLast > $SPEAK_DELAY) {
 			$speakLast = $now;
 			DMX::say('Unauthorized access detected.');
