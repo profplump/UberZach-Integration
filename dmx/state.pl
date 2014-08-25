@@ -82,6 +82,8 @@ if ($HOST =~ /loki/i) {
 	# Equipment
 	$MON_FILES{'FAN'}     = 'LINE-NOUPDATE';
 	$MON_FILES{'FAN_CMD'} = 'EXISTS-TIMEOUT';
+	$MON_FILES{'LOCK'}    = 'EXISTS';
+	$MON_FILES{'ALARM'}   = 'NONE';
 
 	# OS State
 	$MON_FILES{'FRONT_APP'}   = 'LINE-NOUPDATE';
@@ -470,6 +472,18 @@ while (1) {
 				}
 			}
 		}
+	}
+
+	# Determine if we should ALARM before anything else
+	{
+		my $alarm = 0;
+		if (exists($files{'LOCK'}) && $files{'LOCK'}->{'value'} && exists($files{'MOTION'}) && $files{'MOTION'}->{'value'}) {
+			$alarm = 1;
+		}
+		if (!exists($files{'ALARM'}->{'value'}) || $files{'ALARM'}->{'value'} != $alarm) {
+			$files{'ALARM'}->{'update'} = $now;
+		}
+		$files{'ALARM'}->{'value'} = $alarm;
 	}
 
 	# Simulate the old GUI indicator
