@@ -160,6 +160,11 @@ while (1) {
 		next;
 	}
 
+	# Alert continously on ALARM
+	if (exists($exists{'ALARM'}) && $exists{'ALARM'}) {
+		$newState = 'RED_ALERT';
+	}
+
 	# Handle effects by name
 	if (defined($EFFECTS{$newState})) {
 
