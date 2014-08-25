@@ -96,6 +96,15 @@ while (1) {
 		$update = 0;
 	}
 
+	# Do not operate when LOCKed
+	if ($update && $exists{'LOCK'}) {
+		DMX::say('Garage door locked');
+		if ($exists{'GARAGE_CMD'}) {
+			DMX::say('Access denied to: ' . $exists{'GARAGE_CMD'});
+		}
+		$update = 0;
+	}
+
 	# Update the relay
 	if ($update) {
 
