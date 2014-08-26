@@ -1,10 +1,13 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
+use Email::MIME;
+use Email::Sender::Simple qw(sendmail);
+use File::Basename qw(dirname);
+use Sys::Hostname;
 
 # Local modules
 use Cwd qw(abs_path);
-use File::Basename qw(dirname);
 use lib dirname(abs_path($0));
 use DMX;
 
@@ -26,6 +29,7 @@ if ($ENV{'DEBUG'}) {
 # State
 my %exists    = ();
 my %last      = ();
+my %mtime     = ();
 my $pullLast  = time();
 my $speakLast = time();
 
@@ -40,7 +44,7 @@ while (1) {
 	%last = %exists;
 
 	# Wait for state updates
-	my $cmdState = DMX::readState($DELAY, \%exists, undef(), undef());
+	my $cmdState = DMX::readState($DELAY, \%exists, \%mtime, undef());
 
 	# Avoid repeated calls to time()
 	my $now = time();
@@ -91,7 +95,29 @@ while (1) {
 		}
 	}
 
-	# Ongoing ALARM
+	# Email when ALARM is asserted
+	if (exists($exists{'ALARM'}) && exists($last{'ALARM'}) && $exists{'ALARM'} && !$last{'ALARM'}) {
+		my @exists_tmp = ();
+		foreach my $key (sort(keys(%exists))) {
+			push(@exists_tmp, $key . ":\t" . $exists{$key} . ' @ ' . $mtime{$key});
+		}
+
+		my $message = Email::MIME->create(
+			header_str => [
+				To      => 'zach@kotlarek.com',
+				From    => $ENV{'USER'} . '@' . Sys::Hostname::hostname(),
+				Subject => 'Alarm Activated',
+			],
+			attributes => {
+				encoding => 'quoted-printable',
+				charset  => 'ISO-8859-1',
+			},
+			body_str => 'Alarm activated: ' . localtime() . "\n\nState: " . $cmdState . "\n" . join("\n", @exists_tmp) . "\n",
+		);
+		sendmail($message);
+	}
+
+	# Ongoing spoken ALARM
 	if ($exists{'ALARM'}) {
 		if ($now - $speakLast > $SPEAK_DELAY) {
 			$speakLast = $now;
