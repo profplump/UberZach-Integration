@@ -232,6 +232,9 @@ foreach my $name (keys(%MON_FILES)) {
 	if ($attr{'extra'}) {
 		$attr{'no_value'} = 1;
 	}
+	if ($attr{'no_value'}) {
+		$attr{'no_update'} = 1;
+	}
 	if ($attr{'line'}) {
 		$attr{'value'} = 1;
 	}
@@ -276,7 +279,7 @@ my $startTime       = time() + $START_DELAY;
 my $pushLast        = 0;
 
 # Announce startup
-DMX::say('System initalizing');
+DMX::say('System initializing');
 
 # Loop forever
 while (1) {
@@ -477,18 +480,6 @@ while (1) {
 		}
 	}
 
-	# Determine if we should ALARM before anything else
-	{
-		my $alarm = 0;
-		if (exists($files{'LOCK'}) && $files{'LOCK'}->{'value'} && exists($files{'MOTION'}) && $files{'MOTION'}->{'value'}) {
-			$alarm = 1;
-		}
-		if (!exists($files{'ALARM'}->{'value'}) || $files{'ALARM'}->{'value'} != $alarm) {
-			$files{'ALARM'}->{'update'} = $now;
-		}
-		$files{'ALARM'}->{'value'} = $alarm;
-	}
-
 	# Simulate the old GUI indicator
 	{
 		my $gui = 0;
@@ -583,6 +574,18 @@ while (1) {
 	}
 	if ($state eq 'INIT') {
 		$state = 'OFF';
+	}
+
+	# ALARM if LOCK exists and the master state is not OFF
+	{
+		my $alarm = 0;
+		if (exists($files{'LOCK'}) && $files{'LOCK'}->{'value'} && $state ne 'OFF') {
+			$alarm = 1;
+		}
+		if (!exists($files{'ALARM'}->{'value'}) || $files{'ALARM'}->{'value'} != $alarm) {
+			$files{'ALARM'}->{'update'} = $now;
+		}
+		$files{'ALARM'}->{'value'} = $alarm;
 	}
 
 	# Clear EXISTS_ON files when the main state is "OFF" (and before we append their status)
