@@ -39,11 +39,13 @@ while (1) {
 	# Remember the last state, for comparison
 	%last = %exists;
 
-	# Avoid repeated system calls
-	my $now = time();
-
 	# Wait for state updates
 	my $cmdState = DMX::readState($DELAY, \%exists, undef(), undef());
+
+	# Avoid repeated calls to time()
+	my $now = time();
+
+	# Record only valid states
 	if (defined($cmdState)) {
 		$pullLast = $now;
 	}

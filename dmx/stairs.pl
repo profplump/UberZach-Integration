@@ -58,11 +58,13 @@ while (1) {
 	# State is calculated; use newState to gather data
 	my $newState = $state;
 
+	# Wait for state updates
+	my $cmdState = DMX::readState($DELAY, \%exists, \%mtime, undef());
+
 	# Avoid repeated calls to time()
 	my $now = time();
 
-	# Wait for state updates
-	my $cmdState = DMX::readState($DELAY, \%exists, \%mtime, undef());
+	# Record only valid states
 	if (defined($cmdState)) {
 		$newState = $cmdState;
 		$pullLast = $now;
