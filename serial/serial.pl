@@ -172,9 +172,9 @@ if (basename($0) =~ /PROJECTOR/i) {
 		'VOL60'     => 'VOLM60  ',
 	);
 	%STATUS_CMDS = (
-		'STATUS' => { 'MATCH' => [ qr//, qr/1/ ] },
+		'STATUS' => { 'MATCH' => [ qr/\d/, qr/1/ ] },
 		'VOL'    => { 'EVAL'  => [ qr/\d/, '' ] },
-		'INPUT'  => { 'EVAL'  => [ qr/.*/, 'if ($a =~ /7/i) { $a = "PLEX" } elsif ($a =~ /\d/i) { $a = "OTHER" } else { $a = "TV" }' ] },
+		'INPUT'  => { 'EVAL'  => [ qr/(\d|ERR)/, 'if ($a =~ /7/i) { $a = "PLEX" } elsif ($a =~ /\d/i) { $a = "OTHER" } else { $a = "TV" }' ] },
 	);
 } else {
 	die("No device specified\n");
@@ -232,10 +232,13 @@ sendQuery($port, $CMDS{'INIT'});
 my $lastStatus = 0;
 my %STATUS     = ();
 foreach my $cmd (keys(%STATUS_CMDS)) {
-	my %tmp = ('status' => 0, 'last' => 0);
+	my %tmp = ('status' => 0, 'last' => '');
 	$tmp{'path'} = $DATA_DIR . uc($DEV);
 	if ($cmd ne 'STATUS') {
 		$tmp{'path'} .= '_' . uc($cmd);
+	}
+	if (-r $tmp{'path'}) {
+		unlink($tmp{'path'});
 	}
 
 	$STATUS{$cmd} = \%tmp;
@@ -314,7 +317,7 @@ while (1) {
 			my $result = sendQuery($port, $CMDS{$cmd});
 
 			# Process the result as requested
-			if ($result) {
+			if (defined($result) && $result ne '') {
 				if ($scmd->{'MATCH'}) {
 					if ($result =~ $scmd->{'MATCH'}[0]) {
 						if ($result =~ $scmd->{'MATCH'}[1]) {
