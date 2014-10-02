@@ -98,8 +98,9 @@ if ($HOST =~ /loki/i) {
 	$MON_FILES{'STAIRS'}   = 'LINE-NOUPDATE';
 
 	# TV
-	$MON_FILES{'TV'}     = 'STATUS';
-	$MON_FILES{'TV_VOL'} = 'LINE';
+	$MON_FILES{'TV'}       = 'STATUS';
+	$MON_FILES{'TV_VOL'}   = 'LINE-NOUPDATE';
+	$MON_FILES{'TV_INPUT'} = 'LINE-NOUPDATE';
 }
 my %EXTRAS = (
 	'PLAYING' => {
@@ -580,10 +581,11 @@ while (1) {
 	{
 		my $alarm = 0;
 		if (exists($files{'LOCK'}) && $files{'LOCK'}->{'value'}) {
-			if ($state ne 'OFF' ||
-				(exists($files{'MOTION'}) && $files{'MOTION'}->{'value'}) ||
-				(exists($files{'MOTION_STAIRS'}) && $files{'MOTION_STAIRS'}->{'value'})) {
-					$alarm = 1;
+			if (   $state ne 'OFF'
+				|| (exists($files{'MOTION'}) && $files{'MOTION'}->{'value'})
+				|| (exists($files{'MOTION_STAIRS'}) && $files{'MOTION_STAIRS'}->{'value'}))
+			{
+				$alarm = 1;
 			}
 		}
 		if (!exists($files{'ALARM'}->{'value'}) || $files{'ALARM'}->{'value'} != $alarm) {
