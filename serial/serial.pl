@@ -195,9 +195,9 @@ if ($ENV{'DEBUG'}) {
 }
 
 # Command-line arguments
-my ($DELAY_STATUS) = @ARGV;
-if (!$DELAY_STATUS) {
-	$DELAY_STATUS = 1;
+my ($DELAY) = @ARGV;
+if (!$DELAY) {
+	$DELAY = 1;
 }
 
 # Sanity check
@@ -211,7 +211,7 @@ if (!-r $PORT) {
 if ($BLUETOOTH) {
 	system($BT_CHECK, $DEV);
 	if ($? != 0) {
-		sleep($DELAY_STATUS);
+		sleep($DELAY);
 		die('Bluetooth device "' . $DEV . "\" not available\n");
 	}
 }
@@ -247,8 +247,8 @@ foreach my $cmd (keys(%STATUS_CMDS)) {
 while (1) {
 
 	# Calculate our next timeout
-	# Hold on select() but not more than $DELAY_STATUS after our last update
-	my $timeout = ($lastStatus + $DELAY_STATUS) - time();
+	# Hold on select() but not more than $DELAY after our last update
+	my $timeout = ($lastStatus + $DELAY) - time();
 	if ($timeout < 0) {
 		$timeout = 0;
 	}
@@ -296,7 +296,7 @@ while (1) {
 	}
 
 	# Read periodic data, but not too frequently
-	if (time() > $lastStatus + $DELAY_STATUS) {
+	if (time() > $lastStatus + $DELAY) {
 
 		# Record the last status update time
 		$lastStatus = time();
@@ -315,30 +315,35 @@ while (1) {
 			}
 			my $result = sendQuery($port, $CMDS{$cmd});
 
-			# Process the result as requested
-			if (defined($result) && $result ne '') {
-				if ($scmd->{'MATCH'}) {
-					if ($result =~ $scmd->{'MATCH'}[0]) {
-						if ($result =~ $scmd->{'MATCH'}[1]) {
-							$STATUS{$cmd}->{'status'} = 1;
-						} else {
-							$STATUS{$cmd}->{'status'} = 0;
-						}
+			# On read error wait a short while for the device to recover
+			if (!defined($result) || $result eq '' || ! ($result =~ /[[:print:]]/)) {
+				print STDERR 'Read error. Delaying ' . ( 4 * $DELAY ) . " seconds\n";
+				sleep(4 * $DELAY);
+				next;
+			}
+
+			# Process the (non-empty) result as requested
+			if ($scmd->{'MATCH'}) {
+				if ($result =~ $scmd->{'MATCH'}[0]) {
+					if ($result =~ $scmd->{'MATCH'}[1]) {
+						$STATUS{$cmd}->{'status'} = 1;
+					} else {
+						$STATUS{$cmd}->{'status'} = 0;
 					}
-				} elsif ($scmd->{'REPLACE'}) {
-					if ($result =~ $scmd->{'REPLACE'}) {
-						$STATUS{$cmd}->{'status'} = $result;
-						$STATUS{$cmd}->{'status'} =~ s/$scmd->{'REPLACE'}/$1/;
-					}
-				} elsif ($scmd->{'EVAL'}) {
-					my $a = $result;
-					if ($result =~ $scmd->{'EVAL'}[0]) {
-						eval($scmd->{'EVAL'}[1]);
-						$STATUS{$cmd}->{'status'} = $a;
-					}
-				} else {
-					die('Invalid status match type "' . (keys(%{$scmd}))[0] . '" in command: ' . $cmd . "\n");
 				}
+			} elsif ($scmd->{'REPLACE'}) {
+				if ($result =~ $scmd->{'REPLACE'}) {
+					$STATUS{$cmd}->{'status'} = $result;
+					$STATUS{$cmd}->{'status'} =~ s/$scmd->{'REPLACE'}/$1/;
+				}
+			} elsif ($scmd->{'EVAL'}) {
+				my $a = $result;
+				if ($result =~ $scmd->{'EVAL'}[0]) {
+					eval($scmd->{'EVAL'}[1]);
+					$STATUS{$cmd}->{'status'} = $a;
+				}
+			} else {
+				die('Invalid status match type "' . (keys(%{$scmd}))[0] . '" in command: ' . $cmd . "\n");
 			}
 
 			# Ensure the data is clean

@@ -18,7 +18,7 @@
 	<key>ProgramArguments</key>
 	<array>
 		<string>/Users/tv/bin/video/serial/tv.pl</string>
-		<string>2</string>
+		<string>1</string>
 	</array>
 </dict>
 </plist>
