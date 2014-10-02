@@ -184,7 +184,6 @@ if (basename($0) =~ /PROJECTOR/i) {
 my $DATA_DIR        = DMX::dataDir();
 my $CMD_FILE        = uc($DEV);
 my $BT_CHECK        = $ENV{'HOME'} . '/bin/btcheck';
-my $DELAY_STATUS    = 1;
 my $BYTE_TIMEOUT    = 50;
 my $SILENCE_TIMEOUT = $BYTE_TIMEOUT * 10;
 
@@ -196,9 +195,9 @@ if ($ENV{'DEBUG'}) {
 }
 
 # Command-line arguments
-my ($DELAY) = @ARGV;
-if (!$DELAY) {
-	$DELAY = 15;
+my ($DELAY_STATUS) = @ARGV;
+if (!$DELAY_STATUS) {
+	$DELAY_STATUS = 1;
 }
 
 # Sanity check

@@ -24,7 +24,6 @@
 	<key>ProgramArguments</key>
 	<array>
 		<string>/Users/tv/bin/video/serial/amplifier.pl</string>
-		<string>5</string>
 	</array>
 	<!--
 		<key>EnvironmentVariables</key>

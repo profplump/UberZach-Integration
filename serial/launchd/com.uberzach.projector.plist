@@ -18,7 +18,6 @@
 	<key>ProgramArguments</key>
 	<array>
 		<string>/Users/tv/bin/video/serial/projector.pl</string>
-		<string>5</string>
 	</array>
 </dict>
 </plist>
