@@ -19,5 +19,14 @@
 	<array>
 		<string>/Users/tv/bin/video/serial/projector.pl</string>
 	</array>
+	<!--
+		<key>EnvironmentVariables</key>
+		<dict>
+			<key>DEBUG</key>
+			<string>1</string>
+		</dict>
+		<key>StandardErrorPath</key>
+		<string>/Users/tv/Library/Logs/com.uberzach.projector.log</string>
+	-->
 </dict>
 </plist>

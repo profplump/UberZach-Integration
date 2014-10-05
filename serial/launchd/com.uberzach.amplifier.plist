@@ -32,7 +32,7 @@
 			<string>1</string>
 		</dict>
 		<key>StandardErrorPath</key>
-		<string>/Users/tv/com.uberzach.amplifier_errlog.txt</string>
+		<string>/Users/tv/Library/Logs/com.uberzach.amplifier.log</string>
 	-->
 </dict>
 </plist>

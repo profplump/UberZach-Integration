@@ -18,7 +18,16 @@
 	<key>ProgramArguments</key>
 	<array>
 		<string>/Users/tv/bin/video/serial/tv.pl</string>
-		<string>1</string>
+		<string>2</string>
 	</array>
+	<!--
+		<key>EnvironmentVariables</key>
+		<dict>
+			<key>DEBUG</key>
+			<string>1</string>
+		</dict>
+		<key>StandardErrorPath</key>
+		<string>/Users/tv/Library/Logs/com.uberzach.tv.log</string>
+	-->
 </dict>
 </plist>
