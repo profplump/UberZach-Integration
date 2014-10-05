@@ -12,12 +12,12 @@
 	<key>RunAtLoad</key>
 	<true/>
 	<key>Label</key>
-	<string>com.uberzach.projectorPower</string>
+	<string>com.uberzach.tvPower</string>
 	<key>KeepAlive</key>
 	<dict>
 		<key>OtherJobEnabled</key>
 		<dict>
-			<key>com.uberzach.projector</key>
+			<key>com.uberzach.tv</key>
 			<true/>
 			<key>com.uberzach.state</key>
 			<true/>
@@ -25,7 +25,7 @@
 	</dict>
 	<key>ProgramArguments</key>
 	<array>
-		<string>/Users/tv/bin/video/dmx/projectorPower.pl</string>
+		<string>/Users/tv/bin/video/dmx/tvPower.pl</string>
 	</array>
 	<!--
 		<key>EnvironmentVariables</key>
@@ -34,7 +34,7 @@
 			<string>1</string>
 		</dict>
 		<key>StandardErrorPath</key>
-		<string>/Users/tv/Library/Logs/com.uberzach.projectorPower.log</string>
+		<string>/Users/tv/Library/Logs/com.uberzach.tvPower.log</string>
 	-->
 </dict>
 </plist>
