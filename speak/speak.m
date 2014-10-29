@@ -97,6 +97,21 @@ int main(int argc, const char *argv[]) {
 	// Init the speech engine
 	synth = [[NSSpeechSynthesizer alloc] init];
 	[synth setDelegate: [SpeechDelegate new]];
+
+	// Allow changes to the overall speech volume
+	if (argc > 2) {
+		NSString *val = [NSString stringWithUTF8String: argv[2]];
+		NSNumberFormatter * f = [[NSNumberFormatter alloc] init];
+		[f setNumberStyle:NSNumberFormatterDecimalStyle];
+
+		NSNumber *volume = [f numberFromString: val];
+		if ([volume floatValue] == 0.25 || [volume floatValue] == 0.5 || \
+			[volume floatValue] == 0.75 || [volume floatValue] == 1.0) {
+				[synth setObject: volume forProperty: NSSpeechVolumeProperty error: nil];
+		} else {
+			NSLog(@"Invalid volume: %f", [volume floatValue]);
+		}
+	}
 	
 	// Open the socket
 	Socket *sock = [[Socket alloc] init];
