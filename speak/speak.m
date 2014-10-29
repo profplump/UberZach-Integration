@@ -89,7 +89,8 @@ int main(int argc, const char *argv[]) {
 	NSString *str;
 	if (argc > 1) {
 		str = [NSString stringWithUTF8String: argv[1]];
-	} else {
+	}
+	if ([str length] < 1) {
 		NSString *tmpDir = NSTemporaryDirectory();
 		str = [NSString stringWithFormat:@"%@plexMonitor/SPEAK.socket", tmpDir];
 	}
