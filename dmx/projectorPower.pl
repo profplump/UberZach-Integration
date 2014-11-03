@@ -24,7 +24,7 @@ my $PAUSE_DELAY = 10;
 # Color modes by proportion of lamp life
 my $LAMP_LIFE = 1625;
 my %COLORS    = (
-	'0.500' => {
+	'0.332' => {
 		'high' => 'THEATER',
 		'play' => 'THEATER_BLACK_1',
 		'low'  => 'THEATER_BLACK_1',
