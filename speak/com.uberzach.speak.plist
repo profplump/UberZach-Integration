@@ -6,9 +6,12 @@
 	<string>Aqua</string>
 	<key>LimitLoadToHosts</key>
 	<array>
-		<string>beddy.uberzach.com</string>
+		<string>Loki.local</string>
 		<string>loki.uberzach.com</string>
+		<string>Heady.local</string>
 		<string>heady.uberzach.com</string>
+		<string>Beddy.local</string>
+		<string>beddy.uberzach.com</string>
 	</array>
 	<key>RunAtLoad</key>
 	<true/>
@@ -19,6 +22,8 @@
 	<key>ProgramArguments</key>
 	<array>
 		<string>/Users/tv/bin/video/speak/speak</string>
+		<string></string>
+		<string>0.50</string>
 	</array>
 </dict>
 </plist>
