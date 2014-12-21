@@ -358,15 +358,11 @@ sub lsr_run($$$) {
 	# Play a short burst of silence to get all the audio devices in-sync
 	Audio::play('SILENCE');
 
-	# Play the sound in a child (i.e. in the background)
-	$PID = fork();
-	if (defined($PID) && $PID == 0) {
-		Audio::play($name);
-		exit(0);
-	}
+	# Play the sound in the background
+	Audio::background($name);
 
 	# Record our start time
-	$PID_DATA->{'start'} = Time::HiRes::time() + 0.05;
+	$PID_DATA->{'start'} = Time::HiRes::time();
 
 	# Start the main loop
 	$NEXT = $params->{'loop'};
@@ -385,10 +381,10 @@ sub lsr_loop($$$) {
 	my $max_dur  = 375;
 	my $max_val  = 255;
 	my $reserve  = 0.75;
-	my $ramp_dur = 10.45;
-	my $hit_pos  = 43.40;
+	my $ramp_dur = 10.40;
+	my $hit_pos  = 43.35;
 	my $hit_dur  = 100;
-	my $fade_pos = 43.90;
+	my $fade_pos = 43.85;
 	my $fade_dur = 2000;
 
 	# How long have we been playing
