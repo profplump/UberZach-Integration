@@ -6,3 +6,4 @@ Device::SerialPort
 JSON
 Email::MIME
 Email::Sender::Simple
+Time::HiRes
