@@ -342,6 +342,9 @@ sub lsr_run($$$) {
 		print STDERR "lsr_run()\n";
 	}
 
+	# Wait just a second for annoucements
+	sleep(1);
+
 	# Play a short burst of silence to get all the audio devices in-sync
 	Audio::play('SILENCE');
 
@@ -353,7 +356,7 @@ sub lsr_run($$$) {
 	}
 
 	# Record our start time
-	$PID_DATA->{'start'} = Time::HiRes::time();
+	$PID_DATA->{'start'} = Time::HiRes::time() + 0.05;
 
 	# Start the main loop
 	$NEXT = $params->{'loop'};
@@ -372,10 +375,10 @@ sub lsr_loop($$$) {
 	my $max_dur  = 375;
 	my $max_val  = 255;
 	my $reserve  = 0.75;
-	my $ramp_dur = 10.20;
-	my $hit_pos  = 43.15;
+	my $ramp_dur = 10.45;
+	my $hit_pos  = 43.40;
 	my $hit_dur  = 100;
-	my $fade_pos = 43.65;
+	my $fade_pos = 43.90;
 	my $fade_dur = 2000;
 
 	# How long have we been playing
