@@ -50,6 +50,8 @@ my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
 my $DELAY        = $PULL_TIMEOUT / 2;
 my $AMP_DELAY    = 6;
 my $AMP_BOOTING  = 0;
+my $AMP_START    = undef();
+my $AMP_TIMEOUT  = $PUSH_TIMEOUT;
 
 # Debug
 my $DEBUG = 0;
@@ -219,6 +221,13 @@ sub ampWait($$$) {
 		print STDERR "ampWait()\n";
 	}
 
+	# Ensure we don't loop forever
+	if (!defined($AMP_START)) {
+		$AMP_START = Time::HiRes::time();
+	} elsif (Time::HiRes::time() - $AMP_START > $AMP_TIMEOUT) {
+		die("Timeout waiting for amp to start\n");
+	}
+
 	# Just loop until the amp is up, then set a new "next" handler
 	if ($exists{'AMPLIFIER'}) {
 		if ($DEBUG) {
@@ -250,8 +259,9 @@ sub ampWait($$$) {
 			sleep($AMP_DELAY);
 		}
 
-		# Reset the amp boot delay, now that it's running
+		# Reset the amp boot delay and amp start time now that it's running
 		$AMP_BOOTING = 0;
+		undef($AMP_START);
 	} else {
 
 		# The amp wasn't up when we checked, so it will need a boot delay
