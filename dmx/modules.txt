@@ -4,3 +4,5 @@ Time::Out
 File::Touch
 Device::SerialPort
 JSON
+Email::MIME
+Email::Sender::Simple
