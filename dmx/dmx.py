@@ -25,6 +25,15 @@ max_channels = 255
 min_delta = 0.005
 
 # ====================================
+# Environment
+# ====================================
+DEBUG = None
+try:
+  DEBUG = os.environ['DEBUG']
+except NameError:
+  DEBUG = None
+
+# ====================================
 # Globals
 # ====================================
 wrapper = None
@@ -97,7 +106,7 @@ def SendDMXFrame():
           delta = diff
         state[i] += delta
         cmds['ticks'][i] -= 1
-      if (os.environ['DEBUG']):
+      if (DEBUG):
         print '(', time.time(), ') Channel:', (i + 1)
         print "\tDelay:", cmds['delay'][i], "\tValue:", '%.3f' % state[i], "\tDelta:", '%.3f' % delta, "\tTicks:", cmds['ticks'][i]
     
