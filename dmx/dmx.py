@@ -14,20 +14,23 @@ import subprocess
 from ola.ClientWrapper import ClientWrapper
 
 # ====================================
+# Defaults
+# ====================================
+interval = 50
+universe = 0
+max_value = 255
+max_delay = 300000
+max_channels = 255
+min_delta = 0.005
+
+# ====================================
 # Globals
 # ====================================
-max_channels = 512
 wrapper = None
 state = [ 0 ] * max_channels
 cmds = { 'value' : [ 0 ] * max_channels, 'ticks' : [ 0 ] * max_channels, 'delay' : [ 0 ] * max_channels }
 sock = None
 max_mesg_len = 1024
-
-# ====================================
-# Defaults
-# ====================================
-interval = 50
-universe = 0
 
 # ====================================
 # Wrapper callback -- exit on errors
@@ -64,7 +67,7 @@ def SendDMXFrame():
       delay = 0
     
     # Save valid commands
-    if (channel >= 0 and channel <= 512 and intensity >= 0 and intensity <= 255 and duration >= 0 and duration <= 300000 and delay >= 0 and delay < 300000):
+    if (channel >= 0 and channel <= max_channels and intensity >= 0 and intensity <= max_value and duration >= 0 and duration <= max_delay and delay >= 0 and delay < max_delay):
       if (channel > 0):
         cmds['value'][channel - 1] = intensity
         cmds['ticks'][channel - 1] = duration / interval
@@ -89,11 +92,13 @@ def SendDMXFrame():
           delta = diff
         else:
           delta = float(diff) / float(cmds['ticks'][i])
+        if (abs(delta) < min_delta):
+          delta = diff
         state[i] += delta
         cmds['ticks'][i] -= 1
       if (0):
         print 'Channel:', (i + 1)
-        print "\tDelay:", cmds['delay'][i], "\tValue:", state[i], "\tDelta:", delta, "\tTicks:", cmds['ticks'][i]
+        print "\tDelay:", cmds['delay'][i], "\tValue:", '%.3f' % state[i], "\tDelta:", '%.3f' % delta, "\tTicks:", cmds['ticks'][i]
     
   # Send all DMX channels
   data = array.array('B')
