@@ -75,15 +75,6 @@ while (1) {
 		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
 	}
 
-	# Skip processing when in RAVE or EFFECT mode
-	if ($exists{'RAVE'} || $exists{'EFFECT'}) {
-		if ($DEBUG) {
-			print STDERR "Suspending normal operation while in RAVE mode\n";
-		}
-		$update = 1;
-		next;
-	}
-
 	# Calculate the new state
 	$stateLast = $state;
 	if ($exists{'BRIGHT'}) {
