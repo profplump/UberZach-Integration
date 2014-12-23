@@ -17,6 +17,7 @@ from ola.ClientWrapper import ClientWrapper
 # ====================================
 # Defaults
 # ====================================
+DEBUG = False
 interval = 30
 universe = 0
 max_value = 255
@@ -24,15 +25,6 @@ max_delay = 300000
 max_channels = 128
 min_delta = interval / (5 * 1000)
 allow_dups = False
-
-# ====================================
-# Environment
-# ====================================
-DEBUG = None
-try:
-  DEBUG = os.environ['DEBUG']
-except KeyError:
-  DEBUG = None
 
 # ====================================
 # Globals
@@ -135,13 +127,18 @@ def SendDMXFrame():
 # Main
 # ====================================
 
+# Debug
+DEBUG = None
+if 'DEBUG' in os.environ:
+  DEBUG = os.environ['DEBUG']
+
 # Pick a universe (default from above, or as specified in the environment)
 if 'UNIVERSE' in os.environ:
   universe = int(os.environ['UNIVERSE'])
 
 # Pick a tick interval (default from above, or as specified in the environment)
 if 'INTERVAL' in os.environ:
-  universe = int(os.environ['INTERVAL'])
+  interval = int(os.environ['INTERVAL'])
 
 # Pick a socket file ($TMPDIR/plexMonitor/DMX.socket, or as specified in the environment)
 cmd_file = None
