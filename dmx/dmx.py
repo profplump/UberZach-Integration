@@ -17,11 +17,11 @@ from ola.ClientWrapper import ClientWrapper
 # ====================================
 # Defaults
 # ====================================
-interval = 25
+interval = 30
 universe = 0
 max_value = 255
 max_delay = 300000
-max_channels = 512
+max_channels = 128
 min_delta = interval / (5 * 1000)
 allow_dups = False
 
