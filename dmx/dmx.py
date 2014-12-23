@@ -30,7 +30,7 @@ min_delta = 0.005
 DEBUG = None
 try:
   DEBUG = os.environ['DEBUG']
-except NameError:
+except KeyError:
   DEBUG = None
 
 # ====================================
