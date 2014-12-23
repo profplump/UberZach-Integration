@@ -21,8 +21,9 @@ interval = 50
 universe = 0
 max_value = 255
 max_delay = 300000
-max_channels = 255
-min_delta = 0.005
+max_channels = 512
+min_delta = 0.01
+allow_dups = False
 
 # ====================================
 # Environment
@@ -38,7 +39,12 @@ except KeyError:
 # ====================================
 wrapper = None
 state = [ 0 ] * max_channels
-cmds = { 'value' : [ 0 ] * max_channels, 'ticks' : [ 0 ] * max_channels, 'delay' : [ 0 ] * max_channels }
+cmds = {
+  'value' : [ 0 ] * max_channels,
+  'ticks' : [ 0 ] * max_channels,
+  'delay' : [ 0 ] * max_channels,
+  'orig'  : [ "" ] * max_channels
+}
 sock = None
 max_mesg_len = 1024
 
@@ -77,16 +83,25 @@ def SendDMXFrame():
       delay = 0
     
     # Save valid commands
-    if (channel >= 0 and channel <= max_channels and intensity >= 0 and intensity <= max_value and duration >= 0 and duration <= max_delay and delay >= 0 and delay < max_delay):
+    if (
+      channel >= 0 and channel <= max_channels and
+      intensity >= 0 and intensity <= max_value and
+      duration >= 0 and duration <= max_delay and
+      delay >= 0 and delay < max_delay
+    ):
       if (channel > 0):
-        cmds['value'][channel - 1] = intensity
-        cmds['ticks'][channel - 1] = duration / interval
-        cmds['delay'][channel - 1] = delay / interval
+        if (allow_dups or cmd != cmds['orig'][channel - 1]):
+          cmds['orig'][channel - 1] = cmd
+          cmds['value'][channel - 1] = intensity
+          cmds['ticks'][channel - 1] = duration / interval
+          cmds['delay'][channel - 1] = delay / interval
       else:
         for i in range(len(state)):
-          cmds['value'][i] = intensity
-          cmds['ticks'][i] = duration / interval
-          cmds['delay'][i] = delay / interval
+          if (allow_dups or cmd != cmds['orig'][channel - 1]):
+            cmds['orig'][i] = cmd
+            cmds['value'][i] = intensity
+            cmds['ticks'][i] = duration / interval
+            cmds['delay'][i] = delay / interval
     else:
       print 'Invalid command parameters:', channel, duration, intensity, delay
   
