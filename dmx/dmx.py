@@ -32,6 +32,7 @@ DEBUG        = False
 # ====================================
 wrapper   = None
 sock      = None
+lastTick  = time.time()
 state_len = 0
 state     = [ 0 ] * max_channels
 cmds      = {
@@ -53,6 +54,7 @@ def DmxSent(state):
 # Main calculation
 # ====================================
 def SendDMXFrame():
+  global lastTick
   global wrapper
   global sock
   global cmds
@@ -61,6 +63,13 @@ def SendDMXFrame():
 
   # Re-schedule ourselves in interval ms (do this first to keep the timing consistent)
   wrapper.AddEvent(interval, SendDMXFrame)
+
+  # Avoid repeated calls to time()
+  now = time.time()
+
+  # Adjust our tick count to match reality
+  ticks = int(((now - lastTick) * 1000) / interval)
+  lastTick = now
   
   # Check for new commands
   while (True):
@@ -121,9 +130,9 @@ def SendDMXFrame():
         if (abs(delta) < min_delta):
           delta = diff
         state[i] += delta
-        cmds['ticks'][i] -= 1
+        cmds['ticks'][i] -= ticks
       if (DEBUG):
-        print '(', time.time(), ') Channel:', (i + 1)
+        print '(', now, ') Channel:', (i + 1)
         print "\tDelay:", cmds['delay'][i], "\tValue:", '%.3f' % state[i], "\tDelta:", '%.3f' % delta, "\tTicks:", cmds['ticks'][i]
     
   # Send all DMX channels
