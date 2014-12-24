@@ -17,7 +17,7 @@ from ola.ClientWrapper import ClientWrapper
 # ====================================
 # Defaults
 # ====================================
-interval     = 30
+interval     = 20
 universe     = 0
 max_value    = 255
 max_delay    = 300000
@@ -25,15 +25,15 @@ max_channels = 512
 min_delta    = interval / (5 * 1000)
 allow_dups   = False
 max_mesg_len = 1024
+DEBUG        = False
 
 # ====================================
 # Globals
 # ====================================
-DEBUG        = False
-wrapper      = None
-sock         = None
-state_len    = 0
-state        = [ 0 ] * max_channels
+wrapper   = None
+sock      = None
+state_len = 0
+state     = [ 0 ] * max_channels
 cmds      = {
   'value' : [ 0 ] * max_channels,
   'ticks' : [ 0 ] * max_channels,
@@ -53,6 +53,12 @@ def DmxSent(state):
 # Main calculation
 # ====================================
 def SendDMXFrame():
+  global wrapper
+  global sock
+  global cmds
+  global state
+  global state_len
+
   # Re-schedule ourselves in interval ms (do this first to keep the timing consistent)
   wrapper.AddEvent(interval, SendDMXFrame)
   
