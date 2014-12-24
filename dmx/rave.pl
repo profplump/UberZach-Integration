@@ -51,7 +51,8 @@ my $DELAY        = $PULL_TIMEOUT / 2;
 my $AMP_DELAY    = 6;
 my $AMP_BOOTING  = 0;
 my $AMP_START    = undef();
-my $AMP_TIMEOUT  = $PUSH_TIMEOUT;
+my $AMP_TIMEOUT  = $PUSH_TIMEOUT / 2;
+my $CLEANUP_TIME = undef();
 
 # Debug
 my $DEBUG = 0;
@@ -128,31 +129,34 @@ while (1) {
 	}
 
 	# Reap zombie children
-	if (defined($PID)) {
-		my $kid = waitpid($PID, WNOHANG);
-		if ($kid > 0) {
-			if ($DEBUG) {
-				print STDERR 'Reaped child: ' . $PID . "\n";
-			}
+	if (defined($PID) && waitpid($PID, WNOHANG) > 0) {
+		if ($DEBUG) {
+			print STDERR 'Reaped child: ' . $PID . "\n";
+		}
+		$CLEANUP_TIME = Time::HiRes::time();
+	}
 
-			# Run the cleanup routine (if any)
-			if ($EFFECTS{$NAME}{'done'}) {
-				$EFFECTS{$NAME}{'done'}($NAME, \%exists, $EFFECTS{$NAME});
-			}
+	# Cleanup on timer or child exit
+	if (defined($CLEANUP_TIME) && $CLEANUP_TIME <= Time::HiRes::time()) {
 
-			# Forget our local bypass state
-			$PID      = undef();
-			$NAME     = undef();
-			$NEXT     = undef();
-			$PID_DATA = undef();
+		# Run the cleanup routine (if any)
+		if ($EFFECTS{$NAME}{'done'}) {
+			$EFFECTS{$NAME}{'done'}($NAME, \%exists, $EFFECTS{$NAME});
+		}
 
-			# Clear the RAVE and EFFECT flags
-			if (-e $RAVE_FILE) {
-				unlink($RAVE_FILE);
-			}
-			if (-e $EFFECT_FILE) {
-				unlink($EFFECT_FILE);
-			}
+		# Forget our local bypass state
+		$PID          = undef();
+		$CLEANUP_TIME = undef();
+		$NAME         = undef();
+		$NEXT         = undef();
+		$PID_DATA     = undef();
+
+		# Clear the RAVE and EFFECT flags
+		if (-e $RAVE_FILE) {
+			unlink($RAVE_FILE);
+		}
+		if (-e $EFFECT_FILE) {
+			unlink($EFFECT_FILE);
 		}
 	}
 
@@ -360,6 +364,10 @@ sub lsr_run($$$) {
 
 	# Play the sound in the background
 	Audio::background($name);
+
+	# Set a cleanup timer
+	# Now + playback + fade + buffer
+	$CLEANUP_TIME = Time::HiRes::time() + 45.60 + 2 + 1;
 
 	# Record our start time
 	$PID_DATA->{'start'} = Time::HiRes::time();
