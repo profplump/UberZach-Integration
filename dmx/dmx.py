@@ -17,7 +17,7 @@ from ola.ClientWrapper import ClientWrapper
 # ====================================
 # Defaults
 # ====================================
-interval     = 20
+interval     = 10
 universe     = 0
 max_value    = 255
 max_delay    = 300000
