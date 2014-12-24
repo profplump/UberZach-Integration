@@ -17,28 +17,29 @@ from ola.ClientWrapper import ClientWrapper
 # ====================================
 # Defaults
 # ====================================
-DEBUG = False
-interval = 30
-universe = 0
-max_value = 255
-max_delay = 300000
-max_channels = 128
-min_delta = interval / (5 * 1000)
-allow_dups = False
+interval     = 30
+universe     = 0
+max_value    = 255
+max_delay    = 300000
+max_channels = 512
+min_delta    = interval / (5 * 1000)
+allow_dups   = False
+max_mesg_len = 1024
 
 # ====================================
 # Globals
 # ====================================
-wrapper = None
-state = [ 0 ] * max_channels
-cmds = {
+DEBUG        = False
+wrapper      = None
+sock         = None
+state_len    = 0
+state        = [ 0 ] * max_channels
+cmds      = {
   'value' : [ 0 ] * max_channels,
   'ticks' : [ 0 ] * max_channels,
   'delay' : [ 0 ] * max_channels,
   'orig'  : [ "" ] * max_channels
 }
-sock = None
-max_mesg_len = 1024
 
 # ====================================
 # Wrapper callback -- exit on errors
@@ -82,13 +83,15 @@ def SendDMXFrame():
       delay >= 0 and delay < max_delay
     ):
       if (channel > 0):
+        if (channel > state_len):
+          state_len = channel
         if (allow_dups or cmd != cmds['orig'][channel - 1]):
           cmds['orig'][channel - 1] = cmd
           cmds['value'][channel - 1] = intensity
           cmds['ticks'][channel - 1] = duration / interval
           cmds['delay'][channel - 1] = delay / interval
       else:
-        for i in range(len(state)):
+        for i in range(state_len):
           if (allow_dups or cmd != cmds['orig'][channel - 1]):
             cmds['orig'][i] = cmd
             cmds['value'][i] = intensity
@@ -98,7 +101,7 @@ def SendDMXFrame():
       print 'Invalid command parameters:', channel, duration, intensity, delay
   
   # Update values for each channel
-  for i in range(len(cmds['value'])):
+  for i in range(state_len):
     delta = 0
     if (cmds['value'][i] != state[i]):
       if (cmds['delay'][i] > 0):
@@ -119,7 +122,7 @@ def SendDMXFrame():
     
   # Send all DMX channels
   data = array.array('B')
-  for i in range(len(state)):
+  for i in range(state_len):
     data.append(int(state[i]))
   wrapper.Client().SendDmx(universe, data, DmxSent)
 
