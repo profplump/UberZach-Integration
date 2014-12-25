@@ -68,7 +68,7 @@ def SendDMXFrame():
   now = time.time()
 
   # Adjust our tick count to match reality
-  ticks = int(((now - lastTick) * 1000) / interval)
+  ticks = ((now - lastTick) * 1000) / interval
   lastTick = now
   
   # Check for new commands
@@ -120,7 +120,10 @@ def SendDMXFrame():
     delta = 0
     if (cmds['value'][i] != state[i]):
       if (cmds['delay'][i] > 0):
-        cmds['delay'][i] -= 1
+        if (cmds['delay'][i] >= ticks):        
+          cmds['delay'][i] -= ticks
+        else:
+          cmds['delay'][i] = 0
       else:
         diff = cmds['value'][i] - state[i]
         if (cmds['ticks'][i] < 1):
@@ -133,7 +136,8 @@ def SendDMXFrame():
         cmds['ticks'][i] -= ticks
       if (DEBUG):
         print '(', now, ') Channel:', (i + 1)
-        print "\tDelay:", cmds['delay'][i], "\tValue:", '%.3f' % state[i], "\tDelta:", '%.3f' % delta, "\tTicks:", cmds['ticks'][i]
+        print "\tDelay:", '%.3f' % cmds['delay'][i], "\tValue:", '%.3f' % state[i], \
+          "\tDelta:", '%.3f' % delta, "\tTicks:", '%.3f' % cmds['ticks'][i]
     
   # Send all DMX channels
   data = array.array('B')
