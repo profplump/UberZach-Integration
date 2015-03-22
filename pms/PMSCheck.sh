@@ -3,11 +3,12 @@
 # Config
 CURL_TIMEOUT=15
 RESTART_DELAY=600
-PMS_URL="http://localhost:32400/"
+PMS_URL="http://127.0.0.1:32400/"
 UNWATCHED_SECTION="2"
 UNWATCHED_SLEEP=60
 UNWATCHED_RETRIES=5
 MIN_UNWATCHED_COUNT=10
+MAX_VSIZE=$(( 10 * 1024 * 1024 )) # 10 GB in kB
 ADMIN_EMAIL="zach@kotlarek.com"
 
 # Heady allows 0 unwatched
@@ -64,6 +65,17 @@ while [ $LOOP -ne 0 ]; do
 				UNWATCHED_TIMEOUT=$(( $UNWATCHED_TIMEOUT + $CURL_TIMEOUT ))
 			fi
 		done
+	fi
+
+	# Check Plex's memory usage
+	if [ -z "${FAILED}" ]; then
+		VSIZE="`ps awx -o vsize,comm | awk '$0 ~ /\/Plex Media Server$/ {print $1}'`"
+		if [ -z "${VSIZE}" ]; then
+			FAILED="Unable to read memory use"
+		fi
+		if [ $VSIZE -gt $MAX_VSIZE ]; then
+			FAILED="Memory use too high: ${VSIZE}/${MAX_VSIZE} kB"
+		fi
 	fi
 
 	# If Plex has failed kill it
