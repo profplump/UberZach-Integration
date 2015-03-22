@@ -10,9 +10,15 @@ MIN_UNWATCHED_COUNT=10
 MAX_VSIZE=$(( 10 * 1024 * 1024 )) # 10 GB in kB
 ADMIN_EMAIL="zach@kotlarek.com"
 
-# Construct a URL from the envrionment
+# Construct URL components from the environment
 if [ -z "${PMS_URL}" ]; then
-	PMS_URL="http://127.0.0.1:32400/"
+	if [ -z "${PMS_HOST}" ]; then
+		PMS_HOST="localhost"
+	fi
+	if [ -z "${PMS_PORT}" ]; then
+		PMS_PORT=32400
+	fi
+	PMS_URL="http://${PMS_HOST}:${PMS_PORT}"
 fi
 PMS_AUTH=""
 if [ -n "${PMS_TOKEN}" ]; then
@@ -44,7 +50,7 @@ while [ $LOOP -ne 0 ]; do
 
 	# Ask Plex for the top-level status page
 	if [ -z "${FAILED}" ]; then
-		PAGE="`curl --silent --max-time "${CURL_TIMEOUT}" "${PMS_URL}?${PMS_AUTH}"`"
+		PAGE="`curl --silent --max-time "${CURL_TIMEOUT}" "${PMS_URL}/?${PMS_AUTH}"`"
 		if [ -z "${PAGE}" ]; then
 			FAILED="HTTP timeout"
 		else
@@ -58,7 +64,7 @@ while [ $LOOP -ne 0 ]; do
 	# Ask Plex for a list of unwatched TV series
 	UNWATCHED_TIMEOUT=$(( $CURL_TIMEOUT ))
 	if [ -z "${FAILED}" ]; then
-		UNWATCHED_URL="${PMS_URL}library/sections/${UNWATCHED_SECTION}/all?${PMS_AUTH}&type=2&unwatched=1&sort=titleSort:asc&X-Plex-Container-Start=0&X-Plex-Container-Size=10000"
+		UNWATCHED_URL="${PMS_URL}/library/sections/${UNWATCHED_SECTION}/all?${PMS_AUTH}&type=2&unwatched=1&sort=titleSort:asc&X-Plex-Container-Start=0&X-Plex-Container-Size=10000"
 		TRY=1
 		FAILED="Too few unwatched series"
 		while [ $TRY -le $UNWATCHED_RETRIES ] && [ -n "${FAILED}" ]; do
