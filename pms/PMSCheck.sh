@@ -14,8 +14,9 @@ ADMIN_EMAIL="zach@kotlarek.com"
 if [ -z "${PMS_URL}" ]; then
 	PMS_URL="http://127.0.0.1:32400/"
 fi
+PMS_AUTH=""
 if [ -n "${PMS_TOKEN}" ]; then
-	PMS_URL="${PMS_URL}?X-Plex-Token=${PMS_TOKEN}"
+	PMS_AUTH="X-Plex-Token=${PMS_TOKEN}"
 fi
 
 # Heady allows 0 unwatched
@@ -43,7 +44,7 @@ while [ $LOOP -ne 0 ]; do
 
 	# Ask Plex for the top-level status page
 	if [ -z "${FAILED}" ]; then
-		PAGE="`curl --silent --max-time "${CURL_TIMEOUT}" "${PMS_URL}"`"
+		PAGE="`curl --silent --max-time "${CURL_TIMEOUT}" "${PMS_URL}?${PMS_AUTH}"`"
 		if [ -z "${PAGE}" ]; then
 			FAILED="HTTP timeout"
 		else
@@ -57,7 +58,7 @@ while [ $LOOP -ne 0 ]; do
 	# Ask Plex for a list of unwatched TV series
 	UNWATCHED_TIMEOUT=$(( $CURL_TIMEOUT ))
 	if [ -z "${FAILED}" ]; then
-		UNWATCHED_URL="${PMS_URL}library/sections/${UNWATCHED_SECTION}/all?type=2&unwatched=1&sort=titleSort:asc&X-Plex-Container-Start=0&X-Plex-Container-Size=10000"
+		UNWATCHED_URL="${PMS_URL}library/sections/${UNWATCHED_SECTION}/all?${PMS_AUTH}&type=2&unwatched=1&sort=titleSort:asc&X-Plex-Container-Start=0&X-Plex-Container-Size=10000"
 		TRY=1
 		FAILED="Too few unwatched series"
 		while [ $TRY -le $UNWATCHED_RETRIES ] && [ -n "${FAILED}" ]; do
