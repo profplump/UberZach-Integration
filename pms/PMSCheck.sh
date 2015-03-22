@@ -3,13 +3,20 @@
 # Config
 CURL_TIMEOUT=15
 RESTART_DELAY=600
-PMS_URL="http://127.0.0.1:32400/"
 UNWATCHED_SECTION="2"
 UNWATCHED_SLEEP=60
 UNWATCHED_RETRIES=5
 MIN_UNWATCHED_COUNT=10
 MAX_VSIZE=$(( 10 * 1024 * 1024 )) # 10 GB in kB
 ADMIN_EMAIL="zach@kotlarek.com"
+
+# Construct a URL from the envrionment
+if [ -z "${PMS_URL}" ]; then
+	PMS_URL="http://127.0.0.1:32400/"
+fi
+if [ -n "${PMS_TOKEN}" ]; then
+	PMS_URL="${PMS_URL}?X-Plex-Token=${PMS_TOKEN}"
+fi
 
 # Heady allows 0 unwatched
 if hostname | grep -qi heady; then

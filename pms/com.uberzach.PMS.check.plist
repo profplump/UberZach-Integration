@@ -4,23 +4,16 @@
 <dict>
 	<key>LimitLoadToSessionType</key>
 	<string>Aqua</string>
-	<key>LimitLoadToHosts</key>
-	<array>
-		<string>Beddy.local</string>
-		<string>beddy.uberzach.com</string>
-		<string>Heady.local</string>
-		<string>heady.uberzach.com</string>
-		<string>Baldwin.local</string>
-		<string>baldwin.uberzach.com</string>
-	</array>
 	<key>RunAtLoad</key>
 	<true/>
 	<key>Label</key>
 	<string>com.uberzach.PMS.check</string>
 	<key>KeepAlive</key>
+	<true/>
+	<key>EnvironmentVariables</key>
 	<dict>
-		<key>NetworkState</key>
-		<true/>
+		<key>PMS_TOKEN</key>
+		<string>foo</string>
 	</dict>
 	<key>ProgramArguments</key>
 	<array>
