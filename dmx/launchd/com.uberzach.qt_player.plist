@@ -4,15 +4,6 @@
 <dict>
 	<key>LimitLoadToSessionType</key>
 	<string>Aqua</string>
-	<key>LimitLoadToHosts</key>
-	<array>
-		<string>Loki.local</string>
-		<string>loki.uberzach.com</string>
-		<string>Heady.local</string>
-		<string>heady.uberzach.com</string>
-		<string>Beddy.local</string>
-		<string>beddy.uberzach.com</string>
-	</array>
 	<key>RunAtLoad</key>
 	<true/>
 	<key>Label</key>
