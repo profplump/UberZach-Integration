@@ -6,7 +6,7 @@ UNWATCHED_SECTION="2"
 UNWATCHED_SLEEP=60
 UNWATCHED_RETRIES=5
 MIN_UNWATCHED_COUNT=10
-MAX_VSIZE=$(( 10 * 1024 * 1024 )) # 10 GB in kB
+MAX_MEM=$(( 14 * 1024 * 1024 )) # GB in kB
 ADMIN_EMAIL="zach@kotlarek.com"
 IFS=''
 CURL_TIMEOUT=15
@@ -85,8 +85,8 @@ while [ $LOOP -ne 0 ]; do
 
 	# Check Plex's memory usage
 	if [ -z "${FAILED}" ]; then
-		VSIZE="`ps awx -o vsize,comm | awk '$0 ~ /\/Plex Media Server$/ {print $1}'`"
-		if [ -z "${VSIZE}" ]; then
+		MEM="`ps awx -o vsize,comm | awk '$0 ~ /\/Plex Media Server$/ {print $1}'`"
+		if [ -z "${MEM}" ]; then
 			FAILED="Unable to read memory use"
 		fi
 		if [ $VSIZE -gt $MAX_VSIZE ]; then
