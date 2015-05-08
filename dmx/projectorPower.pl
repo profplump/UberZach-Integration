@@ -125,6 +125,16 @@ while (1) {
 	if ($exists{'PLAYING'} && $lastUser < $now) {
 		$lastUser = $now;
 	}
+	
+	# Motion counts as activity when Plex is not foreground
+	if (!$exists{'PLEX'} && $mtime{'MOTION'} > $lastUser) {
+		$lastUser = $mtime{'MOTION'};
+	}
+	
+	# Explict no-motion counts as activity when Plex is not foreground
+	if (!$exists{'PLEX'} && $exists{'NO_MOTION'} && $lastUser < $now) {
+		$lastUser = $now;
+	}
 
 	# Clear the shutdown timestamp if there is new user activity
 	if ($shutdown && (!$exists{'PROJECTOR'} || $lastUser > $shutdown)) {
