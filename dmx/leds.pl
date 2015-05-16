@@ -132,15 +132,13 @@ while (1) {
 
 	# Calculate the new state
 	$stateLast = $state;
-	if ($exists{'BRIGHT'} || $exists{'LIGHTS'}) {
+	if ($exists{'BRIGHT'}) {
+		$newState = 'BRIGHT';
+	} elsif ($exists{'LIGHTS'}) {
 		if ($newState eq 'PLAY') {
 			$newState = 'PLAY_HIGH';
 		} else {
-			if ($exists{'BRIGHT'}) {
-				$newState = 'BRIGHT';
-			} else {
-				$newState = 'MOTION';
-			}
+			$newState = 'MOTION';
 		}
 	}
 	$state = $newState;
