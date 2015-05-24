@@ -75,10 +75,10 @@ while (1) {
 		$state = 'OFF';
 	} elsif ($newState eq 'FULL') {
 		$state = 'FULL';
-	} elsif ($newState eq 'RANDOM') {
+	} elsif ($newState eq 'RANDOM' || $newState eq 'RANDOM_FULL') {
 		$state    = 'RANDOM';
 		$newValue = int(rand($STEPS) + 1);
-	} elsif ($newState =~ /^RANDOM_(HIGH|MID|LOW|OFF)$/) {
+	} elsif ($newState =~ /^RANDOM_(HIGH|MED|LOW|MIN)$/) {
 		$state = 'RANDOM';
 		my $parts = ceil($STEPS / 3);
 		$newValue = int(rand($parts) + 1);
@@ -93,7 +93,7 @@ while (1) {
 				$newValue += $parts;
 			}
 		}
-	} elsif ($newState =~ /^(LEVEL|RAW)_(\d{1,2})$/) {
+	} elsif ($newState =~ /^(LEVEL|RAW)_(\d{1,3})$/) {
 		if ($1 eq 'LEVEL') {
 			$state = 'RANDOM';
 		} else {
