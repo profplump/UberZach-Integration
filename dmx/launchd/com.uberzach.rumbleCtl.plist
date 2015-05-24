@@ -7,7 +7,7 @@
 	<key>RunAtLoad</key>
 	<true/>
 	<key>Label</key>
-	<string>com.uberzach.amplifierPower</string>
+	<string>com.uberzach.rumbleCtl</string>
 	<key>KeepAlive</key>
 	<dict>
 		<key>OtherJobEnabled</key>
@@ -20,7 +20,7 @@
 	</dict>
 	<key>ProgramArguments</key>
 	<array>
-		<string>/Users/tv/bin/video/dmx/amplifierPower.pl</string>
+		<string>/Users/tv/bin/video/dmx/rumbleCtl.pl</string>
 	</array>
 	<!--
 		<key>EnvironmentVariables</key>
@@ -29,7 +29,7 @@
 			<string>1</string>
 		</dict>
 		<key>StandardErrorPath</key>
-		<string>/Users/tv/Library/Logs/com.uberzach.amplifierPower.log</string>
+		<string>/Users/tv/Library/Logs/com.uberzach.rumbleCtl.log</string>
 	-->
 </dict>
 </plist>
