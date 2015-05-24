@@ -16,7 +16,7 @@ my $STEPS   = 8;
 my $EXP     = 2.375;
 my %DIM     = (
 	'OFF'    => [ { 'channel' => 64, 'value' => 0,   'time' => 0 } ],
-	'FULL'   => [ { 'channel' => 64, 'value' => 255, 'time' => 0 } ],
+	'ON'     => [ { 'channel' => 64, 'value' => 255, 'time' => 0 } ],
 	'RAW'    => [ { 'channel' => 64, 'value' => 0,   'time' => 0 } ],
 	'RANDOM' => [ { 'channel' => 64, 'value' => 0,   'time' => 100 } ],
 );
@@ -47,8 +47,8 @@ $state = 'OFF';
 DMX::applyDataset($DIM{$state}, $state, $OUTPUT_FILE);
 
 # Sockets
+# We don't actually subscribe for state, but the framework is handy
 DMX::stateSocket($STATE_SOCK);
-DMX::stateSubscribe($STATE_SOCK);
 
 # Loop forever
 while (1) {
@@ -71,10 +71,8 @@ while (1) {
 	# Calculate the new state
 	my $newValue = undef();
 	$stateLast = $state;
-	if ($newState eq 'STOP') {
-		$state = 'OFF';
-	} elsif ($newState eq 'FULL') {
-		$state = 'FULL';
+	if ($newState eq 'OFF' || $newState eq 'ON') {
+		$state = $newState;
 	} elsif ($newState eq 'RANDOM' || $newState eq 'RANDOM_FULL') {
 		$state    = 'RANDOM';
 		$newValue = int(rand($STEPS) + 1);
