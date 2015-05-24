@@ -12,9 +12,9 @@ use DMX;
 my $MIN_OUT = 40;
 my $MAX_OUT = 180;
 my $MAX_DMX = 255;
-my $STEPS = 8;
-my $EXP = 2.375;
-my %DIM = (
+my $STEPS   = 8;
+my $EXP     = 2.375;
+my %DIM     = (
 	'OFF'    => [ { 'channel' => 64, 'value' => 0,   'time' => 0 } ],
 	'FULL'   => [ { 'channel' => 64, 'value' => 255, 'time' => 0 } ],
 	'RAW'    => [ { 'channel' => 64, 'value' => 0,   'time' => 0 } ],
@@ -76,7 +76,7 @@ while (1) {
 	} elsif ($newState eq 'FULL') {
 		$state = 'FULL';
 	} elsif ($newState eq 'RANDOM') {
-		$state = 'RANDOM';
+		$state    = 'RANDOM';
 		$newValue = int(rand($STEPS) + 1);
 	} elsif ($newState =~ /^RANDOM_(HIGH|MID|LOW|OFF)$/) {
 		$state = 'RANDOM';
@@ -116,6 +116,7 @@ while (1) {
 
 	# In RANDOM mode, convert our level number into a DMX value
 	if (defined($newValue) && $state eq 'RANDOM') {
+
 		# Level 0 and 1 are the same -- OFF
 		if ($newValue <= 1) {
 			$newValue = 0;
@@ -131,7 +132,7 @@ while (1) {
 		# Always update in RANDOM mode
 		$update = 1;
 
-		my $value = int($newValue ** $EXP) + $MIN_OUT;
+		my $value = int($newValue**$EXP) + $MIN_OUT;
 		if ($value <= $MIN_OUT) {
 			$value = 0;
 		} elsif ($value > $MAX_OUT) {
