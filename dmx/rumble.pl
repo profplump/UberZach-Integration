@@ -82,7 +82,7 @@ while (1) {
 		$newValue = int(rand($parts) + 1);
 		if ($1 eq 'HIGH') {
 			$newValue += 2 * $parts;
-		} elsif ($1 eq 'MID') {
+		} elsif ($1 eq 'MED') {
 			$newValue += $parts;
 		} elsif ($1 eq 'OFF') {
 			if ($newValue < $parts) {
@@ -159,7 +159,11 @@ while (1) {
 	if ($update) {
 
 		# Update
-		DMX::applyDataset($DIM{$state}, $state, $OUTPUT_FILE);
+		my $text = $state . '-' . $DIM{$state}[0]->{'value'};
+		if (defined($newValue)) {
+			$text .= ' (' . $newValue . ')';
+		}
+		DMX::applyDataset($DIM{$state}, $text, $OUTPUT_FILE);
 
 		# Update the push time
 		$pushLast = time();

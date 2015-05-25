@@ -43,6 +43,7 @@ if ($HOST =~ /loki/i) {
 	$MON_FILES{ $MEDIA_PATH . '/DMX/cmd/GARAGE_CMD' } = 'EXISTS-LINE-CLEAR';
 
 	# Rumble pack
+	$MON_FILES{'RUMBLE'}                                    = 'LINE-NOUPDATE';
 	$MON_FILES{ $MEDIA_PATH . '/DMX/cmd/RUMBLE_CMD' }       = 'LINE-NOUPDATE';
 	$MON_FILES{ $MEDIA_PATH . '/DMX/cmd/RUMBLE_VALUE' }     = 'LINE-NOUPDATE';
 	$MON_FILES{ $MEDIA_PATH . '/DMX/cmd/RUMBLE_DELAY_MIN' } = 'LINE-NOUPDATE';
