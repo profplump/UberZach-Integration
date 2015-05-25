@@ -11,13 +11,14 @@ use lib dirname(abs_path($0));
 use DMX;
 
 # App config
-my $DATA_DIR     = DMX::dataDir();
-my $STATE_SOCK   = 'RUMBLE_CTL';
-my $OUT_SOCK     = 'RUMBLE';
-my $OUTPUT_FILE  = $DATA_DIR . $STATE_SOCK;
-my $PUSH_TIMEOUT = 20;
-my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
-my $DELAY        = 1;
+my $DATA_DIR      = DMX::dataDir();
+my $STATE_SOCK    = 'RUMBLE_CTL';
+my $OUT_SOCK      = 'RUMBLE';
+my $OUTPUT_FILE   = $DATA_DIR . $STATE_SOCK;
+my $PUSH_TIMEOUT  = 20;
+my $PULL_TIMEOUT  = $PUSH_TIMEOUT * 3;
+my $DELAY         = 1;
+my $RAND_MAX_INT  = 30;
 
 # Debug
 my $DEBUG = 0;
@@ -38,6 +39,7 @@ my $pushLast  = 0;
 my $pullLast  = time();
 my $update    = 0;
 my $stateEnd  = 0;
+my $bumpNext  = 0;
 
 # Loop forever
 while (1) {
@@ -73,6 +75,7 @@ while (1) {
 			$delay = int(rand($exists{'RUMBLE_DELAY_MAX'} - $delay)) + $delay;
 		}
 		$stateEnd = $now + $delay;
+		$bumpNext = 0;
 
 		# Set the state
 		$state = 'OFF';
@@ -92,6 +95,31 @@ while (1) {
 		if ($DEBUG) {
 			print STDERR "Forcing periodic update\n";
 		}
+		$update = 1;
+	}
+
+	# Re-send the same command at randomized intervals based on user delay settings
+	if ($bumpNext <= $now) {
+		if ($DEBUG) {
+			print STDERR "Bumping\n";
+		}
+
+		my $max = $RAND_MAX_INT;
+		if ($exists{'RUMBLE_DELAY_MAX'} &&
+			$exists{'RUMBLE_DELAY_MAX'} < $RAND_MAX_INT &&
+			$exists{'RUMBLE_DELAY_MAX'} > 1) {
+				$max = int($exists{'RUMBLE_DELAY_MAX'});
+		}
+		my $min = 1;
+		if ($exists{'RUMBLE_DELAY_MIN'}) {
+			$min = int($exists{'RUMBLE_DELAY_MIN'} / 4);
+		}
+		if ($min > $max) {
+			$min = $max;
+		}
+
+		$bumpNext = int(rand($max - $min)) + $min - int(rand($min));
+		$bumpNext += $now;
 		$update = 1;
 	}
 
