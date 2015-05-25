@@ -10,9 +10,6 @@ use File::Basename qw(dirname);
 use lib dirname(abs_path($0));
 use DMX;
 
-# Prototypes
-sub sendCmd($$);
-
 # App config
 my $DATA_DIR     = DMX::dataDir();
 my $STATE_SOCK   = 'RUMBLE_CTL';
@@ -20,9 +17,7 @@ my $OUT_SOCK     = 'RUMBLE';
 my $OUTPUT_FILE  = $DATA_DIR . $STATE_SOCK;
 my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
-my $DELAY        = $PULL_TIMEOUT / 2;
-my $CMD_DELAY    = 5.0;
-my $AUTO_CMD     = 'INPUT_AUTO';
+my $DELAY        = 1;
 
 # Debug
 my $DEBUG = 0;
@@ -37,16 +32,12 @@ my $out = DMX::clientSock($OUT_SOCK);
 
 # State
 my $state     = 'OFF';
-my $mode      = 'SURROUND';
-my $input     = 'TV';
 my $stateLast = $state;
 my %exists    = ();
 my $pushLast  = 0;
 my $pullLast  = time();
 my $update    = 0;
-my $lastMode  = 0;
-my $lastInput = 0;
-my $lastPower = 0;
+my $stateEnd  = 0;
 
 # Loop forever
 while (1) {
@@ -71,26 +62,37 @@ while (1) {
 		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
 	}
 
-	# Calculate the new state
-	$stateLast = $state;
-	if ($newState eq 'PLAY') {
-		$state = 'ON';
-	} elsif ($exists{'RAVE'}) {
-		$state = 'RAVE';
-	} elsif ($newState eq 'PAUSE') {
-		$state = 'ON';
-	} else {
+	# Calculate the new state, but only after the timer has elapsed
+	if ($stateEnd <= $now) {
+		# Pick a new delay window
+		my $delay = 0;
+		if (exists($exists{'RUMBLE_DELAY_MIN'})) {
+			$delay = int($exists{'RUMBLE_DELAY_MIN'});
+		}
+		if (exists($exists{'RUMBLE_DELAY_MAX'}) && $exists{'RUMBLE_DELAY_MAX'} > $delay) {
+			$delay = int(rand($exists{'RUMBLE_DELAY_MAX'} - $delay)) + $delay;
+		}
+		$stateEnd = $now + $delay;
+
+		# Set the state
 		$state = 'OFF';
+		if ($exists{'RUMBLE_CMD'} && $exists{'RUMBLE_VALUE'}) {
+			if ($exists{'RUMBLE_CMD'} =~ /^(?:LEVEL|RAW)$/) {
+				$state = sprintf('%s_%d', $exists{'RUMBLE_CMD'}, int($exists{'RUMBLE_VALUE'}));
+			} elsif ($exists{'RUMBLE_CMD'} eq 'RANDOM') {
+				if ($exists{'RUMBLE_VALUE'} =~ /^(?:MIN|LOW|MED|FULL|HIGH)$/) {
+					$state = sprintf('RANDOM_%s', $exists{'RUMBLE_VALUE'});
+				}
+			}
+		}
 	}
 
 	# Force updates on a periodic basis
 	if (!$update && $now - $pushLast > $PUSH_TIMEOUT) {
-
-		# Not for the amp
-		#if ($DEBUG) {
-		#	print STDERR "Forcing periodic update\n";
-		#}
-		#$update = 1;
+		if ($DEBUG) {
+			print STDERR "Forcing periodic update\n";
+		}
+		$update = 1;
 	}
 
 	# Force updates on any state change
@@ -101,17 +103,18 @@ while (1) {
 		$update = 1;
 	}
 
-	# Update the rumble
+	# Update the rumbler
 	if ($update) {
 
 		# Send master power state
-		my $cmd = $state;
-		if (!$state) {
-			$cmd = 'OFF';
-		}
-		sendCmd($out, $cmd);
+		$out->send($state)
+		  or die('Unable to write command to rumble socket: ' . $state . ": ${!}\n");
+		$stateLast = $state;
 
 		# No output file
+		if ($DEBUG) {
+			print STDERR 'Sending rumble state: ' . $state . "\n";
+		}
 
 		# Update the push time
 		$pushLast = $now;
