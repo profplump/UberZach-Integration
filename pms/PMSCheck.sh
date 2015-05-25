@@ -89,8 +89,8 @@ while [ $LOOP -ne 0 ]; do
 		if [ -z "${MEM}" ]; then
 			FAILED="Unable to read memory use"
 		fi
-		if [ $VSIZE -gt $MAX_VSIZE ]; then
-			FAILED="Memory use too high: ${VSIZE}/${MAX_VSIZE} kB"
+		if [ $MEM -gt $MAX_MEM ]; then
+			FAILED="Memory use too high: ${MEM}/${MAX_MEM} kB"
 		fi
 	fi
 
