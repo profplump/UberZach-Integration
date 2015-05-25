@@ -41,6 +41,12 @@ if ($HOST =~ /loki/i) {
 
 	# Garage door opener
 	$MON_FILES{ $MEDIA_PATH . '/DMX/cmd/GARAGE_CMD' } = 'EXISTS-LINE-CLEAR';
+
+	# Rumble pack
+	$MON_FILES{ $MEDIA_PATH . '/DMX/cmd/RUMBLE_CMD' }       = 'LINE-NOUPDATE';
+	$MON_FILES{ $MEDIA_PATH . '/DMX/cmd/RUMBLE_VALUE' }     = 'LINE-NOUPDATE';
+	$MON_FILES{ $MEDIA_PATH . '/DMX/cmd/RUMBLE_DELAY_MIN' } = 'LINE-NOUPDATE';
+	$MON_FILES{ $MEDIA_PATH . '/DMX/cmd/RUMBLE_DELAY_MAX' } = 'LINE-NOUPDATE';
 }
 
 # Available state files
