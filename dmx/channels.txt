@@ -8,10 +8,10 @@
 #       6  => Bar-side bar-shelves
 #       7  => Bar-side exposed
 #       8  => Bar-side ceiling
-#       9  => Behind screen
-#       10 => <Unused>
+#       9  => Behind screen (track)
+#       10 => Behind screen (LED)
 #       11 => Fan
-#       12 => Bias Light
+#       12 => <Unused>
 #	13 => Blue
 #	14 => Red (+14%)
 #	15 => Green (+19%)
