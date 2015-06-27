@@ -11,7 +11,7 @@ use DMX;
 # User config
 my %DIM = (
 	'OFF'    => [ { 'channel' => 10, 'value' => 0,   'time' => 60000 }, ],
-	'PLAY'   => [ { 'channel' => 10, 'value' => 16,  'time' => 250 } ],
+	'PLAY'   => [ { 'channel' => 10, 'value' => 12,  'time' => 250 } ],
 	'PAUSE'  => [ { 'channel' => 10, 'value' => 32,  'time' => 5000, 'delay' => 5000 } ],
 	'MOTION' => [ { 'channel' => 10, 'value' => 48,  'time' => 1500 } ],
 	'BRIGHT' => [ { 'channel' => 10, 'value' => 255, 'time' => 1500 } ],
