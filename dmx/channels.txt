@@ -10,9 +10,13 @@
 #       8  => Bar-side ceiling
 #       9  => Behind screen (track)
 #       10 => Behind screen (LED)
-#       11 => Fan
-#       12 => <Unused>
+#       11 => Fan (Switch)
+#       12 => <Unused> (Switch)
 #	13 => Blue
 #	14 => Red (+14%)
 #	15 => Green (+19%)
-#	16 => Garage
+#	16 => Garage Door
+#	17 => Garage Lights
+#	18 => <Unused>
+#	19 => Oil Heater (Switch)
+#	20 => <Unused> (Swtich)
