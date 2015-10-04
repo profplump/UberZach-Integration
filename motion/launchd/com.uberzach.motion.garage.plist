@@ -7,14 +7,14 @@
 	<key>RunAtLoad</key>
 	<true/>
 	<key>Label</key>
-	<string>com.uberzach.motion.stairs</string>
+	<string>com.uberzach.motion.garage</string>
 	<key>KeepAlive</key>
 	<true/>
 	<key>ProgramArguments</key>
 	<array>
 		<string>/Users/tv/bin/video/motion/USBMicroX</string>
-		<string>101128155210</string>
-		<string>MOTION_STAIRS</string>
+		<string>150910134303</string>
+		<string>MOTION_GARAGE</string>
 	</array>
 </dict>
 </plist>

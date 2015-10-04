@@ -64,6 +64,7 @@ if ($HOST =~ /loki/i) {
 	# Motion detection
 	$MON_FILES{'MOTION'}        = 'MTIME';
 	$MON_FILES{'MOTION_STAIRS'} = 'MTIME-NOUPDATE';
+	$MON_FILES{'MOTION_GARAGE'} = 'MTIME-NOUPDATE';
 	$MON_FILES{'NO_MOTION'}     = 'EXISTS-NOUPDATE';
 
 	# Projector
@@ -590,7 +591,8 @@ while (1) {
 		if (exists($files{'LOCK'}) && $files{'LOCK'}->{'value'}) {
 			if (   $state ne 'OFF'
 				|| (exists($files{'MOTION'}) && $files{'MOTION'}->{'value'})
-				|| (exists($files{'MOTION_STAIRS'}) && $files{'MOTION_STAIRS'}->{'value'}))
+				|| (exists($files{'MOTION_STAIRS'}) && $files{'MOTION_STAIRS'}->{'value'})
+				|| (exists($files{'MOTION_GARAGE'}) && $files{'MOTION_GARAGE'}->{'value'}))
 			{
 				$alarm = 1;
 			}

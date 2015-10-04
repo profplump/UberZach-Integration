@@ -4,20 +4,12 @@
 <dict>
 	<key>UserName</key>
 	<string>tv</string>
-	<key>LimitLoadToHosts</key>
-	<array>
-		<string>loki.uberzach.com</string>
-		<string>Loki.local</string>
-	</array>
 	<key>RunAtLoad</key>
 	<true/>
 	<key>Label</key>
 	<string>com.uberzach.motion.upstairs</string>
 	<key>KeepAlive</key>
-	<dict>
-		<key>NetworkState</key>
-		<true/>
-	</dict>
+	<true/>
 	<key>ProgramArguments</key>
 	<array>
 		<string>/Users/tv/bin/video/motion/USBMicroX</string>
