@@ -7,20 +7,18 @@
 	<key>RunAtLoad</key>
 	<true/>
 	<key>Label</key>
-	<string>com.uberzach.ola.fan</string>
+	<string>com.uberzach.ola.door</string>
 	<key>KeepAlive</key>
 	<dict>
 		<key>OtherJobEnabled</key>
 		<dict>
 			<key>com.uberzach.ola.dmx</key>
 			<true/>
-			<key>com.uberzach.projector</key>
-			<true/>
 		</dict>
 	</dict>
 	<key>ProgramArguments</key>
 	<array>
-		<string>/Users/tv/bin/video/dmx/fan.pl</string>
+		<string>/Users/tv/bin/video/dmx/door.pl</string>
 	</array>
 </dict>
 </plist>

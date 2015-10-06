@@ -4,11 +4,6 @@
 <dict>
 	<key>LimitLoadToSessionType</key>
 	<string>Aqua</string>
-	<key>LimitLoadToHosts</key>
-	<array>
-		<string>Loki.local</string>
-		<string>loki.uberzach.com</string>
-	</array>
 	<key>RunAtLoad</key>
 	<true/>
 	<key>Label</key>
@@ -18,8 +13,6 @@
 		<key>OtherJobEnabled</key>
 		<dict>
 			<key>com.uberzach.ola.dmx</key>
-			<true/>
-			<key>com.uberzach.projector</key>
 			<true/>
 		</dict>
 	</dict>
