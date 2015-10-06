@@ -40,7 +40,7 @@ if ($HOST =~ /loki/i) {
 	}
 
 	# Garage door opener
-	$MON_FILES{ $MEDIA_PATH . '/DMX/cmd/GARAGE_CMD' } = 'EXISTS-LINE-CLEAR';
+	$MON_FILES{ $MEDIA_PATH . '/DMX/cmd/DOOR_CMD' } = 'EXISTS-LINE-CLEAR';
 
 	# Rumble pack
 	$MON_FILES{'RUMBLE'}                                    = 'LINE-NOUPDATE';

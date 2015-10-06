@@ -9,20 +9,15 @@ use lib dirname(abs_path($0));
 use DMX;
 
 # User config
-my $MOTION_TIMEOUT     = 30;
-my $POSTMOTION_TIMEOUT = 60;
-my %DIM                = (
-	'OFF'        => [ { 'channel' => 17, 'value' => 0,   'time' => 60000 }, ],
-	'PREMOTION'  => [ { 'channel' => 17, 'value' => 32,  'time' => 2500 }, ],
-	'MOTION'     => [ { 'channel' => 17, 'value' => 192, 'time' => 750 }, ],
-	'POSTMOTION' => [ { 'channel' => 17, 'value' => 32,  'time' => $POSTMOTION_TIMEOUT * 1000 }, ],
-	'BRIGHT'     => [ { 'channel' => 17, 'value' => 255, 'time' => 1000 }, ],
-	'ERROR'      => [ { 'channel' => 17, 'value' => 192, 'time' => 100 }, ],
+my $MOTION_TIMEOUT = 120;
+my %DIM            = (
+	'OFF'        => [ { 'channel' => 19, 'value' => 0,   'time' => 0 }, ],
+	'ON'         => [ { 'channel' => 19, 'value' => 255, 'time' => 0 }, ],
 );
 
 # App config
 my $DATA_DIR     = DMX::dataDir();
-my $STATE_SOCK   = 'GARAGE';
+my $STATE_SOCK   = 'OIL';
 my $OUTPUT_FILE  = $DATA_DIR . $STATE_SOCK;
 my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
@@ -42,10 +37,9 @@ my %mtime      = ();
 my $pushLast   = 0;
 my $pullLast   = time();
 my $update     = 0;
-my $lastMotion = 0;
 
-# Always force lights into ERROR at launch
-$state = 'ERROR';
+# Always force the heater into OFF at launch
+$state = 'OFF';
 DMX::applyDataset($DIM{$state}, $state, $OUTPUT_FILE);
 
 # Sockets
@@ -77,17 +71,8 @@ while (1) {
 
 	# Calculate the new state
 	$stateLast = $state;
-	if ($exists{'BRIGHT'}) {
-		$newState = 'BRIGHT';
-	} elsif ($mtime{'MOTION_GARAGE'} > $now - $MOTION_TIMEOUT) {
-		$newState   = 'MOTION';
-		$lastMotion = $now;
-	} elsif ($newState eq 'PLAY' || $newState eq 'PAUSE' || $newState eq 'MOTION') {
-		if ($now > $lastMotion + $POSTMOTION_TIMEOUT) {
-			$newState = 'PREMOTION';
-		} else {
-			$newState = 'POSTMOTION';
-		}
+	if ($mtime{'MOTION_GARAGE'} > $now - $MOTION_TIMEOUT) {
+		$newState   = 'ON';
 	} else {
 		$newState = 'OFF';
 	}
