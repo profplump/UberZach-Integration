@@ -9,10 +9,12 @@ use lib dirname(abs_path($0));
 use DMX;
 
 # User config
-my $MOTION_TIMEOUT = 120;
-my %DIM            = (
-	'OFF'        => [ { 'channel' => 20, 'value' => 0,   'time' => 0 }, ],
-	'ON'         => [ { 'channel' => 20, 'value' => 255, 'time' => 0 }, ],
+my $PREHEAT_TIMEOUT = 20;
+my $MOTION_TIMEOUT  = 120;
+my %DIM             = (
+	'OFF'     => [ { 'channel' => 20, 'value' => 0,   'time' => 0 }, ],
+	'ON'      => [ { 'channel' => 20, 'value' => 255, 'time' => 0 }, ],
+	'PREHEAT' => [ { 'channel' => 20, 'value' => 255, 'time' => 0 }, ],
 );
 
 # App config
@@ -30,13 +32,14 @@ if ($ENV{'DEBUG'}) {
 }
 
 # State
-my $state      = 'OFF';
-my $stateLast  = $state;
-my %exists     = ();
-my %mtime      = ();
-my $pushLast   = 0;
-my $pullLast   = time();
-my $update     = 0;
+my $state     = 'OFF';
+my $stateLast = $state;
+my %exists    = ();
+my %mtime     = ();
+my $pushLast  = 0;
+my $pullLast  = time();
+my $update    = 0;
+my $lastPlay  = 0;
 
 # Always force the heater into OFF at launch
 $state = 'OFF';
@@ -69,10 +72,19 @@ while (1) {
 		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
 	}
 
+	# Remember the last master PLAY state
+	if ($newState == 'PLAY') {
+		$lastPlay = $now;
+	}
+
 	# Calculate the new state
 	$stateLast = $state;
 	if ($mtime{'MOTION_GARAGE'} > $now - $MOTION_TIMEOUT) {
-		$newState   = 'ON';
+		$newState = 'ON';
+	} elsif (($newState == 'PAUSE' || $newState == 'MOTION')
+		&& $PREHEAT_TIMEOUT > $now - $lastPlay)
+	{
+		$newState = 'PREHEAT';
 	} else {
 		$newState = 'OFF';
 	}
