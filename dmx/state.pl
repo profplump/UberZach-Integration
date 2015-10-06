@@ -39,7 +39,7 @@ if ($HOST =~ /loki/i) {
 		die("Unable to access media path\n");
 	}
 
-	# Garage door opener
+	# Door remote command
 	$MON_FILES{ $MEDIA_PATH . '/DMX/cmd/DOOR_CMD' } = 'EXISTS-LINE-CLEAR';
 
 	# Rumble pack
@@ -90,6 +90,8 @@ if ($HOST =~ /loki/i) {
 	# Equipment
 	$MON_FILES{'FAN'}     = 'LINE-NOUPDATE';
 	$MON_FILES{'FAN_CMD'} = 'EXISTS-TIMEOUT';
+	$MON_FILES{'OIL'}     = 'LINE-NOUPDATE';
+	$MON_FILES{'DOOR'}    = 'LINE-NOUPDATE';
 	$MON_FILES{'LOCK'}    = 'EXISTS-NOUPDATE';
 	$MON_FILES{'ALARM'}   = 'NONE';
 
@@ -104,6 +106,7 @@ if ($HOST =~ /loki/i) {
 	$MON_FILES{'OVERHEAD'} = 'LINE-NOUPDATE';
 	$MON_FILES{'ROPE'}     = 'LINE-NOUPDATE';
 	$MON_FILES{'STAIRS'}   = 'LINE-NOUPDATE';
+	$MON_FILES{'GARAGE'}   = 'LINE-NOUPDATE';
 
 	# TV
 	$MON_FILES{'TV'}       = 'STATUS';
