@@ -9,8 +9,8 @@ use lib dirname(abs_path($0));
 use DMX;
 
 # User config
-my $PREHEAT_DELAY   = 5;
-my $PREHEAT_TIMEOUT = 15;
+my $PREHEAT_DELAY   = 2;
+my $PREHEAT_TIMEOUT = $PREHEAT_DELAY + 20;
 my $MOTION_TIMEOUT  = 120;
 my %DIM             = (
 	'OFF'     => [ { 'channel' => 20, 'value' => 0,   'time' => 0 }, ],
@@ -35,14 +35,15 @@ if ($ENV{'DEBUG'}) {
 }
 
 # State
-my $state     = 'OFF';
-my $stateLast = $state;
-my %exists    = ();
-my %mtime     = ();
-my $pushLast  = 0;
-my $pullLast  = time();
-my $update    = 0;
-my $lastPlay  = 0;
+my $state       = 'OFF';
+my $stateLast   = $state;
+my $masterState = 'OFF';
+my %exists      = ();
+my %mtime       = ();
+my $pushLast    = 0;
+my $pullLast    = time();
+my $update      = 0;
+my $lastPlay    = 0;
 
 # Always force the heater into OFF at launch
 $state = 'OFF';
@@ -55,9 +56,6 @@ DMX::stateSubscribe($STATE_SOCK);
 # Loop forever
 while (1) {
 
-	# State is calculated; use newState to gather data
-	my $newState = $state;
-
 	# Wait for state updates
 	my $cmdState = DMX::readState($DELAY, \%exists, \%mtime, undef());
 
@@ -66,7 +64,7 @@ while (1) {
 
 	# Record only valid states
 	if (defined($cmdState)) {
-		$newState = $cmdState;
+		$masterState = $cmdState;
 		$pullLast = $now;
 	}
 
@@ -75,14 +73,14 @@ while (1) {
 		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
 	}
 
-	# Remember the last master PLAY state
-	if ($newState eq 'PLAY') {
+	# Remember the last master PLAY mtime
+	if ($masterState eq 'PLAY') {
 		$lastPlay = $now;
 	}
 
-	# Change our minimum update rate to make timer-based modes more accurate
+	# Reduce our minimum update rate to make timer-based modes more accurate
 	my $elapsed = $now - $lastPlay;
-	if ($elapsed < $PREHEAT_TIMEOUT) {
+	if ($elapsed && $elapsed < $PREHEAT_TIMEOUT) {
 		$DELAY = $MIN_DELAY;
 	} else {
 		$DELAY = $MAX_DELAY;
@@ -91,15 +89,14 @@ while (1) {
 	# Calculate the new state
 	$stateLast = $state;
 	if ($mtime{'MOTION_GARAGE'} > $now - $MOTION_TIMEOUT) {
-		$newState = 'ON';
-	} elsif (($newState eq 'PAUSE' || $newState eq 'MOTION')
+		$state = 'ON';
+	} elsif (($masterState eq 'PAUSE' || $masterState eq 'MOTION')
 		&& $PREHEAT_TIMEOUT > $elapsed && $PREHEAT_DELAY < $elapsed)
 	{
-		$newState = 'PREHEAT';
+		$state = 'PREHEAT';
 	} else {
-		$newState = 'OFF';
+		$state = 'OFF';
 	}
-	$state = $newState;
 
 	# Force updates on a periodic basis
 	if (!$update && $now - $pushLast > $PUSH_TIMEOUT) {
