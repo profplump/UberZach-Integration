@@ -9,7 +9,8 @@ use lib dirname(abs_path($0));
 use DMX;
 
 # User config
-my $PREHEAT_TIMEOUT = 20;
+my $PREHEAT_DELAY   = 5;
+my $PREHEAT_TIMEOUT = 15;
 my $MOTION_TIMEOUT  = 120;
 my %DIM             = (
 	'OFF'     => [ { 'channel' => 20, 'value' => 0,   'time' => 0 }, ],
@@ -23,7 +24,9 @@ my $STATE_SOCK   = 'OIL';
 my $OUTPUT_FILE  = $DATA_DIR . $STATE_SOCK;
 my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
-my $DELAY        = $PULL_TIMEOUT / 2;
+my $MAX_DELAY    = $PULL_TIMEOUT / 2;
+my $MIN_DELAY    = 0.25;
+my $DELAY        = $MAX_DELAY;
 
 # Debug
 my $DEBUG = 0;
@@ -73,16 +76,24 @@ while (1) {
 	}
 
 	# Remember the last master PLAY state
-	if ($newState == 'PLAY') {
+	if ($newState eq 'PLAY') {
 		$lastPlay = $now;
+	}
+
+	# Change our minimum update rate to make timer-based modes more accurate
+	my $elapsed = $now - $lastPlay;
+	if ($elapsed < $PREHEAT_TIMEOUT) {
+		$DELAY = $MIN_DELAY;
+	} else {
+		$DELAY = $MAX_DELAY;
 	}
 
 	# Calculate the new state
 	$stateLast = $state;
 	if ($mtime{'MOTION_GARAGE'} > $now - $MOTION_TIMEOUT) {
 		$newState = 'ON';
-	} elsif (($newState == 'PAUSE' || $newState == 'MOTION')
-		&& $PREHEAT_TIMEOUT > $now - $lastPlay)
+	} elsif (($newState eq 'PAUSE' || $newState eq 'MOTION')
+		&& $PREHEAT_TIMEOUT > $elapsed && $PREHEAT_DELAY < $elapsed)
 	{
 		$newState = 'PREHEAT';
 	} else {
