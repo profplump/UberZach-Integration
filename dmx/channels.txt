@@ -18,5 +18,5 @@
 #	16 => Garage Door
 #	17 => Garage Lights
 #	18 => <Unused>
-#	19 => Oil Heater (Switch)
-#	20 => <Unused> (Swtich)
+#	19 => <Unused> (Swtich)
+#	20 => Oil Heater (Switch)

@@ -11,8 +11,8 @@ use DMX;
 # User config
 my $MOTION_TIMEOUT = 120;
 my %DIM            = (
-	'OFF'        => [ { 'channel' => 19, 'value' => 0,   'time' => 0 }, ],
-	'ON'         => [ { 'channel' => 19, 'value' => 255, 'time' => 0 }, ],
+	'OFF'        => [ { 'channel' => 20, 'value' => 0,   'time' => 0 }, ],
+	'ON'         => [ { 'channel' => 20, 'value' => 255, 'time' => 0 }, ],
 );
 
 # App config
