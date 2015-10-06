@@ -13,9 +13,9 @@ my $MOTION_TIMEOUT     = 30;
 my $POSTMOTION_TIMEOUT = 60;
 my %DIM                = (
 	'OFF'        => [ { 'channel' => 17, 'value' => 0,   'time' => 60000 }, ],
-	'PREMOTION'  => [ { 'channel' => 17, 'value' => 128, 'time' => 2500 }, ],
+	'PREMOTION'  => [ { 'channel' => 17, 'value' => 64,  'time' => 2500 }, ],
 	'MOTION'     => [ { 'channel' => 17, 'value' => 255, 'time' => 750 }, ],
-	'POSTMOTION' => [ { 'channel' => 17, 'value' => 128, 'time' => $POSTMOTION_TIMEOUT * 1000 }, ],
+	'POSTMOTION' => [ { 'channel' => 17, 'value' => 64,  'time' => $POSTMOTION_TIMEOUT * 1000 }, ],
 	'BRIGHT'     => [ { 'channel' => 17, 'value' => 255, 'time' => 1000 }, ],
 	'ERROR'      => [ { 'channel' => 17, 'value' => 255, 'time' => 100 }, ],
 );
