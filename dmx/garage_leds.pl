@@ -9,6 +9,13 @@ use lib dirname(abs_path($0));
 use DMX;
 
 # User config
+my $COLOR_TIMEOUT  = 30;
+my $COLOR_TIME_MIN = int($COLOR_TIMEOUT / 2);
+my %COLOR_VAR      = (
+	'PREMOTION'  => 0.75,
+	'MOTION'     => 0.35,
+	'POSTMOTION' => 0.75,
+);
 my $MOTION_TIMEOUT     = 30;
 my $POSTMOTION_TIMEOUT = 60;
 my %DIM                = (
@@ -56,6 +63,14 @@ my $DELAY        = $PULL_TIMEOUT / 2;
 my $DEBUG = 0;
 if ($ENV{'DEBUG'}) {
 	$DEBUG = 1;
+}
+
+# Reset the timeouts if the color delay demands it
+if ($PUSH_TIMEOUT < $COLOR_TIMEOUT) {
+	$PUSH_TIMEOUT = $COLOR_TIMEOUT / 2;
+}
+if ($DELAY > $COLOR_TIMEOUT / 2) {
+	$DELAY = $COLOR_TIMEOUT / 2;
 }
 
 # State
@@ -117,6 +132,36 @@ while (1) {
 	}
 	$state = $newState;
 
+	# Color changes
+	if ($COLOR_VAR{$state} && time() - $colorChange > $COLOR_TIMEOUT) {
+		@COLOR = ();
+
+		# Grab the default (white) data
+		my $lums = 0;
+		foreach my $data (@{ $DIM{$state} }) {
+			$lums += $data->{'value'};
+		}
+		my $numChans = scalar(@{ $DIM{$state} });
+		my $max      = $lums / $numChans;
+
+		# Pick the change interval
+		my $time = int((rand($COLOR_TIMEOUT - $COLOR_TIME_MIN) + $COLOR_TIME_MIN) * 1000);
+
+		# Assign each channel
+		my @vals = random_normal($numChans, $max, $max * $COLOR_VAR{$state});
+		foreach my $data (@{ $DIM{$state} }) {
+			my $color = pop(@vals);
+			push(@COLOR, { 'channel' => $data->{'channel'}, 'value' => $color, 'time' => $time });
+		}
+
+		# Update
+		$update      = 1;
+		$colorChange = time();
+		if ($DEBUG) {
+			print STDERR "New color\n";
+		}
+	}
+
 	# Force updates on a periodic basis
 	if (!$update && $now - $pushLast > $PUSH_TIMEOUT) {
 		if ($DEBUG) {
@@ -135,6 +180,25 @@ while (1) {
 
 	# Update the lighting
 	if ($update) {
+
+		# Reset the color change sequence on any state change, so we always spend 1 cycle at white
+		if ($stateLast ne $state) {
+			if ($DEBUG) {
+				print STDERR "Reset color sequence\n";
+			}
+			@COLOR       = ();
+			$colorChange = time() + $COLOR_TIME_MIN;
+		}
+
+		# Select a data set (color or standard)
+		my @data_set    = ();
+		my $local_state = $state;
+		if (scalar(@COLOR)) {
+			@data_set = @COLOR;
+			$local_state .= ' (Color)';
+		} else {
+			@data_set = @{ $DIM{$state} };
+		}
 
 		# Update
 		DMX::applyDataset($DIM{$state}, $state, $OUTPUT_FILE);
