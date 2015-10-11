@@ -82,6 +82,8 @@ my $pushLast   = 0;
 my $pullLast   = time();
 my $update     = 0;
 my $lastMotion = 0;
+my @COLOR       = ();
+my $colorChange = time();
 
 # Always force lights into ERROR at launch
 $state = 'ERROR';
