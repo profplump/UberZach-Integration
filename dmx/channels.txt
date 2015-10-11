@@ -20,3 +20,7 @@
 #	18 => <Unused>
 #	19 => <Unused> (Swtich)
 #	20 => Oil Heater (Switch)
+#	21 => Garage Red
+#	22 => Garage Green
+#	23 => Garage Blue
+#	24 => Garage Shelf
