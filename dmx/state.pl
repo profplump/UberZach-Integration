@@ -102,11 +102,13 @@ if ($HOST =~ /loki/i) {
 	$MON_FILES{'AUDIO_STATE'} = 'LINE-NOUPDATE';
 
 	# Lights
-	$MON_FILES{'LED'}      = 'LINE-NOUPDATE';
-	$MON_FILES{'OVERHEAD'} = 'LINE-NOUPDATE';
-	$MON_FILES{'ROPE'}     = 'LINE-NOUPDATE';
-	$MON_FILES{'STAIRS'}   = 'LINE-NOUPDATE';
-	$MON_FILES{'GARAGE'}   = 'LINE-NOUPDATE';
+	$MON_FILES{'LED'}          = 'LINE-NOUPDATE';
+	$MON_FILES{'OVERHEAD'}     = 'LINE-NOUPDATE';
+	$MON_FILES{'ROPE'}         = 'LINE-NOUPDATE';
+	$MON_FILES{'STAIRS'}       = 'LINE-NOUPDATE';
+	$MON_FILES{'GARAGE'}       = 'LINE-NOUPDATE';
+	$MON_FILES{'GARAGE_LEDS'}  = 'LINE-NOUPDATE';
+	$MON_FILES{'GARAGE_SHELF'} = 'LINE-NOUPDATE';
 
 	# TV
 	$MON_FILES{'TV'}       = 'STATUS';
@@ -593,7 +595,7 @@ while (1) {
 		my $alarm = 0;
 		if (exists($files{'LOCK'}) && $files{'LOCK'}->{'value'}) {
 			if (   $state ne 'OFF'
-				|| (exists($files{'MOTION'}) && $files{'MOTION'}->{'value'})
+				|| (exists($files{'MOTION'})        && $files{'MOTION'}->{'value'})
 				|| (exists($files{'MOTION_STAIRS'}) && $files{'MOTION_STAIRS'}->{'value'})
 				|| (exists($files{'MOTION_GARAGE'}) && $files{'MOTION_GARAGE'}->{'value'}))
 			{
