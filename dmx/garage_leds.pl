@@ -12,30 +12,36 @@ use DMX;
 my $MOTION_TIMEOUT     = 30;
 my $POSTMOTION_TIMEOUT = 60;
 my %DIM                = (
-	'OFF'        => [ { 'channel' => 21, 'value' => 0,   'time' => 60000 },
-			  { 'channel' => 22, 'value' => 0,   'time' => 60000 },
-			  { 'channel' => 23, 'value' => 0,   'time' => 60000 },
+	'OFF' =>         [
+			{ 'channel' => 21, 'value' => 0,   'time' => 60000 },
+			{ 'channel' => 22, 'value' => 0,   'time' => 60000 },
+			{ 'channel' => 23, 'value' => 0,   'time' => 60000 },
+	],
+	'PREMOTION'  => [
+			{ 'channel' => 21, 'value' => 32,  'time' => 2500 },
+			{ 'channel' => 22, 'value' => 32,  'time' => 2500 },
+			{ 'channel' => 23, 'value' => 32,  'time' => 2500 },
 			],
-	'PREMOTION'  => [ { 'channel' => 21, 'value' => 32,  'time' => 2500 },
-			  { 'channel' => 22, 'value' => 32,  'time' => 2500 },
-			  { 'channel' => 23, 'value' => 32,  'time' => 2500 },
-			],
-	'MOTION'     => [ { 'channel' => 21, 'value' => 128,  'time' => 750 },
-			  { 'channel' => 22, 'value' => 128,  'time' => 750 },
-			  { 'channel' => 23, 'value' => 128,  'time' => 750 },
-			],
-	'POSTMOTION' => [ { 'channel' => 21, 'value' => 32,   'time' => $POSTMOTION_TIMEOUT * 1000 },
-			  { 'channel' => 22, 'value' => 32,   'time' => $POSTMOTION_TIMEOUT * 1000 },
-			  { 'channel' => 23, 'value' => 32,   'time' => $POSTMOTION_TIMEOUT * 1000 },
-			],
-	'BRIGHT'     => [ { 'channel' => 21, 'value' => 255,  'time' => 1000 },
-			  { 'channel' => 22, 'value' => 255,  'time' => 1000 },
-			  { 'channel' => 23, 'value' => 255,  'time' => 1000 },
-			],
-	'ERROR'      => [ { 'channel' => 21, 'value' => 144,  'time' => 100 },
-			  { 'channel' => 22, 'value' => 255,  'time' => 100 },
-			  { 'channel' => 23, 'value' => 144,  'time' => 100 },
-			],
+	'MOTION'     => [
+			{ 'channel' => 21, 'value' => 128,  'time' => 750 },
+			{ 'channel' => 22, 'value' => 128,  'time' => 750 },
+			{ 'channel' => 23, 'value' => 128,  'time' => 750 },
+	],
+	'POSTMOTION' => [
+			{ 'channel' => 21, 'value' => 32,   'time' => $POSTMOTION_TIMEOUT * 1000 },
+			{ 'channel' => 22, 'value' => 32,   'time' => $POSTMOTION_TIMEOUT * 1000 },
+			{ 'channel' => 23, 'value' => 32,   'time' => $POSTMOTION_TIMEOUT * 1000 },
+	],
+	'BRIGHT'     => [
+			{ 'channel' => 21, 'value' => 255,  'time' => 1000 },
+			{ 'channel' => 22, 'value' => 255,  'time' => 1000 },
+			{ 'channel' => 23, 'value' => 255,  'time' => 1000 },
+	],
+	'ERROR'      => [
+			{ 'channel' => 21, 'value' => 144,  'time' => 100 },
+			{ 'channel' => 22, 'value' => 255,  'time' => 100 },
+			{ 'channel' => 23, 'value' => 144,  'time' => 100 },
+	],
 );
 
 # App config
