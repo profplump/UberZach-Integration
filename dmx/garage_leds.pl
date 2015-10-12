@@ -1,5 +1,5 @@
-#!/usr/bin/perl
-use strict;
+o    #!/usr/bin/perl
+  use strict;
 use warnings;
 use POSIX;
 use Math::Random;
@@ -108,7 +108,7 @@ while (1) {
 	# Record only valid states
 	if (defined($cmdState)) {
 		$masterState = $cmdState;
-		$pullLast = $now;
+		$pullLast    = $now;
 	}
 
 	# Die if we don't see regular updates
@@ -121,7 +121,7 @@ while (1) {
 	if ($exists{'BRIGHT'}) {
 		$state = 'BRIGHT';
 	} elsif ($mtime{'MOTION_GARAGE'} > $now - $MOTION_TIMEOUT) {
-		$state   = 'MOTION';
+		$state      = 'MOTION';
 		$lastMotion = $now;
 	} elsif ($masterState eq 'PLAY' || $masterState eq 'PAUSE' || $masterState eq 'MOTION') {
 		if ($now > $lastMotion + $POSTMOTION_TIMEOUT) {

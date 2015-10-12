@@ -12,10 +12,10 @@ use DMX;
 my $MOTION_TIMEOUT     = 30;
 my $POSTMOTION_TIMEOUT = 60;
 my %DIM                = (
-	'OFF'        => [ { 'channel' => 24, 'value' => 0,   'time' => 60000 }, ],
-	'MOTION'     => [ { 'channel' => 24, 'value' => 196, 'time' => 750 }, ],
-	'BRIGHT'     => [ { 'channel' => 24, 'value' => 255, 'time' => 1000 }, ],
-	'ERROR'      => [ { 'channel' => 24, 'value' => 255, 'time' => 100 }, ],
+	'OFF'    => [ { 'channel' => 24, 'value' => 0,   'time' => 60000 }, ],
+	'MOTION' => [ { 'channel' => 24, 'value' => 196, 'time' => 750 }, ],
+	'BRIGHT' => [ { 'channel' => 24, 'value' => 255, 'time' => 1000 }, ],
+	'ERROR'  => [ { 'channel' => 24, 'value' => 255, 'time' => 100 }, ],
 );
 
 # App config
@@ -62,7 +62,7 @@ while (1) {
 	# Record only valid states
 	if (defined($cmdState)) {
 		$masterState = $cmdState;
-		$pullLast = $now;
+		$pullLast    = $now;
 	}
 
 	# Die if we don't see regular updates
@@ -75,7 +75,7 @@ while (1) {
 	if ($exists{'BRIGHT'}) {
 		$state = 'BRIGHT';
 	} elsif ($mtime{'MOTION_GARAGE'} > $now - $MOTION_TIMEOUT) {
-		$state   = 'MOTION';
+		$state = 'MOTION';
 	} else {
 		$state = 'OFF';
 	}
