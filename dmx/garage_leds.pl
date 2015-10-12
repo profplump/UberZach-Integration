@@ -78,6 +78,7 @@ if ($DELAY > $COLOR_TIMEOUT / 2) {
 # State
 my $state       = 'OFF';
 my $stateLast   = $state;
+my $masterState = 'OFF';
 my %exists      = ();
 my %mtime       = ();
 my $pushLast    = 0;
@@ -98,9 +99,6 @@ DMX::stateSubscribe($STATE_SOCK);
 # Loop forever
 while (1) {
 
-	# State is calculated; use newState to gather data
-	my $newState = $state;
-
 	# Wait for state updates
 	my $cmdState = DMX::readState($DELAY, \%exists, \%mtime, undef());
 
@@ -109,7 +107,7 @@ while (1) {
 
 	# Record only valid states
 	if (defined($cmdState)) {
-		$newState = $cmdState;
+		$masterState = $cmdState;
 		$pullLast = $now;
 	}
 
@@ -121,20 +119,19 @@ while (1) {
 	# Calculate the new state
 	$stateLast = $state;
 	if ($exists{'BRIGHT'}) {
-		$newState = 'BRIGHT';
+		$state = 'BRIGHT';
 	} elsif ($mtime{'MOTION_GARAGE'} > $now - $MOTION_TIMEOUT) {
-		$newState   = 'MOTION';
+		$state   = 'MOTION';
 		$lastMotion = $now;
-	} elsif ($newState eq 'PLAY' || $newState eq 'PAUSE' || $newState eq 'MOTION') {
+	} elsif ($masterState eq 'PLAY' || $masterState eq 'PAUSE' || $masterState eq 'MOTION') {
 		if ($now > $lastMotion + $POSTMOTION_TIMEOUT) {
-			$newState = 'PREMOTION';
+			$state = 'PREMOTION';
 		} else {
-			$newState = 'POSTMOTION';
+			$state = 'POSTMOTION';
 		}
 	} else {
-		$newState = 'OFF';
+		$state = 'OFF';
 	}
-	$state = $newState;
 
 	# Color changes
 	if ($COLOR_VAR{$state} && $now - $colorChange > $COLOR_TIMEOUT) {

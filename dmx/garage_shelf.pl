@@ -13,9 +13,7 @@ my $MOTION_TIMEOUT     = 30;
 my $POSTMOTION_TIMEOUT = 60;
 my %DIM                = (
 	'OFF'        => [ { 'channel' => 24, 'value' => 0,   'time' => 60000 }, ],
-	'PREMOTION'  => [ { 'channel' => 24, 'value' => 64,  'time' => 2500 }, ],
-	'MOTION'     => [ { 'channel' => 24, 'value' => 255, 'time' => 750 }, ],
-	'POSTMOTION' => [ { 'channel' => 24, 'value' => 64,  'time' => $POSTMOTION_TIMEOUT * 1000 }, ],
+	'MOTION'     => [ { 'channel' => 24, 'value' => 196, 'time' => 750 }, ],
 	'BRIGHT'     => [ { 'channel' => 24, 'value' => 255, 'time' => 1000 }, ],
 	'ERROR'      => [ { 'channel' => 24, 'value' => 255, 'time' => 100 }, ],
 );
@@ -35,14 +33,14 @@ if ($ENV{'DEBUG'}) {
 }
 
 # State
-my $state      = 'OFF';
-my $stateLast  = $state;
-my %exists     = ();
-my %mtime      = ();
-my $pushLast   = 0;
-my $pullLast   = time();
-my $update     = 0;
-my $lastMotion = 0;
+my $state       = 'OFF';
+my $stateLast   = $state;
+my $masterState = 'OFF';
+my %exists      = ();
+my %mtime       = ();
+my $pushLast    = 0;
+my $pullLast    = time();
+my $update      = 0;
 
 # Always force lights into ERROR at launch
 $state = 'ERROR';
@@ -55,9 +53,6 @@ DMX::stateSubscribe($STATE_SOCK);
 # Loop forever
 while (1) {
 
-	# State is calculated; use newState to gather data
-	my $newState = $state;
-
 	# Wait for state updates
 	my $cmdState = DMX::readState($DELAY, \%exists, \%mtime, undef());
 
@@ -66,7 +61,7 @@ while (1) {
 
 	# Record only valid states
 	if (defined($cmdState)) {
-		$newState = $cmdState;
+		$masterState = $cmdState;
 		$pullLast = $now;
 	}
 
@@ -78,20 +73,12 @@ while (1) {
 	# Calculate the new state
 	$stateLast = $state;
 	if ($exists{'BRIGHT'}) {
-		$newState = 'BRIGHT';
+		$state = 'BRIGHT';
 	} elsif ($mtime{'MOTION_GARAGE'} > $now - $MOTION_TIMEOUT) {
-		$newState   = 'MOTION';
-		$lastMotion = $now;
-	} elsif ($newState eq 'PLAY' || $newState eq 'PAUSE' || $newState eq 'MOTION') {
-		if ($now > $lastMotion + $POSTMOTION_TIMEOUT) {
-			$newState = 'PREMOTION';
-		} else {
-			$newState = 'POSTMOTION';
-		}
+		$state   = 'MOTION';
 	} else {
-		$newState = 'OFF';
+		$state = 'OFF';
 	}
-	$state = $newState;
 
 	# Force updates on a periodic basis
 	if (!$update && $now - $pushLast > $PUSH_TIMEOUT) {
