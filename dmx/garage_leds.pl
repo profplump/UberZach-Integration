@@ -137,14 +137,6 @@ while (1) {
 	$state = $newState;
 
 	# Color changes
-	if ($COLOR_VAR{$state}) {
-		print STDERR "State is color eligible\n";
-	}
-	if ($now - $colorChange > $COLOR_TIMEOUT) {
-		print STDERR "Time is color eligibile\n";
-	} else {
-		print STDERR "Time to color change: " . ($now - $colorChange) . ' (' . $COLOR_TIMEOUT . ")\n";
-	}
 	if ($COLOR_VAR{$state} && $now - $colorChange > $COLOR_TIMEOUT) {
 		@COLOR = ();
 
