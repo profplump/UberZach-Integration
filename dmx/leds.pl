@@ -93,7 +93,7 @@ my $pushLast    = 0;
 my $pullLast    = time();
 my $update      = 0;
 my @COLOR       = ();
-my $colorChange = time();
+my $colorChange = 0;
 
 # Always force lights into ERROR at launch
 $state = 'ERROR';
@@ -111,13 +111,18 @@ while (1) {
 
 	# Wait for state updates
 	my $cmdState = DMX::readState($DELAY, \%exists, undef(), \%VALID);
+
+	# Avoid repeated calls to time()
+	my $now = time();
+
+	# Record only valid states
 	if (defined($cmdState)) {
 		$newState = $cmdState;
-		$pullLast = time();
+		$pullLast = $now;
 	}
 
 	# Die if we don't see regular updates
-	if (time() - $pullLast > $PULL_TIMEOUT) {
+	if ($now - $pullLast > $PULL_TIMEOUT) {
 		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
 	}
 
@@ -144,7 +149,7 @@ while (1) {
 	$state = $newState;
 
 	# Color changes
-	if ($COLOR_VAR{$state} && time() - $colorChange > $COLOR_TIMEOUT) {
+	if ($COLOR_VAR{$state} && $now - $colorChange > $COLOR_TIMEOUT) {
 		@COLOR = ();
 
 		# Grab the default (white) data
@@ -167,14 +172,14 @@ while (1) {
 
 		# Update
 		$update      = 1;
-		$colorChange = time();
+		$colorChange = $now;
 		if ($DEBUG) {
 			print STDERR "New color\n";
 		}
 	}
 
 	# Force updates on a periodic basis
-	if (!$update && time() - $pushLast > $PUSH_TIMEOUT) {
+	if (!$update && $now - $pushLast > $PUSH_TIMEOUT) {
 		if ($DEBUG) {
 			print STDERR "Forcing periodic update\n";
 		}
@@ -198,7 +203,7 @@ while (1) {
 				print STDERR "Reset color sequence\n";
 			}
 			@COLOR       = ();
-			$colorChange = time() + $COLOR_TIME_MIN;
+			$colorChange = $now + $COLOR_TIME_MIN;
 		}
 
 		# Select a data set (color or standard)
@@ -215,7 +220,7 @@ while (1) {
 		DMX::applyDataset(\@data_set, $local_state, $OUTPUT_FILE);
 
 		# Update the push time
-		$pushLast = time();
+		$pushLast = $now;
 
 		# Clear the update flag
 		$update = 0;

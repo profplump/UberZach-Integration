@@ -1,6 +1,8 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
+use POSIX;
+use Math::Random;
 
 # Local modules
 use Cwd qw(abs_path);
@@ -9,7 +11,7 @@ use lib dirname(abs_path($0));
 use DMX;
 
 # User config
-my $COLOR_TIMEOUT  = 30;
+my $COLOR_TIMEOUT  = 10;
 my $COLOR_TIME_MIN = int($COLOR_TIMEOUT / 2);
 my %COLOR_VAR      = (
 	'PREMOTION'  => 0.75,
@@ -25,9 +27,9 @@ my %DIM                = (
 			{ 'channel' => 23, 'value' => 0,   'time' => 60000 },
 	],
 	'PREMOTION'  => [
-			{ 'channel' => 21, 'value' => 32,  'time' => 2500 },
-			{ 'channel' => 22, 'value' => 32,  'time' => 2500 },
-			{ 'channel' => 23, 'value' => 32,  'time' => 2500 },
+			{ 'channel' => 21, 'value' => 5,   'time' => 2500 },
+			{ 'channel' => 22, 'value' => 5,   'time' => 2500 },
+			{ 'channel' => 23, 'value' => 5,   'time' => 2500 },
 			],
 	'MOTION'     => [
 			{ 'channel' => 21, 'value' => 128,  'time' => 750 },
@@ -35,9 +37,9 @@ my %DIM                = (
 			{ 'channel' => 23, 'value' => 128,  'time' => 750 },
 	],
 	'POSTMOTION' => [
-			{ 'channel' => 21, 'value' => 32,   'time' => $POSTMOTION_TIMEOUT * 1000 },
-			{ 'channel' => 22, 'value' => 32,   'time' => $POSTMOTION_TIMEOUT * 1000 },
-			{ 'channel' => 23, 'value' => 32,   'time' => $POSTMOTION_TIMEOUT * 1000 },
+			{ 'channel' => 21, 'value' => 8,   'time' => $POSTMOTION_TIMEOUT * 1000 },
+			{ 'channel' => 22, 'value' => 8,   'time' => $POSTMOTION_TIMEOUT * 1000 },
+			{ 'channel' => 23, 'value' => 8,   'time' => $POSTMOTION_TIMEOUT * 1000 },
 	],
 	'BRIGHT'     => [
 			{ 'channel' => 21, 'value' => 255,  'time' => 1000 },
@@ -45,9 +47,9 @@ my %DIM                = (
 			{ 'channel' => 23, 'value' => 255,  'time' => 1000 },
 	],
 	'ERROR'      => [
-			{ 'channel' => 21, 'value' => 144,  'time' => 100 },
+			{ 'channel' => 21, 'value' => 112,  'time' => 100 },
 			{ 'channel' => 22, 'value' => 255,  'time' => 100 },
-			{ 'channel' => 23, 'value' => 144,  'time' => 100 },
+			{ 'channel' => 23, 'value' => 112,  'time' => 100 },
 	],
 );
 
@@ -74,16 +76,16 @@ if ($DELAY > $COLOR_TIMEOUT / 2) {
 }
 
 # State
-my $state      = 'OFF';
-my $stateLast  = $state;
-my %exists     = ();
-my %mtime      = ();
-my $pushLast   = 0;
-my $pullLast   = time();
-my $update     = 0;
-my $lastMotion = 0;
+my $state       = 'OFF';
+my $stateLast   = $state;
+my %exists      = ();
+my %mtime       = ();
+my $pushLast    = 0;
+my $pullLast    = time();
+my $update      = 0;
+my $lastMotion  = 0;
 my @COLOR       = ();
-my $colorChange = time();
+my $colorChange = 0;
 
 # Always force lights into ERROR at launch
 $state = 'ERROR';
@@ -135,7 +137,15 @@ while (1) {
 	$state = $newState;
 
 	# Color changes
-	if ($COLOR_VAR{$state} && time() - $colorChange > $COLOR_TIMEOUT) {
+	if ($COLOR_VAR{$state}) {
+		print STDERR "State is color eligible\n";
+	}
+	if ($now - $colorChange > $COLOR_TIMEOUT) {
+		print STDERR "Time is color eligibile\n";
+	} else {
+		print STDERR "Time to color change: " . ($now - $colorChange) . ' (' . $COLOR_TIMEOUT . ")\n";
+	}
+	if ($COLOR_VAR{$state} && $now - $colorChange > $COLOR_TIMEOUT) {
 		@COLOR = ();
 
 		# Grab the default (white) data
@@ -158,7 +168,7 @@ while (1) {
 
 		# Update
 		$update      = 1;
-		$colorChange = time();
+		$colorChange = $now;
 		if ($DEBUG) {
 			print STDERR "New color\n";
 		}
@@ -189,7 +199,7 @@ while (1) {
 				print STDERR "Reset color sequence\n";
 			}
 			@COLOR       = ();
-			$colorChange = time() + $COLOR_TIME_MIN;
+			$colorChange = $now + $COLOR_TIME_MIN;
 		}
 
 		# Select a data set (color or standard)
@@ -203,7 +213,7 @@ while (1) {
 		}
 
 		# Update
-		DMX::applyDataset($DIM{$state}, $state, $OUTPUT_FILE);
+		DMX::applyDataset(\@data_set, $local_state, $OUTPUT_FILE);
 
 		# Update the push time
 		$pushLast = $now;
