@@ -1,5 +1,5 @@
-o    #!/usr/bin/perl
-  use strict;
+#!/usr/bin/perl
+use strict;
 use warnings;
 use POSIX;
 use Math::Random;
