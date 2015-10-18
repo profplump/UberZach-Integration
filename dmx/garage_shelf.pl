@@ -13,9 +13,9 @@ my $MOTION_TIMEOUT     = 30;
 my $POSTMOTION_TIMEOUT = 60;
 my %DIM                = (
 	'OFF'    => [ { 'channel' => 24, 'value' => 0,   'time' => 60000 }, ],
-	'MOTION' => [ { 'channel' => 24, 'value' => 196, 'time' => 750 }, ],
+	'MOTION' => [ { 'channel' => 24, 'value' => 32,  'time' => 750 }, ],
 	'BRIGHT' => [ { 'channel' => 24, 'value' => 255, 'time' => 1000 }, ],
-	'ERROR'  => [ { 'channel' => 24, 'value' => 255, 'time' => 100 }, ],
+	'ERROR'  => [ { 'channel' => 24, 'value' => 32,  'time' => 100 }, ],
 );
 
 # App config
