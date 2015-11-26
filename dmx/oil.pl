@@ -10,8 +10,8 @@ use DMX;
 
 # User config
 my $PREHEAT_DELAY   = 2;
-my $PREHEAT_TIMEOUT = $PREHEAT_DELAY + 20;
-my $MOTION_TIMEOUT  = 120;
+my $PREHEAT_TIMEOUT = $PREHEAT_DELAY + 40;
+my $MOTION_TIMEOUT  = 180;
 my %DIM             = (
 	'OFF'     => [ { 'channel' => 20, 'value' => 0,   'time' => 0 }, ],
 	'ON'      => [ { 'channel' => 20, 'value' => 255, 'time' => 0 }, ],
