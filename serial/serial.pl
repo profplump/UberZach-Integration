@@ -71,7 +71,7 @@ if (basename($0) =~ /PROJECTOR/i) {
 		'UNMUTE'       => 'MUOFF',
 		'INPUT'        => 'SI?',
 		'TV'           => 'SITV',
-		'DVD'          => 'SIDVD',
+		'GAME'         => 'SIDVD',
 		'MODE'         => 'MS?',
 		'SURROUND'     => 'MSDOLBY DIGITAL',
 		'STEREO'       => 'MS7CH STEREO',
@@ -82,11 +82,12 @@ if (basename($0) =~ /PROJECTOR/i) {
 		'INPUT_EXT'    => 'SDEXT.IN-1',
 
 	);
+	
 	%STATUS_CMDS = (
 		'STATUS' => { 'MATCH'   => [ qr/^PW/, qr/$CMDS{'ON'}/ ] },
 		'MODE'   => { 'EVAL'    => [ qr/^MS/, 'if ($a =~ /STEREO/i) { $a = "STEREO" } elsif ($a =~ /MS(?:DOLBY|DTS)/i) { $a = "SURROUND" }' ] },
 		'VOL'    => { 'EVAL'    => [ qr/^MV/, '$a =~ s/^MV//; if (length($a) > 2) { $a =~ s/(\d\d)(\d)/$1.$2/ }' ] },
-		'INPUT'  => { 'REPLACE' => qr/^SI(.*)/ },
+		'INPUT'  => { 'EVAL'    => [ qr/^SI/, 'foreach my $cmd (keys(%CMDS)) { if ($a eq $CMDS{$cmd}) { $a = $cmd; } else { $a =~ s/^SI//; } }' ] },
 	);
 } elsif (basename($0) =~ /TV/i) {
 	$DEV       = 'TV';

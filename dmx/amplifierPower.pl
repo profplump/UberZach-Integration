@@ -132,6 +132,11 @@ while (1) {
 	}
 
 	# Set the amplifier input as needed
+	if ($exists{'GAME'}) {
+		$input = 'GAME';
+	} else {
+		$input = 'TV';
+	}
 	if ($exists{'AMPLIFIER'} && $exists{'AMPLIFIER_INPUT'} ne $input && $lastInput < $now - $CMD_DELAY) {
 		$lastInput = $now;
 		if ($DEBUG) {
