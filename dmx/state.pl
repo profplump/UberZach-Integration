@@ -101,6 +101,9 @@ if ( $HOST =~ /loki/i ) {
     $MON_FILES{'AUDIO'}       = 'LINE-NOUPDATE';
     $MON_FILES{'AUDIO_STATE'} = 'LINE-NOUPDATE';
 
+    # Game System
+    $MON_FILES{'GAME'} = 'EXISTS';
+
     # Lights
     $MON_FILES{'LED'}          = 'LINE-NOUPDATE';
     $MON_FILES{'OVERHEAD'}     = 'LINE-NOUPDATE';
