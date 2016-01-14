@@ -75,7 +75,6 @@ if (basename($0) =~ /PROJECTOR/i) {
 		'MODE'         => 'MS?',
 		'SURROUND'     => 'MSDOLBY DIGITAL',
 		'STEREO'       => 'MS7CH STEREO',
-		'TV'           => 'SITV',
 		'INPUT'        => 'SI?',
 		'INPUT_MODE'   => 'SD?',
 		'INPUT_AUTO'   => 'SDAUTO',
