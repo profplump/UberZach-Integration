@@ -100,6 +100,8 @@ while (1) {
 		$state = 'RAVE';
 	} elsif ($exists{'AUDIO_AMP'}) {
 		$state = 'AMP';
+	} elsif ($exists{'GAME'}) {
+		$state = 'DEFAULT';
 	} elsif (!$exists{'PLEX'}) {
 		$state = 'AMP';
 	} else {
