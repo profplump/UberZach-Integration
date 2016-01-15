@@ -87,7 +87,7 @@ if (basename($0) =~ /PROJECTOR/i) {
 		'STATUS' => { 'MATCH'   => [ qr/^PW/, qr/$CMDS{'ON'}/ ] },
 		'MODE'   => { 'EVAL'    => [ qr/^MS/, 'if ($a =~ /STEREO/i) { $a = "STEREO" } elsif ($a =~ /MS(?:DOLBY|DTS)/i) { $a = "SURROUND" }' ] },
 		'VOL'    => { 'EVAL'    => [ qr/^MV/, '$a =~ s/^MV//; if (length($a) > 2) { $a =~ s/(\d\d)(\d)/$1.$2/ }' ] },
-		'INPUT'  => { 'EVAL'    => [ qr/^SI/, 'foreach my $cmd (keys(%CMDS)) { if ($a eq $CMDS{$cmd}) { $a = $cmd; } else { $a =~ s/^SI//; } }' ] },
+		'INPUT'  => { 'EVAL'    => [ qr/^SI/, 'my $done = 0; foreach my $cmd (keys(%CMDS)) { if ($a eq $CMDS{$cmd}) { $a = $cmd; $done = 1; last; } } if (!$done) { $a =~ s/^SI/UNKNOWN-/; }' ] },
 	);
 } elsif (basename($0) =~ /TV/i) {
 	$DEV       = 'TV';
