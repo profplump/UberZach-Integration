@@ -559,7 +559,9 @@ while (1) {
             || $files{'FRONT_APP'}->{'value'} eq
             'com.apple.ScreenSaver.Engine' )
         {
-            $files{'PLEX'}->{'value'} = 1;
+            if ( !exists( $files{'GAME'} ) || !$files{'GAME'}->{'value'} ) {
+                $files{'PLEX'}->{'value'} = 1;
+            }
         }
     }
     if ( $files{'PLEX'}->{'last'} != $files{'PLEX'}->{'value'} ) {
