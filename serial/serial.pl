@@ -21,7 +21,7 @@ sub clearBuffer($);
 sub collectUntil($$);
 
 # Device parameters
-my ($DEV, $PORT, $BLUETOOTH, $CRLF, $DELIMITER, %CMDS, %STATUS_CMDS);
+my ($DEV, $PORT, $BLUETOOTH, $BAUD, $DBITS, $SBITS, $PARITY, $CRLF, $DELIMITER, %CMDS, %STATUS_CMDS);
 if (basename($0) =~ /PROJECTOR/i) {
 	$DEV       = 'Projector';
 	$PORT      = '/dev/tty.usbserial-A5006xbj';
@@ -176,6 +176,37 @@ if (basename($0) =~ /PROJECTOR/i) {
 		'VOL'    => { 'EVAL'  => [ qr/\d/,       '' ] },
 		'INPUT'  => { 'EVAL'  => [ qr/(\d|ERR)/, 'if ($a =~ /7/i) { $a = "PLEX" } elsif ($a =~ /\d/i) { $a = "OTHER" } else { $a = "TV" }' ] },
 	);
+} elsif (basename($0) =~ /HDMI/i) {
+	$DEV       = 'HDMI';
+	$PORT      = '/dev/tty.usbserial-AL0096TO';
+	$BLUETOOTH = 0;
+	$BAUD      = 38400;
+	$CRLF      = "\r";
+	$DELIMITER = "\r>";
+	%CMDS      = (
+		'INIT'     => '',
+		'STATUS'   => 'VS',
+		'REBOOT'   => 'REBOOT',
+		'INFO'     => 'PI',
+		'IN1'      => 'AVI=1',
+		'IN2'      => 'AVI=2',
+		'BOFF'     => 'BEEP=0',
+		'BON'      => 'BEEP=1',
+		'ASCII'    => 'TI=0',
+		'BINARY'   => 'TI=167',
+		'UNLOCK'   => 'LCK=0',
+		'LOCK'     => 'LCK=167',
+		'ENABLE1'  => 'AVOEN=1',
+		'ENABLE2'  => 'AVOEN=2',
+		'DISABLE1' => 'AVODIS=1',
+		'DISABLE2' => 'AVODIS=2',
+		'EDID1'    => 'CE=1,1',
+		'EDID2'    => 'CE=1,2',
+	);
+
+	%STATUS_CMDS = (
+		'STATUS' => { 'EVAL' => [ qr/^Source of Output/, '$a =~ s/^\D+\s+(\d+)\s+.*$/$1/' ] },
+	);
 } else {
 	die("No device specified\n");
 }
@@ -222,6 +253,18 @@ my $select = DMX::selectSock($CMD_FILE);
 # Port init
 my $port = new Device::SerialPort($PORT)
   or die('Unable to open serial connection: ' . $PORT . ": ${!}\n");
+if ($BAUD) {
+	$port->baudrate($BAUD);
+}
+if ($DBITS) {
+	$port->databits($DBITS);
+}
+if ($SBITS) {
+	$port->stopbits($SBITS);
+}
+if ($PARITY) {
+	$port->parity($PARITY);
+}
 $port->read_const_time($BYTE_TIMEOUT);
 
 # Init (clear any previous state)
@@ -403,15 +446,14 @@ sub clearBuffer($) {
 }
 
 sub collectUntil($$) {
-	my ($port, $char) = @_;
-	if (length($char) != 1) {
-		die('Invalid collection delimiter: ' . $char . "\n");
-	}
+	my ($port, $delim) = @_;
+	my $char = substr($delim, 0, 1);
 
 	# This byte-by-byte reading is not efficient, but it's safe
 	# Allow reading forever as long as we don't exceed the silence timeout
-	my $count  = 0;
-	my $string = '';
+	my $count   = 0;
+	my $string  = '';
+	my $end     = undef();
 	while ($count < $SILENCE_TIMEOUT / $BYTE_TIMEOUT) {
 		my $byte = $port->read(1);
 		if (length($byte)) {
@@ -422,8 +464,19 @@ sub collectUntil($$) {
 				print STDERR "\tRead: " . $byte . "\n";
 			}
 
-			if ($byte eq $char) {
-				last;
+			if (defined($end)) {
+				$end .= $byte;
+				if ($end eq $delim) {
+					last;
+				} elsif ($end ne substr($delim, 0, length($end))) {
+					undef($end);
+				}
+			} elsif ($byte eq $char) {
+				if (length($delim) == 1) {
+					last;
+				} else {
+					$end = $byte;
+				}
 			}
 		} else {
 			$count++;
