@@ -4,11 +4,6 @@
 <dict>
 	<key>LimitLoadToSessionType</key>
 	<string>Aqua</string>
-	<key>LimitLoadToHosts</key>
-	<array>
-		<string>Loki.local</string>
-		<string>loki.uberzach.com</string>
-	</array>
 	<key>RunAtLoad</key>
 	<true/>
 	<key>Label</key>
@@ -25,8 +20,9 @@
 			<key>DEBUG</key>
 			<string>1</string>
 		</dict>
+	-->
 		<key>StandardErrorPath</key>
 		<string>/Users/tv/Library/Logs/com.uberzach.projector.log</string>
-	-->
+	<!-- -->
 </dict>
 </plist>
