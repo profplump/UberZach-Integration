@@ -193,13 +193,13 @@ if (basename($0) =~ /PROJECTOR/i) {
 		'GAINOUT'  => 'VS',
 		'IN1'      => 'VS',
 		'IN2'      => 'VS',
-		'OUT1'      => 'VS',
-		'OUT2'      => 'VS',
+		'OUT1'     => 'VS',
+		'OUT2'     => 'VS',
 		'EQ'       => 'VS',
 		'REBOOT'   => 'REBOOT',
 		'INFO'     => 'PI',
-		'SOURCE1'  => 'AVI=1',
-		'SOURCE2'  => 'AVI=2',
+		'PLEX'     => 'AVI=1',
+		'GAME'     => 'AVI=2',
 		'BEEPOFF'  => 'BEEP=0',
 		'BEEPON'   => 'BEEP=1',
 		'ASCII'    => 'TI=0',
@@ -616,6 +616,10 @@ sub parseHDMILine($$$) {
 		$data->{'HDCP' . $port} = $hdcp;
 	}
 	if (defined($source) && $source =~ /Source of Output/i) {
-		$data->{'SOURCE'} = $port;
+		if ($port == 2) {
+			$data->{'SOURCE'} = 'GAME';
+		} else {
+			$data->{'SOURCE'} = 'PLEX';
+		}
 	}
 }
