@@ -19,6 +19,8 @@ use DMX;
 sub sendQuery($$);
 sub clearBuffer($);
 sub collectUntil($$);
+sub parseHDMI($$);
+sub parseHDMILine($$$);
 
 # Device parameters
 my ($DEV, $PORT, $BLUETOOTH, $BAUD, $DBITS, $SBITS, $PARITY, $CRLF, $DELIMITER, %CMDS, %STATUS_CMDS);
@@ -186,12 +188,20 @@ if (basename($0) =~ /PROJECTOR/i) {
 	%CMDS      = (
 		'INIT'     => '',
 		'STATUS'   => 'VS',
+		'SOURCE'   => 'VS',
+		'GAININ'   => 'VS',
+		'GAINOUT'  => 'VS',
+		'IN1'      => 'VS',
+		'IN2'      => 'VS',
+		'OUT1'      => 'VS',
+		'OUT2'      => 'VS',
+		'EQ'       => 'VS',
 		'REBOOT'   => 'REBOOT',
 		'INFO'     => 'PI',
-		'IN1'      => 'AVI=1',
-		'IN2'      => 'AVI=2',
-		'BOFF'     => 'BEEP=0',
-		'BON'      => 'BEEP=1',
+		'SOURCE1'  => 'AVI=1',
+		'SOURCE2'  => 'AVI=2',
+		'BEEPOFF'  => 'BEEP=0',
+		'BEEPON'   => 'BEEP=1',
 		'ASCII'    => 'TI=0',
 		'BINARY'   => 'TI=167',
 		'UNLOCK'   => 'LCK=0',
@@ -202,10 +212,41 @@ if (basename($0) =~ /PROJECTOR/i) {
 		'DISABLE2' => 'AVODIS=2',
 		'EDID1'    => 'CE=1,1',
 		'EDID2'    => 'CE=1,2',
+		'GAININ1'  => 'IVG=1',
+		'GAININ2'  => 'IVG=2',
+		'GAININ3'  => 'IVG=3',
+		'GAININ4'  => 'IVG=4',
+		'GAININ5'  => 'IVG=5',
+		'GAININ6'  => 'IVG=6',
+		'GAININ7'  => 'IVG=7',
+		'GAININ8'  => 'IVG=8',
+		'GAINOUT1' => 'OVG=1',
+		'GAINOUT2' => 'OVG=2',
+		'GAINOUT3' => 'OVG=3',
+		'GAINOUT4' => 'OVG=4',
+		'GAINOUT5' => 'OVG=5',
+		'GAINOUT6' => 'OVG=6',
+		'GAINOUT7' => 'OVG=7',
+		'GAINOUT8' => 'OVG=8',
+		'EQ1'      => 'EQ=1',
+		'EQ2'      => 'EQ=2',
+		'EQ3'      => 'EQ=3',
+		'EQ4'      => 'EQ=4',
+		'EQ5'      => 'EQ=5',
+		'EQ6'      => 'EQ=6',
+		'EQ7'      => 'EQ=7',
+		'EQ8'      => 'EQ=8',
 	);
 
 	%STATUS_CMDS = (
-		'STATUS' => { 'EVAL' => [ qr/^Source of Output/, '$a =~ s/^\D+\s+(\d+)\s+.*$/$1/' ] },
+		'SOURCE'  => { 'EVAL' => [ qr/EGO Switch - Switch/, '$a = parseHDMI("SOURCE", $a);' ] },
+		#'IN1'     => { 'EVAL' => [ qr/EGO Switch - Switch/, '$a = parseHDMI("IN1", $a);' ] },
+		#'IN2'     => { 'EVAL' => [ qr/EGO Switch - Switch/, '$a = parseHDMI("IN2", $a);' ] },
+		#'OUT1'    => { 'EVAL' => [ qr/EGO Switch - Switch/, '$a = parseHDMI("OUT1", $a);' ] },
+		#'OUT2'    => { 'EVAL' => [ qr/EGO Switch - Switch/, '$a = parseHDMI("OUT2", $a);' ] },
+		#'EQ'      => { 'EVAL' => [ qr/EGO Switch - Switch/, '$a = parseHDMI("EQ", $a);' ] },
+		#'GAININ'  => { 'EVAL' => [ qr/EGO Switch - Switch/, '$a = parseHDMI("GAININ", $a);' ] },
+		#'GAINOUT' => { 'EVAL' => [ qr/EGO Switch - Switch/, '$a = parseHDMI("GAINOUT", $a);' ] },
 	);
 } else {
 	die("No device specified\n");
@@ -507,4 +548,74 @@ sub collectUntil($$) {
 		print STDERR 'Read: ' . $string . "\n";
 	}
 	return $string;
+}
+
+sub parseHDMI($$) {
+	my ($type, $raw) = @_;
+	my %data = (
+		'SOURCE'  => 0,
+		'IN1'     => 0,
+		'IN2'     => 0,
+		'HDCP1'   => 0,
+		'HDCP2'   => 0,
+		'OUT1'    => 0,
+		'OUT2'    => 0,
+		'GAININ'  => 0,
+		'GAINOUT' => 0,
+		'EQ'      => 0,
+		'RC'      => 0,
+	);
+
+	my $section = undef();
+	foreach my $line (split(/(\r|\n)+/, $raw)) {
+		if ($line =~ /^=/ || $line eq 'EGO Switch - Switch') {
+			$section = undef();
+			next;
+		} elsif ($line =~ /^\s*$/) {
+			next;
+		} elsif ($line =~ /^RC ID - (\d+)\s*$/) {
+			$data{'RC'} = $1;
+		} elsif ((defined($section) && $section eq 'OUT') || $line =~ /Output:/) {
+			$section = 'OUT';
+			parseHDMILine(\%data, $section, $line);
+		} elsif ((defined($section) && $section eq 'IN') || $line =~ /Input:/) {
+			$section = 'IN';
+			parseHDMILine(\%data, $section, $line);
+		}
+	}
+	return $data{$type};
+}
+
+sub parseHDMILine($$$) {
+	my ($data, $dir, $line) = @_;
+
+	my ($port, $plug, $eq, $gain, $hdcp, $source) = $line =~
+		/^\D+(\d+)\s+(\S+)\s+(EQ\:\d+|on|off)\s+VCO\:(\d+)\s+(\S+)(?:\s+(\S.*\S))?\s*$/;
+	if (!defined($port) || $port < 1 || $port > 2) {
+		warn('Could not parse HDMI line: ' . $line . "\n");
+		next;
+	}
+	if ($plug eq 'Plugged') {
+		$data->{$dir . $port} = 1;
+	}
+	if ($eq) {
+		if ($dir eq 'OUT') {
+			if ($eq eq 'on') {
+				$data->{'OUT' . $port} = 1;
+			} else {
+				$data->{'OUT' . $port} = 0;
+			}
+		} else {
+			($data->{'EQ'}) = $eq =~ /EQ:(\d+)/;
+		}
+	}
+	if ($gain) {
+		$data->{'GAIN' . $dir} = $gain;
+	}
+	if ($hdcp) {
+		$data->{'HDCP' . $port} = $hdcp;
+	}
+	if (defined($source) && $source =~ /Source of Output/i) {
+		$data->{'SOURCE'} = $port;
+	}
 }
