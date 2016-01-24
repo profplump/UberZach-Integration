@@ -87,12 +87,16 @@ if ( $HOST =~ /loki/i ) {
     $MON_FILES{'RAVE'}   = 'EXISTS';
     $MON_FILES{'EFFECT'} = 'EXISTS';
 
-    # Equipment
+    # Fan
     $MON_FILES{'FAN'}     = 'LINE-NOUPDATE';
     $MON_FILES{'FAN_CMD'} = 'EXISTS-TIMEOUT';
+
+    # Garage
     $MON_FILES{'OIL'}     = 'LINE-NOUPDATE';
     $MON_FILES{'DOOR'}    = 'LINE-NOUPDATE';
     $MON_FILES{'LOCK'}    = 'EXISTS-NOUPDATE';
+
+    # Alarm
     $MON_FILES{'ALARM'}   = 'NONE';
 
     # OS State
@@ -103,6 +107,10 @@ if ( $HOST =~ /loki/i ) {
 
     # Game System
     $MON_FILES{'GAME'} = 'EXISTS';
+
+    # HDMI Switch
+    $MON_FILES{'HDMI'}        = 'LINE-NOUPDATE';
+    $MON_FILES{'HDMI_SOURCE'} = 'LINE-NOUPDATE';
 
     # Lights
     $MON_FILES{'LED'}          = 'LINE-NOUPDATE';
