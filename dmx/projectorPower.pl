@@ -125,8 +125,13 @@ while (1) {
 	if ($exists{'PLAYING'} && $lastUser < $now) {
 		$lastUser = $now;
 	}
+
+	# Motion counts as activity when GAME is active
+	if ($exists{'GAME'} && $mtime{'MOTION'} > $lastUser) {
+		$lastUser = $mtime{'MOTION'};
+	}
 	
-	# Motion counts as activity when Plex is not foreground
+	# Motion counts as activity when PLEX is not active
 	if (!$exists{'PLEX'} && $mtime{'MOTION'} > $lastUser) {
 		$lastUser = $mtime{'MOTION'};
 	}
