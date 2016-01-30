@@ -189,6 +189,7 @@ if (basename($0) =~ /PROJECTOR/i) {
 		'INIT'     => '',
 		'STATUS'   => 'VS',
 		'SOURCE'   => 'VS',
+		'SOURCE_2' => 'VS',
 		'GAININ'   => 'VS',
 		'GAINOUT'  => 'VS',
 		'IN1'      => 'VS',
@@ -241,14 +242,15 @@ if (basename($0) =~ /PROJECTOR/i) {
 	);
 
 	%STATUS_CMDS = (
-		'SOURCE'  => { 'EVAL' => [ qr/EGO Switch - Switch/, '$a = parseHDMI("SOURCE", $a);' ] },
-		#'IN1'     => { 'EVAL' => [ qr/EGO Switch - Switch/, '$a = parseHDMI("IN1", $a);' ] },
-		#'IN2'     => { 'EVAL' => [ qr/EGO Switch - Switch/, '$a = parseHDMI("IN2", $a);' ] },
-		#'OUT1'    => { 'EVAL' => [ qr/EGO Switch - Switch/, '$a = parseHDMI("OUT1", $a);' ] },
-		#'OUT2'    => { 'EVAL' => [ qr/EGO Switch - Switch/, '$a = parseHDMI("OUT2", $a);' ] },
-		#'EQ'      => { 'EVAL' => [ qr/EGO Switch - Switch/, '$a = parseHDMI("EQ", $a);' ] },
-		#'GAININ'  => { 'EVAL' => [ qr/EGO Switch - Switch/, '$a = parseHDMI("GAININ", $a);' ] },
-		#'GAINOUT' => { 'EVAL' => [ qr/EGO Switch - Switch/, '$a = parseHDMI("GAINOUT", $a);' ] },
+		'SOURCE'   => { 'EVAL' => [ qr/EGO Switch - 2-Bus/, '$a = parseHDMI("SOURCE", $a);' ] },
+		'SOURCE_2' => { 'EVAL' => [ qr/EGO Switch - 2-Bus/, '$a = parseHDMI("SOURCE_2", $a);' ] },
+		#'IN1'      => { 'EVAL' => [ qr/EGO Switch - 2-Bus/, '$a = parseHDMI("IN1", $a);' ] },
+		#'IN2'      => { 'EVAL' => [ qr/EGO Switch - 2-Bus/, '$a = parseHDMI("IN2", $a);' ] },
+		#'OUT1'     => { 'EVAL' => [ qr/EGO Switch - 2-Bus/, '$a = parseHDMI("OUT1", $a);' ] },
+		#'OUT2'     => { 'EVAL' => [ qr/EGO Switch - 2-Bus/, '$a = parseHDMI("OUT2", $a);' ] },
+		#'EQ'       => { 'EVAL' => [ qr/EGO Switch - 2-Bus/, '$a = parseHDMI("EQ", $a);' ] },
+		#'GAININ'   => { 'EVAL' => [ qr/EGO Switch - 2-Bus/, '$a = parseHDMI("GAININ", $a);' ] },
+		#'GAINOUT'  => { 'EVAL' => [ qr/EGO Switch - 2-Bus/, '$a = parseHDMI("GAINOUT", $a);' ] },
 	);
 } else {
 	die("No device specified\n");
@@ -555,22 +557,23 @@ sub collectUntil($$) {
 sub parseHDMI($$) {
 	my ($type, $raw) = @_;
 	my %data = (
-		'SOURCE'  => 0,
-		'IN1'     => 0,
-		'IN2'     => 0,
-		'HDCP1'   => 0,
-		'HDCP2'   => 0,
-		'OUT1'    => 0,
-		'OUT2'    => 0,
-		'GAININ'  => 0,
-		'GAINOUT' => 0,
-		'EQ'      => 0,
-		'RC'      => 0,
+		'SOURCE'   => 0,
+		'SOURCE_2' => 0,
+		'IN1'      => 0,
+		'IN2'      => 0,
+		'HDCP1'    => 0,
+		'HDCP2'    => 0,
+		'OUT1'     => 0,
+		'OUT2'     => 0,
+		'GAININ'   => 0,
+		'GAINOUT'  => 0,
+		'EQ'       => 0,
+		'RC'       => 0,
 	);
 
 	my $section = undef();
 	foreach my $line (split(/(\r|\n)+/, $raw)) {
-		if ($line =~ /^=/ || $line eq 'EGO Switch - Switch') {
+		if ($line =~ /^=/ || $line eq 'EGO Switch - 2-Bus') {
 			$section = undef();
 			next;
 		} elsif ($line =~ /^\s*$/) {
@@ -617,11 +620,18 @@ sub parseHDMILine($$$) {
 	if ($hdcp) {
 		$data->{'HDCP' . $port} = $hdcp;
 	}
-	if (defined($source) && $source =~ /Source of Output/i) {
+	if (defined($source) && $source =~ /Source of Output (\d(?:,\d)?)/i) {
+		my $target = $1;
+		my $name = 'PLEX';
 		if ($port == 2) {
-			$data->{'SOURCE'} = 'GAME';
-		} else {
-			$data->{'SOURCE'} = 'PLEX';
+			$name = 'GAME';
+		}
+
+		if ($target =~ /1/) {
+			$data->{'SOURCE'} = $name;
+		}
+		if ($target =~ '2') {
+			$data->{'SOURCE_2'} = $name;
 		}
 	}
 }
