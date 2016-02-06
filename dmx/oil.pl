@@ -9,9 +9,9 @@ use lib dirname(abs_path($0));
 use DMX;
 
 # User config
-my $PREHEAT_DELAY   = 2;
-my $PREHEAT_TIMEOUT = $PREHEAT_DELAY + 40;
-my $MOTION_TIMEOUT  = 180;
+my $PREHEAT_DELAY   = 5;
+my $PREHEAT_TIMEOUT = $PREHEAT_DELAY + 60;
+my $MOTION_TIMEOUT  = 300;
 my %DIM             = (
 	'OFF'     => [ { 'channel' => 20, 'value' => 0,   'time' => 0 }, ],
 	'ON'      => [ { 'channel' => 20, 'value' => 255, 'time' => 0 }, ],
