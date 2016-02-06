@@ -22,6 +22,8 @@ my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
 my $DELAY        = $PULL_TIMEOUT / 2;
 my $CMD_DELAY    = 5.0;
+my $BOOT_DELAY   = 10;
+my $BOOT_TIMEOUT = $BOOT_DELAY * 3;
 
 # Debug
 my $DEBUG = 0;
@@ -42,9 +44,7 @@ my %exists    = ();
 my $pushLast  = 0;
 my $pullLast  = time();
 my $update    = 0;
-my $lastMode  = 0;
-my $lastInput = 0;
-my $lastPower = 0;
+my $lastBoot  = 0;
 
 # Loop forever
 while (1) {
@@ -119,6 +119,17 @@ while (1) {
 			print STDERR 'State: ' . $state . "\n";
 		}
 
+		# Reboot before the first update to GAME
+		if ($state eq 'GAME' && $lastBoot < $now - $BOOT_TIMEOUT) {
+			$hdmi->send('REBOOT')
+			  or die('Unable to write command to HDMI socket: ' . $state . ": ${!}\n");
+
+			# Wait for the reboot
+			sleep($BOOT_DELAY);
+			$now += $BOOT_DELAY;
+			$lastBoot = $now;
+		}
+
 		# Send master power state
 		$hdmi->send($state)
 		  or die('Unable to write command to HDMI socket: ' . $state . ": ${!}\n");
@@ -127,7 +138,7 @@ while (1) {
 		#DMX::say('Aitch-Dee-Em-I input' . lc($state));
 
 		# Update the push time
-		$pushLast = time();
+		$pushLast = $now;
 
 		# Clear the update flag
 		$update = 0;
