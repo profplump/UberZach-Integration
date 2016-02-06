@@ -119,8 +119,14 @@ while (1) {
 			print STDERR 'State: ' . $state . "\n";
 		}
 
-		# Reboot before the first update to GAME
+		# Reboot the HDMI switch when first switching to GAME
 		if ($state eq 'GAME' && $lastBoot < $now - $BOOT_TIMEOUT) {
+
+			# WoL the target machine
+			# This should probably happen elsewhere, but if we're hacking here anyway...
+			~/bin/video/wol/wol-game.sh
+
+			# Reboot the HDMI switch
 			$hdmi->send('REBOOT')
 			  or die('Unable to write command to HDMI socket: ' . $state . ": ${!}\n");
 
