@@ -124,7 +124,7 @@ while (1) {
 
 			# WoL the target machine
 			# This should probably happen elsewhere, but if we're hacking here anyway...
-			~/bin/video/wol/wol-game.sh
+			system($ENV{'HOME'} . '/bin/video/wol/wol-game.sh');
 
 			# Reboot the HDMI switch
 			$hdmi->send('REBOOT')
