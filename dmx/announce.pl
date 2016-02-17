@@ -19,7 +19,7 @@ my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
 my $DELAY        = $PULL_TIMEOUT / 2;
 my $ALARM_DELAY  = 5;
-my $MODE_DELAY   = 2;
+my $MODE_DELAY   = 3;
 
 # Debug
 my $DEBUG = 0;
@@ -77,7 +77,7 @@ while (1) {
 		# Allow other checks to opt-out if they are mode-switch related
 		$modeLast = $now;
 
-		DMX::say('Theater mode: ' . $mode);
+		DMX::say('Theater mode: ' . lc($mode));
 	}
 
 	# Speak when LIGHTS changes
