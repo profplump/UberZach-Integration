@@ -88,7 +88,7 @@ while (1) {
 				$mode = 'UP';
 			}
 
-			DMX::say('Lights ' . $mode);
+			DMX::say('Lights ' . lc($mode));
 		}
 	}
 
@@ -96,41 +96,42 @@ while (1) {
 	if (exists($exists{'AMPLIFIER_INPUT'}) && exists($last{'AMPLIFIER_INPUT'}) &&
 		$exists{'AMPLIFIER_INPUT'} ne $last{'AMPLIFIER_INPUT'}) {
 			if ($now - $modeLast > $MODE_DELAY) {
-				DMX::say('Amplifier input: ' . $exists{'AMPLIFIER_INPUT'});
+				DMX::say('Amplifier input: ' . lc($exists{'AMPLIFIER_INPUT'}));
 			}
 	}
 
 	# Speak when AMPLIFIER_MODE changes
 	if (exists($exists{'AMPLIFIER_MODE'}) && exists($last{'AMPLIFIER_MODE'}) &&
 		$exists{'AMPLIFIER_MODE'} ne $last{'AMPLIFIER_MODE'}) {
-			DMX::say('Amplifier mode: ' . $exists{'AMPLIFIER_MODE'});
+			DMX::say('Amplifier mode: ' . lc($exists{'AMPLIFIER_MODE'}));
 	}
 
 	# Speak when BRIGHT changes
 	if (exists($exists{'BRIGHT'}) && exists($last{'BRIGHT'}) && $exists{'BRIGHT'} ne $last{'BRIGHT'}) {
+		my $mode = 'NOMINAL';
 		if ($exists{'BRIGHT'}) {
-			DMX::say('Lights - Full power');
-		} else {
-			DMX::say('Lights - Nominal power');
+			$mode = 'FULL';
 		}
+		DMX::say('Lights - ' . lc($mode) . ' power');
 	}
 
 	# Speak when NO_MOTION changes
 	if (exists($exists{'NO_MOTION'}) && exists($last{'NO_MOTION'}) && $exists{'NO_MOTION'} ne $last{'NO_MOTION'}) {
+		my $mode = 'ENABLED';
 		if ($exists{'NO_MOTION'}) {
-			DMX::say('Motion detectors: Disabled');
-		} else {
-			DMX::say('Motion detectors: Enabled');
+			$mode = 'DISABLED';
 		}
+		DMX::say('Motion detectors: ' . lc($mode));
 	}
 
 	# Speak when LOCK changes
 	if (exists($exists{'LOCK'}) && exists($last{'LOCK'}) && $exists{'LOCK'} ne $last{'LOCK'}) {
+		my $mode = 'UNLOCKED';
 		if ($exists{'LOCK'}) {
-			DMX::say('System locked');
-		} else {
-			DMX::say('System unlocked');
+			$mode = 'LOCKED';
 		}
+
+		DMX::say('System ' . lc($mode));
 	}
 
 	# Email when ALARM is asserted

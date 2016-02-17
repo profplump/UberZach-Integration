@@ -99,7 +99,7 @@ while (1) {
 	# Set the input as needed
 	my $inputCmd = undef();
 	{
-		my $input = 'TV';
+		my $input = 'PLEX';
 		if ($exists{'GAME'}) {
 			$input = 'GAME';
 		}
