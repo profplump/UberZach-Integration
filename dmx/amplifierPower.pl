@@ -11,7 +11,7 @@ use lib dirname(abs_path($0));
 use DMX;
 
 # Prototypes
-sub sendCmd($$);
+sub sendCmd($);
 
 # App config
 my $DATA_DIR     = DMX::dataDir();
@@ -33,26 +33,22 @@ if ($ENV{'DEBUG'}) {
 # Sockets
 DMX::stateSocket($STATE_SOCK);
 DMX::stateSubscribe($STATE_SOCK);
-my $amp = DMX::clientSock($AMP_SOCK);
+my $AMP = DMX::clientSock($AMP_SOCK);
 
 # State
-my $state     = 'OFF';
-my $mode      = 'SURROUND';
-my $input     = 'TV';
-my $stateLast = $state;
+my $power     = 'OFF';
 my %exists    = ();
 my $pushLast  = 0;
 my $pullLast  = time();
-my $update    = 0;
 my $lastMode  = 0;
+my $modeCmd   = undef();
 my $lastInput = 0;
+my $inputCmd  = undef();
 my $lastPower = 0;
+my $powerCmd  = undef();
 
 # Loop forever
 while (1) {
-
-	# State is calculated; use newState to gather data
-	my $newState = $state;
 
 	# Wait for state updates
 	my $cmdState = DMX::readState($DELAY, \%exists, undef(), undef());
@@ -61,6 +57,7 @@ while (1) {
 	my $now = time();
 
 	# Record only valid states
+	my $newState = undef();
 	if (defined($cmdState)) {
 		$newState = $cmdState;
 		$pullLast = time();
@@ -71,117 +68,99 @@ while (1) {
 		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
 	}
 
-	# Calculate the new state
-	$stateLast = $state;
-	if ($newState eq 'PLAY') {
-		$state = 'ON';
-	} elsif ($exists{'RAVE'}) {
-		$state = 'RAVE';
-	} elsif ($newState eq 'PAUSE') {
-		$state = 'ON';
-	} else {
-		$state = 'OFF';
-	}
-
-	# Calculate the channel mode
-	if ($exists{'STEREO_CMD'} || $exists{'PLAYING_TYPE'} eq 'audio' || $state eq 'RAVE') {
-		$mode = 'STEREO';
-	} else {
-		$mode = 'SURROUND';
-	}
-
-	# Force updates on a periodic basis
-	if (!$update && $now - $pushLast > $PUSH_TIMEOUT) {
-
-		# Not for the amp
-		#if ($DEBUG) {
-		#	print STDERR "Forcing periodic update\n";
-		#}
-		#$update = 1;
-	}
-
-	# Force updates on any state change
-	if (!$update && $stateLast ne $state) {
-		if ($DEBUG) {
-			print STDERR 'State change: ' . $stateLast . ' => ' . $state . "\n";
+	# Set the power state as needed
+	my $powerCmd = undef();
+	{
+		my power = 'OFF';
+		if ($newState eq 'PLAY') {
+			$power = 'ON';
+		} elsif ($exists{'RAVE'}) {
+			$power = 'RAVE';
+		} elsif ($newState eq 'PAUSE') {
+			$power = 'ON';
 		}
-		$update = 1;
-	}
-
-	# Force updates when there is a physical state mistmatch
-	if (!$update && (($state eq 'OFF' && $exists{'AMPLIFIER'}) || ($state eq 'ON' && !$exists{'AMPLIFIER'}))) {
-		if ($DEBUG) {
-			print STDERR 'Physical state mismatch: ' . $state . ':' . $exists{'AMPLIFIER'} . "\n";
+		if (!$update && (($power eq 'OFF' && $exists{'AMPLIFIER'}) || ($power eq 'ON' && !$exists{'AMPLIFIER'}))) {
+			if ($power eq 'OFF' || $power eq 'ON') {
+				$powerCmd = $power;
+			} elsif ($power eq 'RAVE') {
+				$powerCmd = 'ON';
+			}
 		}
-		$update = 1;
 	}
 
 	# Set the channel mode as needed
-	if ($exists{'AMPLIFIER'} && $exists{'AMPLIFIER_MODE'} ne $mode && $lastMode < $now - $CMD_DELAY) {
-		$lastMode = $now;
-		if ($DEBUG) {
-			print STDERR 'Setting mode to: ' . $mode . "\n";
+	my $modeCmd = undef();
+	{
+		my $mode = 'SURROUND';
+		if ($exists{'STEREO_CMD'} || $exists{'PLAYING_TYPE'} eq 'audio' || $power eq 'RAVE') {
+			$mode = 'STEREO';
 		}
-		DMX::say('Amplifier mode: ' . $mode);
-		sendCmd($amp, $mode);
-
-		# Reset the input mode anytime we switch to SURROUND
-		if ($mode eq 'SURROUND') {
-			sendCmd($amp, $AUTO_CMD);
+		if ($exists{'AMPLIFIER'} && $exists{'AMPLIFIER_MODE'} ne $mode) {
+			$modeCmd = $mode;
 		}
 	}
 
-	# Set the amplifier input as needed
-	if ($exists{'GAME'}) {
-		$input = 'GAME';
-	} else {
-		$input = 'TV';
-	}
-	if ($exists{'AMPLIFIER'} && $exists{'AMPLIFIER_INPUT'} ne $input && $lastInput < $now - $CMD_DELAY) {
-		$lastInput = $now;
-		if ($DEBUG) {
-			print STDERR 'Setting input to: ' . $input . "\n";
+	# Set the input as needed
+	my $inputCmd = undef();
+	{
+		my $input = 'TV';
+		if ($exists{'GAME'}) {
+			$input = 'GAME';
 		}
-		DMX::say('Amplifier input: ' . $input);
-		sendCmd($amp, $input);
+		if ($exists{'AMPLIFIER'} && $exists{'AMPLIFIER_INPUT'} ne $input) {
+			$inputCmd = $input;
+		}
 	}
 
 	# Update the amp
-	if ($update) {
-
-		# Extra debugging to record pushes
-		if ($DEBUG) {
-			print STDERR 'State: ' . $state . "\n";
-		}
+	if ($powerCmd || $inputCmd || $modeCmd) {
 
 		# Send master power state
-		my $cmd = undef();
-		if ($state eq 'OFF' || $state eq 'ON') {
-			$cmd = $state;
-		} elsif ($state eq 'RAVE') {
-			$cmd = 'ON';
-		}
-		if (defined($cmd) && $lastPower < $now - $CMD_DELAY) {
+		if (defined($powerCmd) && $lastPower < $now - $CMD_DELAY) {
 			$lastPower = $now;
-			sendCmd($amp, $cmd);
+			if ($DEBUG) {
+				print STDERR 'State: ' . $power . "\n";
+			}
+			sendCmd($powerCmd);
 		}
+
+		# Send the output state
+		if (defined($mode) && $lastMode < $now - $CMD_DELAY) {
+			$lastMode = $now;
+			if ($DEBUG) {
+				print STDERR 'Setting mode to: ' . $modeCmd . "\n";
+			}
+			sendCmd($modeCmd);
+
+			# Reset the input mode anytime we switch to SURROUND
+			if ($mode eq 'SURROUND') {
+				sendCmd($AUTO_CMD);
+			}
+		}
+
+		# Send the input state
+		if ($input && $lastInput < $now - $CMD_DELAY) {
+			$lastInput = $now;
+			if ($DEBUG) {
+				print STDERR 'Setting input to: ' . $inputCmd . "\n";
+			}
+			sendCmd($inputCmd);
+		}
+
 
 		# No output file
 
 		# Update the push time
 		$pushLast = $now;
-
-		# Clear the update flag
-		$update = 0;
 	}
 }
 
 # Send the requested command and enforce an inter-command delay
 sub sendCmd($$) {
-	my ($amp, $cmd) = @_;
+	my ($cmd) = @_;
 
 	# Send the command
-	$amp->send($cmd)
+	$AMP->send($cmd)
 	  or die('Unable to write command to amp socket: ' . $cmd . ": ${!}\n");
 
 	# A tiny delay to keep the serial port stable in repeated calls

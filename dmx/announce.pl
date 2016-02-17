@@ -18,7 +18,8 @@ my $OUTPUT_FILE  = $DATA_DIR . $STATE_SOCK;
 my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
 my $DELAY        = $PULL_TIMEOUT / 2;
-my $SPEAK_DELAY  = 5;
+my $ALARM_DELAY  = 5;
+my $MODE_DELAY   = 2;
 
 # Debug
 my $DEBUG = 0;
@@ -30,8 +31,9 @@ if ($ENV{'DEBUG'}) {
 my %exists    = ();
 my %last      = ();
 my %mtime     = ();
+my $alarmLast = 0;
+my $modeLast  = 0;
 my $pullLast  = time();
-my $speakLast = time();
 
 # Sockets
 DMX::stateSocket($STATE_SOCK);
@@ -59,21 +61,57 @@ while (1) {
 		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
 	}
 
+	# Speak when the theater mode changes
+	if (exists($exists{'GAME'}) && exists($last{'GAME'}) && $exists{'GAME'} ne $last{'GAME'}) {
+		my $mode = 'PLEX';
+		if ($exists{'GAME'}) {
+			$mode = 'GAME';
+		}
+
+		# Wake the input system when we switch to it
+		my $wol = $ENV{'HOME'} . '/bin/video/wol/wol-' . lc($mode) . '.sh';
+		if (-x $wol) {
+			system($wol);
+		}
+
+		# Allow other checks to opt-out if they are mode-switch related
+		$modeLast = $now;
+
+		DMX::say('Theater mode: ' . $mode);
+	}
+
+	# Speak when LIGHTS changes
+	if (exists($exists{'LIGHTS'}) && exists($last{'LIGHTS'}) && $exists{'LIGHTS'} ne $last{'LIGHTS'}) {
+		if ($now - $modeLast > $MODE_DELAY) {
+			my $mode = 'DOWN';
+			if ($exists{'LIGHTS'}) {
+				$mode = 'UP';
+			}
+
+			DMX::say('Lights ' . $mode);
+		}
+	}
+
+	# Speak when AMPLIFIER_INPUT changes
+	if (exists($exists{'AMPLIFIER_INPUT'}) && exists($last{'AMPLIFIER_INPUT'}) &&
+		$exists{'AMPLIFIER_INPUT'} ne $last{'AMPLIFIER_INPUT'}) {
+			if ($now - $modeLast > $MODE_DELAY) {
+				DMX::say('Amplifier input: ' . $exists{'AMPLIFIER_INPUT'});
+			}
+	}
+
+	# Speak when AMPLIFIER_MODE changes
+	if (exists($exists{'AMPLIFIER_MODE'}) && exists($last{'AMPLIFIER_MODE'}) &&
+		$exists{'AMPLIFIER_MODE'} ne $last{'AMPLIFIER_MODE'}) {
+			DMX::say('Amplifier mode: ' . $exists{'AMPLIFIER_MODE'});
+	}
+
 	# Speak when BRIGHT changes
 	if (exists($exists{'BRIGHT'}) && exists($last{'BRIGHT'}) && $exists{'BRIGHT'} ne $last{'BRIGHT'}) {
 		if ($exists{'BRIGHT'}) {
 			DMX::say('Lights - Full power');
 		} else {
 			DMX::say('Lights - Nominal power');
-		}
-	}
-
-	# Speak when LIGHTS changes
-	if (exists($exists{'LIGHTS'}) && exists($last{'LIGHTS'}) && $exists{'LIGHTS'} ne $last{'LIGHTS'}) {
-		if ($exists{'LIGHTS'}) {
-			DMX::say('Lights up');
-		} else {
-			DMX::say('Lights down');
 		}
 	}
 
@@ -119,8 +157,8 @@ while (1) {
 
 	# Ongoing spoken ALARM
 	if ($exists{'ALARM'}) {
-		if ($now - $speakLast > $SPEAK_DELAY) {
-			$speakLast = $now;
+		if ($now - $alarmLast > $ALARM_DELAY) {
+			$alarmLast = $now;
 			DMX::say('Unauthorized access detected.');
 		}
 	}
