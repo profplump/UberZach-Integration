@@ -120,7 +120,7 @@ while (1) {
 		}
 
 		# Reboot before the first update to GAME
-		if ($state eq 'GAME' && $lastBoot < $now - $BOOT_TIMEOUT) {
+		if (0 && $state eq 'GAME' && $lastBoot < $now - $BOOT_TIMEOUT) {
 			$hdmi->send('REBOOT')
 			  or die('Unable to write command to HDMI socket: ' . $state . ": ${!}\n");
 
@@ -133,9 +133,6 @@ while (1) {
 		# Send master power state
 		$hdmi->send($state)
 		  or die('Unable to write command to HDMI socket: ' . $state . ": ${!}\n");
-
-		# Annouce the state change, after the fact
-		#DMX::say('Aitch-Dee-Em-I input' . lc($state));
 
 		# Update the push time
 		$pushLast = $now;
