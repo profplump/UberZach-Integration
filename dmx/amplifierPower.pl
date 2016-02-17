@@ -71,20 +71,16 @@ while (1) {
 	# Set the power state as needed
 	my $powerCmd = undef();
 	{
-		my power = 'OFF';
+		my $power = 'OFF';
 		if ($newState eq 'PLAY') {
 			$power = 'ON';
 		} elsif ($exists{'RAVE'}) {
-			$power = 'RAVE';
+			$power = 'ON';
 		} elsif ($newState eq 'PAUSE') {
 			$power = 'ON';
 		}
-		if (!$update && (($power eq 'OFF' && $exists{'AMPLIFIER'}) || ($power eq 'ON' && !$exists{'AMPLIFIER'}))) {
-			if ($power eq 'OFF' || $power eq 'ON') {
-				$powerCmd = $power;
-			} elsif ($power eq 'RAVE') {
-				$powerCmd = 'ON';
-			}
+		if (($power eq 'OFF' && $exists{'AMPLIFIER'}) || ($power eq 'ON' && !$exists{'AMPLIFIER'})) {
+			$powerCmd = $power;
 		}
 	}
 
@@ -92,7 +88,7 @@ while (1) {
 	my $modeCmd = undef();
 	{
 		my $mode = 'SURROUND';
-		if ($exists{'STEREO_CMD'} || $exists{'PLAYING_TYPE'} eq 'audio' || $power eq 'RAVE') {
+		if ($exists{'STEREO_CMD'} || $exists{'PLAYING_TYPE'} eq 'audio' || $exists{'RAVE'}) {
 			$mode = 'STEREO';
 		}
 		if ($exists{'AMPLIFIER'} && $exists{'AMPLIFIER_MODE'} ne $mode) {
@@ -125,7 +121,7 @@ while (1) {
 		}
 
 		# Send the output state
-		if (defined($mode) && $lastMode < $now - $CMD_DELAY) {
+		if (defined($modeCmd) && $lastMode < $now - $CMD_DELAY) {
 			$lastMode = $now;
 			if ($DEBUG) {
 				print STDERR 'Setting mode to: ' . $modeCmd . "\n";
@@ -133,13 +129,13 @@ while (1) {
 			sendCmd($modeCmd);
 
 			# Reset the input mode anytime we switch to SURROUND
-			if ($mode eq 'SURROUND') {
+			if ($modeCmd eq 'SURROUND') {
 				sendCmd($AUTO_CMD);
 			}
 		}
 
 		# Send the input state
-		if ($input && $lastInput < $now - $CMD_DELAY) {
+		if ($inputCmd && $lastInput < $now - $CMD_DELAY) {
 			$lastInput = $now;
 			if ($DEBUG) {
 				print STDERR 'Setting input to: ' . $inputCmd . "\n";
