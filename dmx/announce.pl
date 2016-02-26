@@ -20,6 +20,8 @@ my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
 my $DELAY        = $PULL_TIMEOUT / 2;
 my $ALARM_DELAY  = 5;
 my $MODE_DELAY   = 3;
+my $PROJ_DELAY   = 59;
+my $PROJ_FACTOR  = 0.9;
 
 # Debug
 my $DEBUG = 0;
@@ -33,6 +35,7 @@ my %last      = ();
 my %mtime     = ();
 my $alarmLast = 0;
 my $modeLast  = 0;
+my $projLast  = 0;
 my $pullLast  = time();
 
 # Sockets
@@ -93,17 +96,70 @@ while (1) {
 	}
 
 	# Speak when AMPLIFIER_INPUT changes
-	if (exists($exists{'AMPLIFIER_INPUT'}) && exists($last{'AMPLIFIER_INPUT'}) &&
-		$exists{'AMPLIFIER_INPUT'} ne $last{'AMPLIFIER_INPUT'}) {
-			if ($now - $modeLast > $MODE_DELAY) {
-				DMX::say('Amplifier input: ' . lc($exists{'AMPLIFIER_INPUT'}));
-			}
+	if (   exists($exists{'AMPLIFIER_INPUT'})
+		&& exists($last{'AMPLIFIER_INPUT'})
+		&& $exists{'AMPLIFIER_INPUT'} ne $last{'AMPLIFIER_INPUT'})
+	{
+		if ($now - $modeLast > $MODE_DELAY) {
+			DMX::say('Amplifier input: ' . lc($exists{'AMPLIFIER_INPUT'}));
+		}
 	}
 
 	# Speak when AMPLIFIER_MODE changes
-	if (exists($exists{'AMPLIFIER_MODE'}) && exists($last{'AMPLIFIER_MODE'}) &&
-		$exists{'AMPLIFIER_MODE'} ne $last{'AMPLIFIER_MODE'}) {
-			DMX::say('Amplifier mode: ' . lc($exists{'AMPLIFIER_MODE'}));
+	if (   exists($exists{'AMPLIFIER_MODE'})
+		&& exists($last{'AMPLIFIER_MODE'})
+		&& $exists{'AMPLIFIER_MODE'} ne $last{'AMPLIFIER_MODE'})
+	{
+		DMX::say('Amplifier mode: ' . lc($exists{'AMPLIFIER_MODE'}));
+	}
+
+	# Speak when PROJECTOR_CTRL_TIMER changes
+	if (exists($exists{'PROJECTOR_CTRL_TIMER'}) && $exists{'PROJECTOR_CTRL_TIMER'}) {
+		if ($now - $projLast > $PROJ_DELAY) {
+
+			# Determine the unit
+			my $unit     = 'second';
+			my $timeLeft = $exists{'PROJECTOR_CTRL_TIMER'};
+			if ($exists{'PROJECTOR_CTRL_TIMER'} > 60) {
+				$timeLeft = $exists{'PROJECTOR_CTRL_TIMER'} / 60;
+				$unit     = 'minute';
+			}
+
+			# Avoid saying "0" unless we *really* mean it
+			$timeLeft = ceil($timeLeft);
+
+			# Add an "s" as needed
+			my $plural = 's';
+			if ($timeLeft == 1) {
+				$plural = '';
+			}
+			$unit .= $plural;
+
+			# Speak
+			DMX::say('Projector shutdown in about ' . $timeLeft . ' ' . $unit);
+
+			# Update the delay timer
+			$projLast = $now;
+		}
+	}
+
+	# Speak when PROJECTOR_CTRL_POWER changes
+	if (   exists($exists{'PROJECTOR_CTRL_POWER'})
+		&& exists($last{'PROJECTOR_CTRL_POWER'})
+		&& $exists{'PROJECTOR_CTRL_POWER'} ne $last{'PROJECTOR_CTRL_POWER'})
+	{
+		if ($exists{'PROJECTOR_CTRL_POWER'} ne 'SHUTDOWN') {
+			$projLast = 0;
+			DMX::say('Projector: ' . lc($exists{'PROJECTOR_CTRL_POWER'}));
+
+			# Announce lamp life status, if near/past $LAMP_LIFE
+			if (exists($exists{'PROJECTOR_CTRL_LIFE'}) && $exists{'PROJECTOR_CTRL_LIFE'} > $PROJ_FACTOR) {
+				my $chance = ($exists{'PROJECTOR_CTRL_LIFE'} - $PROJ_FACTOR) * (1 / (1 - $PROJ_FACTOR));
+				if (rand(1) <= $chance) {
+					DMX::say('Projector lamp has run for ' . int($exists{'PROJECTOR_CTRL_LIFE'} * 100) . '% of its estimated life.');
+				}
+			}
+		}
 	}
 
 	# Speak when BRIGHT changes

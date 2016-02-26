@@ -3,8 +3,9 @@ use strict;
 use warnings;
 
 # Local modules
-use Cwd qw(abs_path);
-use File::Basename qw(dirname);
+use Cwd qw( abs_path );
+use File::Temp qw( tempfile );
+use File::Basename qw( dirname );
 use lib dirname(abs_path($0));
 use DMX;
 
@@ -48,15 +49,16 @@ my %COLORS    = (
 
 # App config
 my $DATA_DIR     = DMX::dataDir();
-my $STATE_SOCK   = 'PROJECTOR_POWER';
+my $STATE_SOCK   = 'PROJECTOR_CTRL';
 my $PROJ_SOCK    = 'PROJECTOR';
 my $OUTPUT_FILE  = $DATA_DIR . $STATE_SOCK;
+my $POWER_FILE   = $OUTPUT_FILE . '_POWER';
+my $LIFE_FILE    = $OUTPUT_FILE . '_LIFE';
+my $TIMER_FILE   = $OUTPUT_FILE . '_TIMER';
+my $COLOR_FILE   = $OUTPUT_FILE . '_COLOR';
 my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
 my $DELAY        = $PULL_TIMEOUT / 2;
-
-# Prototypes
-sub sayShutdown($);
 
 # Debug
 my $DEBUG = 0;
@@ -74,17 +76,22 @@ my $state        = 'OFF';
 my $stateLast    = $state;
 my %exists       = ();
 my %mtime        = ();
-my $pushLast     = 0;
 my $pullLast     = time();
-my $update       = 0;
 my $lastAnnounce = 0;
 my $lastUser     = time();
 my $shutdown     = 0;
 my $life         = 0;
+my $lifeLast     = 0;
 my @color_sets   = sort { $a <=> $b } keys(%COLORS);
 my $color_set    = $color_sets[0];
 my $color        = $COLORS{$color_set}{'low'};
 my $lastPlay     = 0;
+my $timeLeft     = 0;
+my $timeLeftLast = 0;
+my $colorCmd     = undef();
+my $colorLast    = 0;
+my $powerCmd     = undef();
+my $powerLast    = 0;
 
 # Loop forever
 while (1) {
@@ -130,12 +137,12 @@ while (1) {
 	if ($exists{'GAME'} && $mtime{'MOTION'} > $lastUser) {
 		$lastUser = $mtime{'MOTION'};
 	}
-	
+
 	# Motion counts as activity when PLEX is not active
 	if (!$exists{'PLEX'} && $mtime{'MOTION'} > $lastUser) {
 		$lastUser = $mtime{'MOTION'};
 	}
-	
+
 	# Explict no-motion counts as activity when Plex is not foreground
 	if (!$exists{'PLEX'} && $exists{'NO_MOTION'} && $lastUser < $now) {
 		$lastUser = $now;
@@ -162,7 +169,6 @@ while (1) {
 	}
 
 	# Calculate the new state
-	$stateLast = $state;
 	if ($exists{'PROJECTOR'}) {
 		if ($shutdown) {
 			$state = 'SHUTDOWN';
@@ -237,134 +243,86 @@ while (1) {
 		print STDERR 'Selected color: ' . $color . "\n";
 	}
 
-	# Force updates on a periodic basis
-	if (!$update && $now - $pushLast > $PUSH_TIMEOUT) {
-
-		# Not for the projector
-		#if ($DEBUG) {
-		#	print STDERR "Forcing periodic update\n";
-		#}
-		#$update = 1;
+	# Calculate the shutdown counter
+	$timeLeft = 0;
+	if ($state eq 'SHUTDOWN') {
+		$timeLeft = $OFF_DELAY - $elapsed;
+	} elsif ($state eq 'COUNTDOWN') {
+		$timeLeft = ($TIMEOUT + $COUNTDOWN) - $elapsed;
 	}
 
-	# Force updates on any state change
-	if (!$update && $stateLast ne $state) {
+	# Update power when there is a state mismatch
+	if (($state eq 'OFF' && $exists{'PROJECTOR'}) || ($state eq 'ON' && !$exists{'PROJECTOR'})) {
 		if ($DEBUG) {
-			print STDERR 'State change: ' . $stateLast . ' => ' . $state . "\n";
+			print STDERR 'Power state mismatch: ' . $state . ':' . $exists{'PROJECTOR'} . "\n";
 		}
-		$update = 1;
+		$powerCmd = $state;
 	}
 
-	# Force updates when there is a physical state mistmatch
-	if (!$update && $state eq 'OFF' && $exists{'PROJECTOR'}) {
-		if ($DEBUG) {
-			print STDERR 'Physical state mismatch: ' . $state . ':' . $exists{'PROJECTOR'} . "\n";
-		}
-		$update = 1;
-	}
-
-	# Set the color mode as needed
+	# Update color when there is a state mismatch and the projector is on
 	if ($exists{'PROJECTOR'} && $exists{'PROJECTOR_COLOR'} ne $color) {
 		if ($DEBUG) {
-			print STDERR 'Setting color to: ' . $color . "\n";
+			print STDERR 'Color state mismatch: ' . $color . ':' . $exists{'PROJECTOR_COLOR'} . "\n";
+		}
+		$colorCmd = $color;
+	}
+
+	# Save the power state to disk
+	if ($state ne $stateLast) {
+		my ($fh, $tmp) = tempfile($POWER_FILE . '.XXXXXXXX', 'UNLINK' => 0);
+		print $fh $state . "\n";
+		close($fh);
+		rename($tmp, $POWER_FILE);
+		$stateLast = $state;
+	}
+
+	# Save the color state to disk
+	if ($color ne $colorLast) {
+		my ($fh, $tmp) = tempfile($COLOR_FILE . '.XXXXXXXX', 'UNLINK' => 0);
+		print $fh $color . "\n";
+		close($fh);
+		rename($tmp, $COLOR_FILE);
+		$colorLast = $color;
+	}
+
+	# Save the lamp life to disk
+	if ($life != $lifeLast) {
+		my ($fh, $tmp) = tempfile($LIFE_FILE . '.XXXXXXXX', 'UNLINK' => 0);
+		print $fh $life . "\n";
+		close($fh);
+		rename($tmp, $LIFE_FILE);
+		$lifeLast = $life;
+	}
+
+	# Save the shutdown time to disk
+	if ($timeLeft != $timeLeftLast) {
+		my ($fh, $tmp) = tempfile($TIMER_FILE . '.XXXXXXXX', 'UNLINK' => 0);
+		print $fh $timeLeft . "\n";
+		close($fh);
+		rename($tmp, $TIMER_FILE);
+		$timeLeftLast = $timeLeft;
+	}
+
+	# Send the color mode, if requested
+	if ($colorCmd) {
+		if ($DEBUG) {
+			print STDERR 'Setting color mode: ' . $color . "\n";
 		}
 		$proj->send($color)
 		  or die('Unable to write command to projector socket: ' . $color . ": ${!}\n");
+		$colorCmd = undef();
 	}
 
-	# Announce a pending shutdown
-	if ($state eq 'COUNTDOWN' || $state eq 'SHUTDOWN') {
-		my $timeLeft = 0;
-		if ($state eq 'SHUTDOWN') {
-			$timeLeft = $OFF_DELAY - $elapsed;
-		} else {
-			$timeLeft = ($TIMEOUT + $COUNTDOWN) - $elapsed;
-		}
-		sayShutdown($timeLeft / 60);
-	}
-
-	# Only allow updates to "ON" or "OFF" -- the projector knows no other states
-	if ($update && ($state ne 'ON' && $state ne 'OFF')) {
-		if ($DEBUG) {
-			print STDERR 'Ignoring update state other than ON/OFF: ' . $state . "\n";
-		}
-		$update = 0;
-	}
-
+	# Send master power state, if requested
 	# Only allow updates every few seconds -- the projector goes dumb during power state changes
-	if ($update && $now < $pushLast + $CMD_DELAY) {
+	if ($powerCmd && $now > $powerLast + $CMD_DELAY) {
 		if ($DEBUG) {
-			print STDERR 'Ignoring overrate update: ' . $state . "\n";
-		}
-		$update = 0;
-	}
-
-	# Update the projector
-	if ($update) {
-
-		# Extra debugging to record pushes
-		if ($DEBUG) {
-			print STDERR 'State: ' . $state . "\n";
+			print STDERR 'Setting power state: ' . $state . "\n";
 		}
 
-		# Send master power state
 		$proj->send($state)
 		  or die('Unable to write command to proj socket: ' . $state . ": ${!}\n");
-
-		# Annouce the state change, after the fact
-		DMX::say('Projector ' . $state);
-
-		# Announce lamp life status, if near/past $LAMP_LIFE
-		if (exists($exists{'PROJECTOR_LAMP'})) {
-			if ($life > 0.9) {
-				my $chance = ($life - 0.9) * 10;
-				if (rand(1) <= $chance) {
-					DMX::say('Projector lamp has run for ' . int($life * 100) . '% of its estimated life.');
-				}
-			}
-		}
-
-		# No output file
-
-		# Update the push time
-		$pushLast = $now;
-
-		# Clear the lastAnnounce timer
-		$lastAnnounce = 0;
-
-		# Clear the update flag
-		$update = 0;
+		$powerLast = $now;
+		$powerCmd  = undef();
 	}
-}
-
-sub sayShutdown($) {
-	my ($minutesLeft) = @_;
-
-	# Only allow annoucements once per minute
-	my $now = time();
-	if ($now < $lastAnnounce + 60) {
-		return;
-	}
-	$lastAnnounce = $now;
-
-	# Determine the unit
-	my $unit     = 'minute';
-	my $timeLeft = $minutesLeft;
-	if ($minutesLeft < 1) {
-		$timeLeft = $minutesLeft * 60;
-		$unit     = 'second';
-	}
-
-	# Avoid saying "0" unless we *really* mean it
-	$timeLeft = ceil($timeLeft);
-
-	# Add an "s" as needed
-	my $plural = 's';
-	if ($timeLeft == 1) {
-		$plural = '';
-	}
-	$unit .= $plural;
-
-	# Speak
-	DMX::say('Projector shutdown in about ' . $timeLeft . ' ' . $unit);
 }
