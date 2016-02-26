@@ -148,7 +148,7 @@ while (1) {
 		&& exists($last{'PROJECTOR_CTRL_POWER'})
 		&& $exists{'PROJECTOR_CTRL_POWER'} ne $last{'PROJECTOR_CTRL_POWER'})
 	{
-		if ($exists{'PROJECTOR_CTRL_POWER'} eq 'OFF' && $exists{'PROJECTOR_CTRL_POWER'} eq 'ON') {
+		if ($exists{'PROJECTOR_CTRL_POWER'} eq 'OFF' || $exists{'PROJECTOR_CTRL_POWER'} eq 'ON') {
 			$projLast = 0;
 			DMX::say('Projector: ' . lc($exists{'PROJECTOR_CTRL_POWER'}));
 
