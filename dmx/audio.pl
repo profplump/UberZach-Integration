@@ -16,7 +16,7 @@ use DMX;
 my %DEVS = (
 	'AMP'     => 'Built-in Output',
 	'RAVE'    => 'Built-in Output',
-	'DEFAULT' => 'USB Audio CODEC',
+	'DEFAULT' => 'USB Audio CODEC ',
 );
 
 # Prototypes
