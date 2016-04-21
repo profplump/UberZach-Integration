@@ -19,8 +19,6 @@ use DMX;
 sub sendQuery($$);
 sub clearBuffer($);
 sub collectUntil($$);
-sub parseHDMI($$);
-sub parseHDMILine($$$);
 
 # Device parameters
 my ($DEV, $PORT, $BLUETOOTH, $BAUD, $DBITS, $SBITS, $PARITY, $CRLF, $DELIMITER, %CMDS, %STATUS_CMDS);
@@ -84,12 +82,12 @@ if (basename($0) =~ /PROJECTOR/i) {
 		'INPUT_EXT'    => 'SDEXT.IN-1',
 
 	);
-	
+
 	%STATUS_CMDS = (
-		'STATUS' => { 'MATCH'   => [ qr/^PW/, qr/$CMDS{'ON'}/ ] },
-		'MODE'   => { 'EVAL'    => [ qr/^MS/, 'if ($a =~ /STEREO/i) { $a = "STEREO" } elsif ($a =~ /MS(?:DOLBY|DTS)/i) { $a = "SURROUND" }' ] },
-		'VOL'    => { 'EVAL'    => [ qr/^MV/, '$a =~ s/^MV//; if (length($a) > 2) { $a =~ s/(\d\d)(\d)/$1.$2/ }' ] },
-		'INPUT'  => { 'EVAL'    => [ qr/^SI/, 'my $done = 0; foreach my $cmd (keys(%CMDS)) { if ($a eq $CMDS{$cmd}) { $a = $cmd; $done = 1; last; } } if (!$done) { $a =~ s/^SI/UNKNOWN-/; }' ] },
+		'STATUS' => { 'MATCH' => [ qr/^PW/, qr/$CMDS{'ON'}/ ] },
+		'MODE'   => { 'EVAL'  => [ qr/^MS/, 'if ($a =~ /STEREO/i) { $a = "STEREO" } elsif ($a =~ /MS(?:DOLBY|DTS)/i) { $a = "SURROUND" }' ] },
+		'VOL'    => { 'EVAL'  => [ qr/^MV/, '$a =~ s/^MV//; if (length($a) > 2) { $a =~ s/(\d\d)(\d)/$1.$2/ }' ] },
+		'INPUT'  => { 'EVAL'  => [ qr/^SI/, 'my $done = 0; foreach my $cmd (keys(%CMDS)) { if ($a eq $CMDS{$cmd}) { $a = $cmd; $done = 1; last; } } if (!$done) { $a =~ s/^SI/UNKNOWN-/; }' ] },
 	);
 } elsif (basename($0) =~ /TV/i) {
 	$DEV       = 'TV';
@@ -182,76 +180,22 @@ if (basename($0) =~ /PROJECTOR/i) {
 	$DEV       = 'HDMI';
 	$PORT      = '/dev/tty.usbserial-AL0096TO';
 	$BLUETOOTH = 0;
-	$BAUD      = 38400;
+	$BAUD      = 19200;
 	$CRLF      = "\r";
-	$DELIMITER = "\r>";
+	$DELIMITER = "\r";
 	%CMDS      = (
-		'INIT'     => '',
-		'STATUS'   => 'VS',
-		'SOURCE'   => 'VS',
-		'SOURCE_2' => 'VS',
-		'GAININ'   => 'VS',
-		'GAINOUT'  => 'VS',
-		'IN1'      => 'VS',
-		'IN2'      => 'VS',
-		'OUT1'     => 'VS',
-		'OUT2'     => 'VS',
-		'EQ'       => 'VS',
-		'REBOOT'   => 'REBOOT',
-		'INFO'     => 'PI',
-		'PLEX'     => 'AVI=1,1',
-		'GAME'     => 'AVI=2,1',
-		'PLEX2'    => 'AVI=1,2',
-		'GAME2'    => 'AVI=2,2',
-		'BEEPOFF'  => 'BEEP=0',
-		'BEEPON'   => 'BEEP=1',
-		'ASCII'    => 'TI=0',
-		'BINARY'   => 'TI=167',
-		'UNLOCK'   => 'LCK=0',
-		'LOCK'     => 'LCK=167',
-		'ENABLE1'  => 'AVOEN=1',
-		'ENABLE2'  => 'AVOEN=2',
-		'DISABLE1' => 'AVODIS=1',
-		'DISABLE2' => 'AVODIS=2',
-		'EDID1'    => 'CE=1,1',
-		'EDID2'    => 'CE=1,2',
-		'GAININ1'  => 'IVG=1',
-		'GAININ2'  => 'IVG=2',
-		'GAININ3'  => 'IVG=3',
-		'GAININ4'  => 'IVG=4',
-		'GAININ5'  => 'IVG=5',
-		'GAININ6'  => 'IVG=6',
-		'GAININ7'  => 'IVG=7',
-		'GAININ8'  => 'IVG=8',
-		'GAINOUT1' => 'OVG=1',
-		'GAINOUT2' => 'OVG=2',
-		'GAINOUT3' => 'OVG=3',
-		'GAINOUT4' => 'OVG=4',
-		'GAINOUT5' => 'OVG=5',
-		'GAINOUT6' => 'OVG=6',
-		'GAINOUT7' => 'OVG=7',
-		'GAINOUT8' => 'OVG=8',
-		'EQ1'      => 'EQ=1',
-		'EQ2'      => 'EQ=2',
-		'EQ3'      => 'EQ=3',
-		'EQ4'      => 'EQ=4',
-		'EQ5'      => 'EQ=5',
-		'EQ6'      => 'EQ=6',
-		'EQ7'      => 'EQ=7',
-		'EQ8'      => 'EQ=8',
+		'INIT'    => '',
+		'PLEX'    => 'sw i01',
+		'GAME'    => 'sw i02',
+		'IN_3'    => 'sw i03',
+		'IN_4'    => 'sw i04',
+		'IN_NEXT' => 'sw +',
+		'IN_PREV' => 'sw -',
+		'POD_ON'  => 'pod on',
+		'POD_OFF' => 'pod off',
 	);
 
-	%STATUS_CMDS = (
-		'SOURCE'   => { 'EVAL' => [ qr/EGO Switch - 2-Bus/, '$a = parseHDMI("SOURCE", $a);' ] },
-		'SOURCE_2' => { 'EVAL' => [ qr/EGO Switch - 2-Bus/, '$a = parseHDMI("SOURCE_2", $a);' ] },
-		#'IN1'      => { 'EVAL' => [ qr/EGO Switch - 2-Bus/, '$a = parseHDMI("IN1", $a);' ] },
-		#'IN2'      => { 'EVAL' => [ qr/EGO Switch - 2-Bus/, '$a = parseHDMI("IN2", $a);' ] },
-		#'OUT1'     => { 'EVAL' => [ qr/EGO Switch - 2-Bus/, '$a = parseHDMI("OUT1", $a);' ] },
-		#'OUT2'     => { 'EVAL' => [ qr/EGO Switch - 2-Bus/, '$a = parseHDMI("OUT2", $a);' ] },
-		#'EQ'       => { 'EVAL' => [ qr/EGO Switch - 2-Bus/, '$a = parseHDMI("EQ", $a);' ] },
-		#'GAININ'   => { 'EVAL' => [ qr/EGO Switch - 2-Bus/, '$a = parseHDMI("GAININ", $a);' ] },
-		#'GAINOUT'  => { 'EVAL' => [ qr/EGO Switch - 2-Bus/, '$a = parseHDMI("GAINOUT", $a);' ] },
-	);
+	%STATUS_CMDS = ();
 } else {
 	die("No device specified\n");
 }
@@ -496,9 +440,9 @@ sub collectUntil($$) {
 
 	# This byte-by-byte reading is not efficient, but it's safe
 	# Allow reading forever as long as we don't exceed the silence timeout
-	my $count   = 0;
-	my $string  = '';
-	my $end     = undef();
+	my $count  = 0;
+	my $string = '';
+	my $end    = undef();
 	while ($count < $SILENCE_TIMEOUT / $BYTE_TIMEOUT) {
 		my $byte = $port->read(1);
 		if (length($byte)) {
@@ -552,86 +496,4 @@ sub collectUntil($$) {
 		print STDERR 'Read: ' . $string . "\n";
 	}
 	return $string;
-}
-
-sub parseHDMI($$) {
-	my ($type, $raw) = @_;
-	my %data = (
-		'SOURCE'   => 0,
-		'SOURCE_2' => 0,
-		'IN1'      => 0,
-		'IN2'      => 0,
-		'HDCP1'    => 0,
-		'HDCP2'    => 0,
-		'OUT1'     => 0,
-		'OUT2'     => 0,
-		'GAININ'   => 0,
-		'GAINOUT'  => 0,
-		'EQ'       => 0,
-		'RC'       => 0,
-	);
-
-	my $section = undef();
-	foreach my $line (split(/(\r|\n)+/, $raw)) {
-		if ($line =~ /^=/ || $line eq 'EGO Switch - 2-Bus') {
-			$section = undef();
-			next;
-		} elsif ($line =~ /^\s*$/) {
-			next;
-		} elsif ($line =~ /^RC ID - (\d+)\s*$/) {
-			$data{'RC'} = $1;
-		} elsif ((defined($section) && $section eq 'OUT') || $line =~ /Output:/) {
-			$section = 'OUT';
-			parseHDMILine(\%data, $section, $line);
-		} elsif ((defined($section) && $section eq 'IN') || $line =~ /Input:/) {
-			$section = 'IN';
-			parseHDMILine(\%data, $section, $line);
-		}
-	}
-	return $data{$type};
-}
-
-sub parseHDMILine($$$) {
-	my ($data, $dir, $line) = @_;
-
-	my ($port, $plug, $eq, $gain, $hdcp, $source) = $line =~
-		/^\D+(\d+)\s+(\S+)\s+(EQ\:\d+|on|off)\s+VCO\:(\d+)\s+(\S+)(?:\s+(\S.*\S))?\s*$/;
-	if (!defined($port) || $port < 1 || $port > 2) {
-		warn('Could not parse HDMI line: ' . $line . "\n");
-		next;
-	}
-	if ($plug eq 'Plugged') {
-		$data->{$dir . $port} = 1;
-	}
-	if ($eq) {
-		if ($dir eq 'OUT') {
-			if ($eq eq 'on') {
-				$data->{'OUT' . $port} = 1;
-			} else {
-				$data->{'OUT' . $port} = 0;
-			}
-		} else {
-			($data->{'EQ'}) = $eq =~ /EQ:(\d+)/;
-		}
-	}
-	if ($gain) {
-		$data->{'GAIN' . $dir} = $gain;
-	}
-	if ($hdcp) {
-		$data->{'HDCP' . $port} = $hdcp;
-	}
-	if (defined($source) && $source =~ /Source of Output (\d(?:,\d)?)/i) {
-		my $target = $1;
-		my $name = 'PLEX';
-		if ($port == 2) {
-			$name = 'GAME';
-		}
-
-		if ($target =~ /1/) {
-			$data->{'SOURCE'} = $name;
-		}
-		if ($target =~ '2') {
-			$data->{'SOURCE_2'} = $name;
-		}
-	}
 }

@@ -21,9 +21,8 @@ my $OUTPUT_FILE  = $DATA_DIR . $STATE_SOCK;
 my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
 my $DELAY        = $PULL_TIMEOUT / 2;
-my $CMD_DELAY    = 5.0;
-my $BOOT_DELAY   = 10;
-my $BOOT_TIMEOUT = $BOOT_DELAY * 3;
+my $CMD_DELAY    = 1.0;
+my @INIT_CMDS    = ('POD_OFF');
 
 # Debug
 my $DEBUG = 0;
@@ -37,14 +36,18 @@ DMX::stateSubscribe($STATE_SOCK);
 my $hdmi = DMX::clientSock($HDMI_SOCK);
 
 # State
-my $state     = 'OFF';
-my $source    = 'PLEX';
+my $state     = 'PLEX';
 my $stateLast = $state;
 my %exists    = ();
 my $pushLast  = 0;
 my $pullLast  = time();
 my $update    = 0;
-my $lastBoot  = 0;
+
+# Init
+foreach my $cmd (@INIT_CMDS) {
+	$hdmi->send($cmd)
+	  or die('Unable to write command to HDMI socket: ' . $cmd . ": ${!}\n");
+}
 
 # Loop forever
 while (1) {
@@ -79,12 +82,10 @@ while (1) {
 
 	# Force updates on a periodic basis
 	if (!$update && $now - $pushLast > $PUSH_TIMEOUT) {
-
-		# Not for HDMI
-		#if ($DEBUG) {
-		#	print STDERR "Forcing periodic update\n";
-		#}
-		#$update = 1;
+		if ($DEBUG) {
+			print STDERR "Forcing periodic update\n";
+		}
+		$update = 1;
 	}
 
 	# Force updates on any state change
@@ -95,15 +96,7 @@ while (1) {
 		$update = 1;
 	}
 
-	# Force updates when there is a physical state mistmatch
-	if (!$update && $state ne $exists{'HDMI_SOURCE'}) {
-		if ($DEBUG) {
-			print STDERR 'Physical state mismatch: ' . $state . ':' . $exists{'HDMI_SOURCE'} . "\n";
-		}
-		$update = 1;
-	}
-
-	# Only allow updates every few seconds -- the projector goes dumb during power state changes
+	# Rate-limit commands, in case we go dumb somewhere in the chain
 	if ($update && $now < $pushLast + $CMD_DELAY) {
 		if ($DEBUG) {
 			print STDERR 'Ignoring overrate update: ' . $state . "\n";
@@ -111,7 +104,7 @@ while (1) {
 		$update = 0;
 	}
 
-	# Update the amp
+	# Update the switch
 	if ($update) {
 
 		# Extra debugging to record pushes
@@ -119,18 +112,7 @@ while (1) {
 			print STDERR 'State: ' . $state . "\n";
 		}
 
-		# Reboot before the first update to GAME
-		if (0 && $state eq 'GAME' && $lastBoot < $now - $BOOT_TIMEOUT) {
-			$hdmi->send('REBOOT')
-			  or die('Unable to write command to HDMI socket: ' . $state . ": ${!}\n");
-
-			# Wait for the reboot
-			sleep($BOOT_DELAY);
-			$now += $BOOT_DELAY;
-			$lastBoot = $now;
-		}
-
-		# Send master power state
+		# Send state
 		$hdmi->send($state)
 		  or die('Unable to write command to HDMI socket: ' . $state . ": ${!}\n");
 
