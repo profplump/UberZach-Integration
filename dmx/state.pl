@@ -114,10 +114,6 @@ if ( $HOST =~ /loki/i ) {
     # Game System
     $MON_FILES{'GAME'} = 'EXISTS';
 
-    # HDMI Switch
-    $MON_FILES{'HDMI'}        = 'LINE-NOUPDATE';
-    $MON_FILES{'HDMI_SOURCE'} = 'LINE-NOUPDATE';
-
     # Lights
     $MON_FILES{'LED'}          = 'LINE-NOUPDATE';
     $MON_FILES{'OVERHEAD'}     = 'LINE-NOUPDATE';
