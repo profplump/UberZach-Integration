@@ -55,7 +55,6 @@ if (basename($0) =~ /PROJECTOR/i) {
 	);
 } elsif (basename($0) =~ /AMPLIFIER/i) {
 	$DEV       = 'Amplifier';
-	$PORT      = '/dev/tty.usbserial-AM01C96Q';
 	$BLUETOOTH = 0;
 	$CRLF      = "\r";
 	$DELIMITER = "\r";
@@ -82,6 +81,12 @@ if (basename($0) =~ /PROJECTOR/i) {
 		'INPUT_EXT'    => 'SDEXT.IN-1',
 
 	);
+
+	$PORT = `$ENV{'HOME'}/bin/video/serial/findDevice.sh 1d111200`;
+	$PORT =~ s/\s*$//;
+	if (!($PORT =~ /^\/dev\/tty\.usbserial/)) {
+		die("Unable to find serial device by USB location\n");
+	}
 
 	%STATUS_CMDS = (
 		'STATUS' => { 'MATCH' => [ qr/^PW/, qr/$CMDS{'ON'}/ ] },
@@ -178,7 +183,6 @@ if (basename($0) =~ /PROJECTOR/i) {
 	);
 } elsif (basename($0) =~ /HDMI/i) {
 	$DEV       = 'HDMI';
-	$PORT      = '/dev/tty.usbserial-AL0096TO';
 	$BLUETOOTH = 0;
 	$BAUD      = 19200;
 	$CRLF      = "\r";
@@ -194,6 +198,12 @@ if (basename($0) =~ /PROJECTOR/i) {
 		'POD_ON'  => 'pod on',
 		'POD_OFF' => 'pod off',
 	);
+
+	$PORT = `$ENV{'HOME'}/bin/video/serial/findDevice.sh 1d111300`;
+	$PORT =~ s/\s*$//;
+	if (!($PORT =~ /^\/dev\/tty\.usbserial/)) {
+		die("Unable to find serial device by USB location\n");
+	}
 
 	%STATUS_CMDS = ();
 } else {
