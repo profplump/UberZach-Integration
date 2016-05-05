@@ -18,8 +18,8 @@ my $OUTPUT_FILE  = $DATA_DIR . $STATE_SOCK;
 my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
 my $DELAY        = $PULL_TIMEOUT / 2;
-my $ALARM_DELAY  = 5;
-my $MODE_DELAY   = 3;
+my $ALARM_DELAY  = 10;
+my $MODE_DELAY   = 5;
 my $PROJ_DELAY   = 59;
 my $PROJ_FACTOR  = 0.9;
 
