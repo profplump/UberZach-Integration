@@ -11,7 +11,7 @@
 #       9  => Behind screen (track)
 #       10 => Behind screen (LED)
 #       11 => Fan (Switch)
-#       12 => <Unused> (Switch)
+#       12 => VR Front (Switch)
 #	13 => Blue
 #	14 => Red (+14%)
 #	15 => Green (+19%)
@@ -24,3 +24,7 @@
 #	22 => Garage Red (+23%)
 #	23 => Garage Blue
 #	24 => Garage Shelf
+#	64 => Rumble
+#	65 => <Unused>
+#	66 => VR Back (Switch)
+#	67 => <Unused> (Switch)
