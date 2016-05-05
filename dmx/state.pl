@@ -113,6 +113,7 @@ if ( $HOST =~ /loki/i ) {
 
     # Game System
     $MON_FILES{'GAME'} = 'EXISTS';
+    $MON_FILES{'VR'}   = 'LINE-NOUPDATE';
 
     # Lights
     $MON_FILES{'LED'}          = 'LINE-NOUPDATE';
