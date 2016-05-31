@@ -19,9 +19,9 @@ my $PUSH_TIMEOUT = 20;
 my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
 my $DELAY        = $PULL_TIMEOUT / 2;
 my $ALARM_DELAY  = 10;
-my $MODE_DELAY   = 5;
+my $MODE_DELAY   = 7.5;
 my $PROJ_DELAY   = 59;
-my $PROJ_FACTOR  = 0.9;
+my $PROJ_FACTOR  = 0.95;
 
 # Debug
 my $DEBUG = 0;
