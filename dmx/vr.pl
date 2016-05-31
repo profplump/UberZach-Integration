@@ -10,8 +10,16 @@ use DMX;
 
 # User config
 my %DIM = (
-	'OFF' => [ { 'channel' => 12, 'value' => 0,   'time' => 0 }, { 'channel' => 66, 'value' => 0,   'time' => 0 }, ],
-	'ON'  => [ { 'channel' => 12, 'value' => 255, 'time' => 0 }, { 'channel' => 66, 'value' => 255, 'time' => 0 }, ],
+    'OFF' => [
+        { 'channel' => 12, 'value' => 0, 'time' => 0 },
+        { 'channel' => 25, 'value' => 0, 'time' => 0 },
+        { 'channel' => 66, 'value' => 0, 'time' => 0 },
+    ],
+    'ON' => [
+        { 'channel' => 12, 'value' => 255, 'time' => 0 },
+        { 'channel' => 25, 'value' => 255, 'time' => 0 },
+        { 'channel' => 66, 'value' => 255, 'time' => 0 },
+    ],
 );
 
 # App config
@@ -25,7 +33,7 @@ my $DELAY        = $PULL_TIMEOUT / 2;
 # Debug
 my $DEBUG = 0;
 if ($ENV{'DEBUG'}) {
-	$DEBUG = 1;
+    $DEBUG = 1;
 }
 
 # State
@@ -49,57 +57,59 @@ DMX::stateSubscribe($STATE_SOCK);
 # Loop forever
 while (1) {
 
-	# Wait for state updates
-	my $cmdState = DMX::readState($DELAY, \%exists, \%mtime, undef());
+    # Wait for state updates
+    my $cmdState = DMX::readState($DELAY, \%exists, \%mtime, undef());
 
-	# Avoid repeated calls to time()
-	my $now = time();
+    # Avoid repeated calls to time()
+    my $now = time();
 
-	# Record only valid states
-	if (defined($cmdState)) {
-		$masterState = $cmdState;
-		$pullLast    = $now;
-	}
+    # Record only valid states
+    if (defined($cmdState)) {
+        $masterState = $cmdState;
+        $pullLast    = $now;
+    }
 
-	# Die if we don't see regular updates
-	if ($now - $pullLast > $PULL_TIMEOUT) {
-		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
-	}
+    # Die if we don't see regular updates
+    if ($now - $pullLast > $PULL_TIMEOUT) {
+        die(    'No update on state socket in past '
+              . $PULL_TIMEOUT
+              . " seconds. Exiting...\n");
+    }
 
-	# Calculate the new state
-	$stateLast = $state;
-	if ($exists{'GAME'}) {
-		$state = 'ON';
-	} else {
-		$state = 'OFF';
-	}
+    # Calculate the new state
+    $stateLast = $state;
+    if ($exists{'GAME'}) {
+        $state = 'ON';
+    } else {
+        $state = 'OFF';
+    }
 
-	# Force updates on a periodic basis
-	if (!$update && $now - $pushLast > $PUSH_TIMEOUT) {
-		if ($DEBUG) {
-			print STDERR "Forcing periodic update\n";
-		}
-		$update = 1;
-	}
+    # Force updates on a periodic basis
+    if (!$update && $now - $pushLast > $PUSH_TIMEOUT) {
+        if ($DEBUG) {
+            print STDERR "Forcing periodic update\n";
+        }
+        $update = 1;
+    }
 
-	# Force updates on any state change
-	if (!$update && $stateLast ne $state) {
-		if ($DEBUG) {
-			print STDERR 'State change: ' . $stateLast . ' => ' . $state . "\n";
-		}
-		$update = 1;
-	}
+    # Force updates on any state change
+    if (!$update && $stateLast ne $state) {
+        if ($DEBUG) {
+            print STDERR 'State change: ' . $stateLast . ' => ' . $state . "\n";
+        }
+        $update = 1;
+    }
 
-	# Update the DMX chain
-	if ($update) {
+    # Update the DMX chain
+    if ($update) {
 
-		# Update
-		DMX::applyDataset($DIM{$state}, $state, $OUTPUT_FILE);
+        # Update
+        DMX::applyDataset($DIM{$state}, $state, $OUTPUT_FILE);
 
-		# Update the push time
-		$pushLast = $now;
+        # Update the push time
+        $pushLast = $now;
 
-		# Clear the update flag
-		$update = 0;
-	}
+        # Clear the update flag
+        $update = 0;
+    }
 }
