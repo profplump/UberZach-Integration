@@ -24,6 +24,10 @@
 #	22 => Garage Red (+23%)
 #	23 => Garage Blue
 #	24 => Garage Shelf
+#	25 => VR Breakout (Switch) 
+#	26 => Rear Comfort (Switch)
+#	27 => <Unused>
+#	28 => <Unused>
 #	64 => Rumble
 #	65 => <Unused>
 #	66 => VR Back (Switch)
