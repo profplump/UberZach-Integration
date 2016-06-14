@@ -10,10 +10,11 @@ use DMX;
 
 # User config
 my %DIM = (
-	'OFF'    => [ { 'channel' => 12, 'value' => 0,   'time' => 60000 }, ],
-	'PLAY'   => [ { 'channel' => 12, 'value' => 255, 'time' => 0 } ],
-	'PAUSE'  => [ { 'channel' => 12, 'value' => 0,   'time' => 0, 'delay' => 10000 } ],
-	'MOTION' => [ { 'channel' => 12, 'value' => 0,   'time' => 0 } ],
+	'OFF'    => [ { 'channel' => 10, 'value' => 0,   'time' => 60000 }, ],
+	'PLAY'   => [ { 'channel' => 10, 'value' => 14,  'time' => 250 } ],
+	'PAUSE'  => [ { 'channel' => 10, 'value' => 32,  'time' => 5000, 'delay' => 5000 } ],
+	'MOTION' => [ { 'channel' => 10, 'value' => 48,  'time' => 1500 } ],
+	'BRIGHT' => [ { 'channel' => 10, 'value' => 255, 'time' => 1500 } ],
 );
 
 # App config
@@ -70,9 +71,14 @@ while (1) {
 		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
 	}
 
-	# Accept the new state directly
+	# Calculate the new state
 	$stateLast = $state;
-	$state     = $newState;
+	if ($exists{'BRIGHT'}) {
+		$newState = 'BRIGHT';
+	} elsif ($exists{'LIGHTS'}) {
+		$newState = 'MOTION';
+	}
+	$state = $newState;
 
 	# Force updates on a periodic basis
 	if (!$update && time() - $pushLast > $PUSH_TIMEOUT) {

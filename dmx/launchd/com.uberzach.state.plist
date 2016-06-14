@@ -8,10 +8,10 @@
 	<array>
 		<string>Loki.local</string>
 		<string>loki.uberzach.com</string>
-		<string>Beddy.local</string>
-		<string>beddy.uberzach.com</string>
 		<string>Heady.local</string>
 		<string>heady.uberzach.com</string>
+		<string>Beddy.local</string>
+		<string>beddy.uberzach.com</string>
 	</array>
 	<key>RunAtLoad</key>
 	<true/>
@@ -22,7 +22,7 @@
 	<key>ProgramArguments</key>
 	<array>
 		<string>/Users/tv/bin/video/dmx/state.pl</string>
-		<string>0.25</string>
+		<string>0.10</string>
 	</array>
 </dict>
 </plist>

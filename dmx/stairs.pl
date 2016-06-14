@@ -58,11 +58,13 @@ while (1) {
 	# State is calculated; use newState to gather data
 	my $newState = $state;
 
+	# Wait for state updates
+	my $cmdState = DMX::readState($DELAY, \%exists, \%mtime, undef());
+
 	# Avoid repeated calls to time()
 	my $now = time();
 
-	# Wait for state updates
-	my $cmdState = DMX::readState($DELAY, \%exists, \%mtime, undef());
+	# Record only valid states
 	if (defined($cmdState)) {
 		$newState = $cmdState;
 		$pullLast = $now;
@@ -71,15 +73,6 @@ while (1) {
 	# Die if we don't see regular updates
 	if ($now - $pullLast > $PULL_TIMEOUT) {
 		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
-	}
-
-	# Skip processing when in RAVE or EFFECT mode
-	if ($exists{'RAVE'} || $exists{'EFFECT'}) {
-		if ($DEBUG) {
-			print STDERR "Suspending normal operation while in RAVE mode\n";
-		}
-		$update = 1;
-		next;
 	}
 
 	# Calculate the new state

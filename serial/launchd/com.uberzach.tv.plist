@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>LimitLoadToSessionType</key>
+	<string>Aqua</string>
+	<key>LimitLoadToHosts</key>
+	<array>
+		<string>Heady.local</string>
+		<string>heady.uberzach.com</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>Label</key>
+	<string>com.uberzach.tv</string>
+	<key>KeepAlive</key>
+	<true/>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/Users/tv/bin/video/serial/tv.pl</string>
+		<string>2</string>
+	</array>
+	<!--
+		<key>EnvironmentVariables</key>
+		<dict>
+			<key>DEBUG</key>
+			<string>1</string>
+		</dict>
+		<key>StandardErrorPath</key>
+		<string>/Users/tv/Library/Logs/com.uberzach.tv.log</string>
+	-->
+</dict>
+</plist>

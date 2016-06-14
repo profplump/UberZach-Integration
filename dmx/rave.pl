@@ -50,6 +50,9 @@ my $PULL_TIMEOUT = $PUSH_TIMEOUT * 3;
 my $DELAY        = $PULL_TIMEOUT / 2;
 my $AMP_DELAY    = 6;
 my $AMP_BOOTING  = 0;
+my $AMP_START    = undef();
+my $AMP_TIMEOUT  = $PUSH_TIMEOUT / 2;
+my $CLEANUP_TIME = undef();
 
 # Debug
 my $DEBUG = 0;
@@ -126,31 +129,34 @@ while (1) {
 	}
 
 	# Reap zombie children
-	if (defined($PID)) {
-		my $kid = waitpid($PID, WNOHANG);
-		if ($kid > 0) {
-			if ($DEBUG) {
-				print STDERR 'Reaped child: ' . $PID . "\n";
-			}
+	if (defined($PID) && waitpid($PID, WNOHANG) > 0) {
+		if ($DEBUG) {
+			print STDERR 'Reaped child: ' . $PID . "\n";
+		}
+		$CLEANUP_TIME = Time::HiRes::time();
+	}
 
-			# Run the cleanup routine (if any)
-			if ($EFFECTS{$NAME}{'done'}) {
-				$EFFECTS{$NAME}{'done'}($NAME, \%exists, $EFFECTS{$NAME});
-			}
+	# Cleanup on timer or child exit
+	if (defined($CLEANUP_TIME) && $CLEANUP_TIME <= Time::HiRes::time()) {
 
-			# Forget our local bypass state
-			$PID      = undef();
-			$NAME     = undef();
-			$NEXT     = undef();
-			$PID_DATA = undef();
+		# Run the cleanup routine (if any)
+		if ($EFFECTS{$NAME}{'done'}) {
+			$EFFECTS{$NAME}{'done'}($NAME, \%exists, $EFFECTS{$NAME});
+		}
 
-			# Clear the RAVE and EFFECT flags
-			if (-e $RAVE_FILE) {
-				unlink($RAVE_FILE);
-			}
-			if (-e $EFFECT_FILE) {
-				unlink($EFFECT_FILE);
-			}
+		# Forget our local bypass state
+		$PID          = undef();
+		$CLEANUP_TIME = undef();
+		$NAME         = undef();
+		$NEXT         = undef();
+		$PID_DATA     = undef();
+
+		# Clear the RAVE and EFFECT flags
+		if (-e $RAVE_FILE) {
+			unlink($RAVE_FILE);
+		}
+		if (-e $EFFECT_FILE) {
+			unlink($EFFECT_FILE);
 		}
 	}
 
@@ -158,6 +164,11 @@ while (1) {
 	if (defined($NEXT)) {
 		$NEXT->($NAME, \%exists, $EFFECTS{$NAME});
 		next;
+	}
+
+	# Alert continuously on ALARM
+	if ($exists{'ALARM'}) {
+		$newState = 'RED_ALERT';
 	}
 
 	# Handle effects by name
@@ -214,6 +225,13 @@ sub ampWait($$$) {
 		print STDERR "ampWait()\n";
 	}
 
+	# Ensure we don't loop forever
+	if (!defined($AMP_START)) {
+		$AMP_START = Time::HiRes::time();
+	} elsif (Time::HiRes::time() - $AMP_START > $AMP_TIMEOUT) {
+		die("Timeout waiting for amp to start\n");
+	}
+
 	# Just loop until the amp is up, then set a new "next" handler
 	if ($exists{'AMPLIFIER'}) {
 		if ($DEBUG) {
@@ -245,8 +263,9 @@ sub ampWait($$$) {
 			sleep($AMP_DELAY);
 		}
 
-		# Reset the amp boot delay, now that it's running
+		# Reset the amp boot delay and amp start time now that it's running
 		$AMP_BOOTING = 0;
+		undef($AMP_START);
 	} else {
 
 		# The amp wasn't up when we checked, so it will need a boot delay
@@ -337,15 +356,18 @@ sub lsr_run($$$) {
 		print STDERR "lsr_run()\n";
 	}
 
+	# Wait just a second for annoucements
+	sleep(1);
+
 	# Play a short burst of silence to get all the audio devices in-sync
 	Audio::play('SILENCE');
 
-	# Play the sound in a child (i.e. in the background)
-	$PID = fork();
-	if (defined($PID) && $PID == 0) {
-		Audio::play($name);
-		exit(0);
-	}
+	# Play the sound in the background
+	Audio::background($name);
+
+	# Set a cleanup timer
+	# Now + playback + fade + buffer
+	$CLEANUP_TIME = Time::HiRes::time() + 45.60 + 2 + 1;
 
 	# Record our start time
 	$PID_DATA->{'start'} = Time::HiRes::time();
@@ -367,10 +389,10 @@ sub lsr_loop($$$) {
 	my $max_dur  = 375;
 	my $max_val  = 255;
 	my $reserve  = 0.75;
-	my $ramp_dur = 10.20;
-	my $hit_pos  = 43.15;
+	my $ramp_dur = 10.40;
+	my $hit_pos  = 43.35;
 	my $hit_dur  = 100;
-	my $fade_pos = 43.65;
+	my $fade_pos = 43.85;
 	my $fade_dur = 2000;
 
 	# How long have we been playing

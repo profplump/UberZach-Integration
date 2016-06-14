@@ -43,7 +43,7 @@ my %DIM = (
 		{ 'channel' => 5,  'value' => 255, 'time' => 1000  },
 		{ 'channel' => 6,  'value' => 104, 'time' => 6000, 'delay' => 3000 },
 		{ 'channel' => 7,  'value' => 192, 'time' => 10000 },
-		{ 'channel' => 8,  'value' => 96,  'time' => 6000, 'delay' => 6000 },
+		{ 'channel' => 8,  'value' => 64,  'time' => 6000, 'delay' => 6000 },
 		{ 'channel' => 9,  'value' => 96,  'time' => 6000, 'delay' => 3000 },
 	],
 	'MOTION'    => [
@@ -52,7 +52,7 @@ my %DIM = (
 		{ 'channel' => 5,  'value' => 192, 'time' => 750  },
 		{ 'channel' => 6,  'value' => 104, 'time' => 1000 },
 		{ 'channel' => 7,  'value' => 192, 'time' => 1000 },
-		{ 'channel' => 8,  'value' => 96,  'time' => 2000 },
+		{ 'channel' => 8,  'value' => 64,  'time' => 2000 },
 		{ 'channel' => 9,  'value' => 96,  'time' => 1500 },
 	],
 	'PREMOTION' => [

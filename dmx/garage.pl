@@ -1,7 +1,6 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-use Time::HiRes qw( usleep sleep time );
 
 # Local modules
 use Cwd qw(abs_path);
@@ -10,10 +9,15 @@ use lib dirname(abs_path($0));
 use DMX;
 
 # User config
-my $RELAY_DELAY = 0.20;
-my %DIM         = (
-	'OFF'      => [ { 'channel' => 16, 'value' => 0,   'time' => 0 } ],
-	'ACTIVATE' => [ { 'channel' => 16, 'value' => 255, 'time' => 0 } ],
+my $MOTION_TIMEOUT     = 30;
+my $POSTMOTION_TIMEOUT = 60;
+my %DIM                = (
+	'OFF'        => [ { 'channel' => 17, 'value' => 0,   'time' => 60000 }, ],
+	'PREMOTION'  => [ { 'channel' => 17, 'value' => 64,  'time' => 2500 }, ],
+	'MOTION'     => [ { 'channel' => 17, 'value' => 255, 'time' => 750 }, ],
+	'POSTMOTION' => [ { 'channel' => 17, 'value' => 64,  'time' => $POSTMOTION_TIMEOUT * 1000 }, ],
+	'BRIGHT'     => [ { 'channel' => 17, 'value' => 255, 'time' => 1000 }, ],
+	'ERROR'      => [ { 'channel' => 17, 'value' => 255, 'time' => 100 }, ],
 );
 
 # App config
@@ -31,15 +35,17 @@ if ($ENV{'DEBUG'}) {
 }
 
 # State
-my $state     = 'OFF';
-my $stateLast = $state;
-my %exists    = ();
-my $pushLast  = 0;
-my $pullLast  = time();
-my $update    = 0;
+my $state      = 'OFF';
+my $stateLast  = $state;
+my %exists     = ();
+my %mtime      = ();
+my $pushLast   = 0;
+my $pullLast   = time();
+my $update     = 0;
+my $lastMotion = 0;
 
-# Always force lights into OFF at launch
-$state = 'OFF';
+# Always force lights into ERROR at launch
+$state = 'ERROR';
 DMX::applyDataset($DIM{$state}, $state, $OUTPUT_FILE);
 
 # Sockets
@@ -50,30 +56,45 @@ DMX::stateSubscribe($STATE_SOCK);
 while (1) {
 
 	# State is calculated; use newState to gather data
-	my $newState = 'OFF';
+	my $newState = $state;
 
 	# Wait for state updates
-	my $cmdState = DMX::readState($DELAY, \%exists, undef(), undef());
+	my $cmdState = DMX::readState($DELAY, \%exists, \%mtime, undef());
+
+	# Avoid repeated calls to time()
+	my $now = time();
+
+	# Record only valid states
 	if (defined($cmdState)) {
 		$newState = $cmdState;
-		$pullLast = time();
+		$pullLast = $now;
 	}
 
 	# Die if we don't see regular updates
-	if (time() - $pullLast > $PULL_TIMEOUT) {
+	if ($now - $pullLast > $PULL_TIMEOUT) {
 		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
 	}
 
 	# Calculate the new state
 	$stateLast = $state;
-	if ($newState eq 'ACTIVATE' || $exists{'GARAGE_CMD'}) {
-		$state = 'ACTIVATE';
+	if ($exists{'BRIGHT'}) {
+		$newState = 'BRIGHT';
+	} elsif ($mtime{'MOTION_GARAGE'} > $now - $MOTION_TIMEOUT) {
+		$newState   = 'MOTION';
+		$lastMotion = $now;
+	} elsif ($newState eq 'PLAY' || $newState eq 'PAUSE' || $newState eq 'MOTION') {
+		if ($now > $lastMotion + $POSTMOTION_TIMEOUT) {
+			$newState = 'PREMOTION';
+		} else {
+			$newState = 'POSTMOTION';
+		}
 	} else {
-		$state = 'OFF';
+		$newState = 'OFF';
 	}
+	$state = $newState;
 
 	# Force updates on a periodic basis
-	if (!$update && time() - $pushLast > $PUSH_TIMEOUT) {
+	if (!$update && $now - $pushLast > $PUSH_TIMEOUT) {
 		if ($DEBUG) {
 			print STDERR "Forcing periodic update\n";
 		}
@@ -88,31 +109,14 @@ while (1) {
 		$update = 1;
 	}
 
-	# Special handling for toggle systems: only push if the state is "ACTIVATE"
-	if ($update && $state ne 'ACTIVATE') {
-		if ($DEBUG) {
-			print STDERR 'Skipping non-activate state: ' . $state . "\n";
-		}
-		$update = 0;
-	}
-
-	# Update the relay
+	# Update the lighting
 	if ($update) {
 
-		# Annouce the command
-		if ($exists{'GARAGE_CMD'}) {
-			DMX::say('Garage door activated by ' . $exists{'GARAGE_CMD'});
-		}
-
-		# Toggle
-		$state = 'ACTIVATE';
-		DMX::applyDataset($DIM{$state}, $state, $OUTPUT_FILE);
-		usleep($RELAY_DELAY * 1000000);
-		$state = 'OFF';
+		# Update
 		DMX::applyDataset($DIM{$state}, $state, $OUTPUT_FILE);
 
 		# Update the push time
-		$pushLast = time();
+		$pushLast = $now;
 
 		# Clear the update flag
 		$update = 0;

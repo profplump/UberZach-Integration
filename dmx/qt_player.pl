@@ -14,7 +14,17 @@ use Audio;
 
 # User config
 my $MEDIA_PATH = `~/bin/video/mediaPath`;
-my %FILES      = ();
+
+# App config
+my $DATA_DIR     = DMX::dataDir();
+my $STATE_SOCK   = 'QT_PLAYER';
+my $OUTPUT_FILE  = $DATA_DIR . $STATE_SOCK;
+my $DELAY        = 5;
+my $MAX_CMD_LEN  = 16384;
+my $TIMEOUT_OPEN = 10;
+
+# Globals
+my %FILES = ();
 
 # Prototypes
 sub init();
@@ -25,18 +35,16 @@ sub printFiles();
 sub cmdApp($$);
 sub openQT($);
 
-# App config
-my $DATA_DIR     = DMX::dataDir();
-my $STATE_SOCK   = 'QT_PLAYER';
-my $OUTPUT_FILE  = $DATA_DIR . $STATE_SOCK;
-my $DELAY        = 5;
-my $MAX_CMD_LEN  = 16384;
-my $TIMEOUT_OPEN = 10;
-
 # Debug
 my $DEBUG = 0;
 if ($ENV{'DEBUG'}) {
 	$DEBUG = 1;
+}
+
+# Ensure the media is ready before we do anything else
+if (!$MEDIA_PATH || !-d $MEDIA_PATH) {
+	sleep($TIMEOUT_OPEN);
+	exit(0);
 }
 
 # Clear our output file
@@ -251,13 +259,13 @@ sub cmdApp($$) {
 # It would be nice to use AS here to get a more definitive document name, but the open() call is QT player is borked
 sub openQT($) {
 	my ($doc) = @_;
-	
+
 	# Build the open command
 	my @cmd = ('open', '-a', 'QuickTime Player');
 	if ($doc) {
 		push(@cmd, $doc);
 	}
-	
+
 	# Execute, dying on timeout
 	timeout $TIMEOUT_OPEN => sub {
 		IPC::System::Simple::system(@cmd);

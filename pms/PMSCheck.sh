@@ -1,14 +1,31 @@
 #!/bin/bash
 
 # Config
-CURL_TIMEOUT=15
 RESTART_DELAY=600
-PMS_URL="http://localhost:32400/"
 UNWATCHED_SECTION="2"
 UNWATCHED_SLEEP=60
 UNWATCHED_RETRIES=5
 MIN_UNWATCHED_COUNT=10
+MAX_MEM=$(( 14 * 1024 * 1024 )) # GB in kB
 ADMIN_EMAIL="zach@kotlarek.com"
+IFS=''
+CURL_TIMEOUT=15
+CURL_OPTS=(--silent --connect-timeout 5 --max-time $CURL_TIMEOUT)
+
+# Construct URL components from the environment
+if [ -z "${PMS_URL}" ]; then
+	if [ -z "${PMS_HOST}" ]; then
+		PMS_HOST="localhost"
+	fi
+	if [ -z "${PMS_PORT}" ]; then
+		PMS_PORT=32400
+	fi
+	PMS_URL="http://${PMS_HOST}:${PMS_PORT}"
+fi
+if [ -z "${PMS_TOKEN}" ]; then
+	echo "No PMS_TOKEN provided" 1>&2
+fi
+CURL_OPTS+=(-H "X-Plex-Token: ${PMS_TOKEN}")
 
 # Heady allows 0 unwatched
 if hostname | grep -qi heady; then
@@ -35,7 +52,7 @@ while [ $LOOP -ne 0 ]; do
 
 	# Ask Plex for the top-level status page
 	if [ -z "${FAILED}" ]; then
-		PAGE="`curl --silent --max-time "${CURL_TIMEOUT}" "${PMS_URL}"`"
+		PAGE="`curl ${CURL_OPTS[@]} "${PMS_URL}/"`"
 		if [ -z "${PAGE}" ]; then
 			FAILED="HTTP timeout"
 		else
@@ -49,12 +66,12 @@ while [ $LOOP -ne 0 ]; do
 	# Ask Plex for a list of unwatched TV series
 	UNWATCHED_TIMEOUT=$(( $CURL_TIMEOUT ))
 	if [ -z "${FAILED}" ]; then
-		UNWATCHED_URL="${PMS_URL}library/sections/${UNWATCHED_SECTION}/all?unwatchedLeaves=1"
+		UNWATCHED_URL="${PMS_URL}/library/sections/${UNWATCHED_SECTION}/all?type=2&unwatched=1&sort=titleSort:asc&X-Plex-Container-Start=0&X-Plex-Container-Size=10000"
 		TRY=1
 		FAILED="Too few unwatched series"
 		while [ $TRY -le $UNWATCHED_RETRIES ] && [ -n "${FAILED}" ]; do
 			TRY=$(( $TRY + 1 ))
-			PAGE="`curl --silent --max-time "${UNWATCHED_TIMEOUT}" "${UNWATCHED_URL}"`"
+			PAGE="`curl ${CURL_OPTS[@]} --max-time "${UNWATCHED_TIMEOUT}" "${UNWATCHED_URL}"`"
 			COUNT="`echo "${PAGE}" | grep '</Directory>' | wc -l`"
 			if [ $COUNT -ge $MIN_UNWATCHED_COUNT ]; then
 				FAILED=""
@@ -64,6 +81,17 @@ while [ $LOOP -ne 0 ]; do
 				UNWATCHED_TIMEOUT=$(( $UNWATCHED_TIMEOUT + $CURL_TIMEOUT ))
 			fi
 		done
+	fi
+
+	# Check Plex's memory usage
+	if [ -z "${FAILED}" ]; then
+		MEM="`ps awx -o vsize,comm | awk '$0 ~ /\/Plex Media Server$/ {print $1}'`"
+		if [ -z "${MEM}" ]; then
+			FAILED="Unable to read memory use"
+		fi
+		if [ $MEM -gt $MAX_MEM ]; then
+			FAILED="Memory use too high: ${MEM}/${MAX_MEM} kB"
+		fi
 	fi
 
 	# If Plex has failed kill it

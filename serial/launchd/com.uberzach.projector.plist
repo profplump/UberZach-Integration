@@ -4,11 +4,6 @@
 <dict>
 	<key>LimitLoadToSessionType</key>
 	<string>Aqua</string>
-	<key>LimitLoadToHosts</key>
-	<array>
-		<string>Loki.local</string>
-		<string>loki.uberzach.com</string>
-	</array>
 	<key>RunAtLoad</key>
 	<true/>
 	<key>Label</key>
@@ -18,7 +13,16 @@
 	<key>ProgramArguments</key>
 	<array>
 		<string>/Users/tv/bin/video/serial/projector.pl</string>
-		<string>5</string>
 	</array>
+	<!--
+		<key>EnvironmentVariables</key>
+		<dict>
+			<key>DEBUG</key>
+			<string>1</string>
+		</dict>
+	-->
+		<key>StandardErrorPath</key>
+		<string>/Users/tv/Library/Logs/com.uberzach.projector.log</string>
+	<!-- -->
 </dict>
 </plist>

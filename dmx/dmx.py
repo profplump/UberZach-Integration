@@ -6,6 +6,7 @@ sys.path.append('/opt/local/lib/python2.7/site-packages')
 sys.path.append('/opt/local/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/site-packages')
 
 import os
+import time
 import array
 import select
 import socket
@@ -14,20 +15,32 @@ import subprocess
 from ola.ClientWrapper import ClientWrapper
 
 # ====================================
-# Globals
-# ====================================
-max_channels = 512
-wrapper = None
-state = [ 0 ] * max_channels
-cmds = { 'value' : [ 0 ] * max_channels, 'ticks' : [ 0 ] * max_channels, 'delay' : [ 0 ] * max_channels }
-sock = None
-max_mesg_len = 1024
-
-# ====================================
 # Defaults
 # ====================================
-interval = 50
-universe = 0
+interval     = 10
+universe     = 0
+max_value    = 255
+max_delay    = 300000
+max_channels = 512
+min_delta    = interval / (5 * 1000)
+allow_dups   = False
+max_mesg_len = 1024
+DEBUG        = False
+
+# ====================================
+# Globals
+# ====================================
+wrapper   = None
+sock      = None
+lastTick  = time.time()
+state_len = 0
+state     = [ 0 ] * max_channels
+cmds      = {
+  'value' : [ 0 ] * max_channels,
+  'ticks' : [ 0 ] * max_channels,
+  'delay' : [ 0 ] * max_channels,
+  'orig'  : [ "" ] * max_channels
+}
 
 # ====================================
 # Wrapper callback -- exit on errors
@@ -41,8 +54,22 @@ def DmxSent(state):
 # Main calculation
 # ====================================
 def SendDMXFrame():
+  global lastTick
+  global wrapper
+  global sock
+  global cmds
+  global state
+  global state_len
+
   # Re-schedule ourselves in interval ms (do this first to keep the timing consistent)
   wrapper.AddEvent(interval, SendDMXFrame)
+
+  # Avoid repeated calls to time()
+  now = time.time()
+
+  # Adjust our tick count to match reality
+  ticks = ((now - lastTick) * 1000) / interval
+  lastTick = now
   
   # Check for new commands
   while (True):
@@ -64,40 +91,57 @@ def SendDMXFrame():
       delay = 0
     
     # Save valid commands
-    if (channel >= 0 and channel <= 512 and intensity >= 0 and intensity <= 255 and duration >= 0 and duration <= 300000 and delay >= 0 and delay < 300000):
+    if (
+      channel >= 0 and channel <= max_channels and
+      intensity >= 0 and intensity <= max_value and
+      duration >= 0 and duration <= max_delay and
+      delay >= 0 and delay < max_delay
+    ):
       if (channel > 0):
-        cmds['value'][channel - 1] = intensity
-        cmds['ticks'][channel - 1] = duration / interval
-        cmds['delay'][channel - 1] = delay / interval
+        if (channel > state_len):
+          state_len = channel
+        if (allow_dups or cmd != cmds['orig'][channel - 1]):
+          cmds['orig'][channel - 1] = cmd
+          cmds['value'][channel - 1] = intensity
+          cmds['ticks'][channel - 1] = duration / interval
+          cmds['delay'][channel - 1] = delay / interval
       else:
-        for i in range(len(state)):
-          cmds['value'][i] = intensity
-          cmds['ticks'][i] = duration / interval
-          cmds['delay'][i] = delay / interval
+        for i in range(state_len):
+          if (allow_dups or cmd != cmds['orig'][channel - 1]):
+            cmds['orig'][i] = cmd
+            cmds['value'][i] = intensity
+            cmds['ticks'][i] = duration / interval
+            cmds['delay'][i] = delay / interval
     else:
       print 'Invalid command parameters:', channel, duration, intensity, delay
   
   # Update values for each channel
-  for i in range(len(cmds['value'])):
+  for i in range(state_len):
     delta = 0
     if (cmds['value'][i] != state[i]):
       if (cmds['delay'][i] > 0):
-        cmds['delay'][i] -= 1
+        if (cmds['delay'][i] >= ticks):        
+          cmds['delay'][i] -= ticks
+        else:
+          cmds['delay'][i] = 0
       else:
         diff = cmds['value'][i] - state[i]
         if (cmds['ticks'][i] < 1):
           delta = diff
         else:
           delta = float(diff) / float(cmds['ticks'][i])
+        if (abs(delta) < min_delta):
+          delta = diff
         state[i] += delta
-        cmds['ticks'][i] -= 1
-      if (0):
-        print 'Channel:', (i + 1)
-        print "\tDelay:", cmds['delay'][i], "\tValue:", state[i], "\tDelta:", delta, "\tTicks:", cmds['ticks'][i]
+        cmds['ticks'][i] -= ticks
+      if (DEBUG):
+        print '(', now, ') Channel:', (i + 1)
+        print "\tDelay:", '%.3f' % cmds['delay'][i], "\tValue:", '%.3f' % state[i], \
+          "\tDelta:", '%.3f' % delta, "\tTicks:", '%.3f' % cmds['ticks'][i]
     
   # Send all DMX channels
   data = array.array('B')
-  for i in range(len(state)):
+  for i in range(state_len):
     data.append(int(state[i]))
   wrapper.Client().SendDmx(universe, data, DmxSent)
 
@@ -105,13 +149,18 @@ def SendDMXFrame():
 # Main
 # ====================================
 
+# Debug
+DEBUG = None
+if 'DEBUG' in os.environ:
+  DEBUG = os.environ['DEBUG']
+
 # Pick a universe (default from above, or as specified in the environment)
 if 'UNIVERSE' in os.environ:
   universe = int(os.environ['UNIVERSE'])
 
 # Pick a tick interval (default from above, or as specified in the environment)
 if 'INTERVAL' in os.environ:
-  universe = int(os.environ['INTERVAL'])
+  interval = int(os.environ['INTERVAL'])
 
 # Pick a socket file ($TMPDIR/plexMonitor/DMX.socket, or as specified in the environment)
 cmd_file = None

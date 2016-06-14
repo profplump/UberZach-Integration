@@ -146,8 +146,9 @@ sub play($) {
 
 	my @cmd = ('tell application "QuickTime Player"');
 	push(@cmd, 'play document ' . $FILES{$name});
+	push(@cmd, 'delay 0.05');
 	push(@cmd, 'repeat while playing of document ' . $FILES{$name} . ' = true');
-	push(@cmd, 'delay 0.1');
+	push(@cmd, 'delay 0.05');
 	push(@cmd, 'end repeat');
 	push(@cmd, 'end tell');
 	runApplescript(join("\n", @cmd));

@@ -21,7 +21,7 @@ sub clearBuffer($);
 sub collectUntil($$);
 
 # Device parameters
-my ($DEV, $PORT, $BLUETOOTH, $CRLF, $DELIMITER, %CMDS, %STATUS_CMDS);
+my ($DEV, $PORT, $BLUETOOTH, $BAUD, $DBITS, $SBITS, $PARITY, $CRLF, $DELIMITER, %CMDS, %STATUS_CMDS);
 if (basename($0) =~ /PROJECTOR/i) {
 	$DEV       = 'Projector';
 	$PORT      = '/dev/tty.usbserial-A5006xbj';
@@ -55,7 +55,6 @@ if (basename($0) =~ /PROJECTOR/i) {
 	);
 } elsif (basename($0) =~ /AMPLIFIER/i) {
 	$DEV       = 'Amplifier';
-	$PORT      = '/dev/tty.usbserial-AM01C96Q';
 	$BLUETOOTH = 0;
 	$CRLF      = "\r";
 	$DELIMITER = "\r";
@@ -70,12 +69,11 @@ if (basename($0) =~ /PROJECTOR/i) {
 		'MUTE'         => 'MUON',
 		'UNMUTE'       => 'MUOFF',
 		'INPUT'        => 'SI?',
-		'TV'           => 'SITV',
-		'DVD'          => 'SIDVD',
+		'PLEX'         => 'SITV',
+		'GAME'         => 'SIDVD',
 		'MODE'         => 'MS?',
 		'SURROUND'     => 'MSDOLBY DIGITAL',
 		'STEREO'       => 'MS7CH STEREO',
-		'TV'           => 'SITV',
 		'INPUT'        => 'SI?',
 		'INPUT_MODE'   => 'SD?',
 		'INPUT_AUTO'   => 'SDAUTO',
@@ -83,37 +81,131 @@ if (basename($0) =~ /PROJECTOR/i) {
 		'INPUT_EXT'    => 'SDEXT.IN-1',
 
 	);
+
+	$PORT = `$ENV{'HOME'}/bin/video/serial/findDevice.sh 1d111200`;
+	$PORT =~ s/\s*$//;
+	if (!($PORT =~ /^\/dev\/tty\.usbserial/)) {
+		die("Unable to find serial device by USB location\n");
+	}
+
 	%STATUS_CMDS = (
-		'STATUS' => { 'MATCH'   => [ qr/^PW/, qr/$CMDS{'ON'}/ ] },
-		'MODE'   => { 'EVAL'    => [ qr/^MS/, 'if ($a =~ /STEREO/i) { $a = "STEREO" } elsif ($a =~ /MS(?:DOLBY|DTS)/i) { $a = "SURROUND" }' ] },
-		'VOL'    => { 'EVAL'    => [ qr/^MV/, '$a =~ s/^MV//; if (length($a) > 2) { $a =~ s/(\d\d)(\d)/$1.$2/ }' ] },
-		'INPUT'  => { 'REPLACE' => qr/^SI(.*)/ },
+		'STATUS' => { 'MATCH' => [ qr/^PW/, qr/$CMDS{'ON'}/ ] },
+		'MODE'   => { 'EVAL'  => [ qr/^MS/, 'if ($a =~ /STEREO/i) { $a = "STEREO" } elsif ($a =~ /MS(?:DOLBY|DTS)/i) { $a = "SURROUND" }' ] },
+		'VOL'    => { 'EVAL'  => [ qr/^MV/, '$a =~ s/^MV//; if (length($a) > 2) { $a =~ s/(\d\d)(\d)/$1.$2/ }' ] },
+		'INPUT'  => { 'EVAL'  => [ qr/^SI/, 'my $done = 0; foreach my $cmd (keys(%CMDS)) { if ($a eq $CMDS{$cmd}) { $a = $cmd; $done = 1; last; } } if (!$done) { $a =~ s/^SI/UNKNOWN-/; }' ] },
 	);
 } elsif (basename($0) =~ /TV/i) {
 	$DEV       = 'TV';
-	$PORT      = '/dev/tty.' . $DEV . '-DevB';
-	$BLUETOOTH = 1;
+	$PORT      = '/dev/tty.usbserial-A501JRBK';
+	$BLUETOOTH = 0;
 	$CRLF      = "\r";
 	$DELIMITER = "\r";
 	%CMDS      = (
-		'INIT'      => 'RSPW1',
-		'ON'        => 'POWR1',
-		'OFF'       => 'POWR0',
-		'STATUS'    => 'POWR?',
-		'VOL+'      => 'MVUP',
-		'VOL-'      => 'MVDOWN',
-		'MUTE'      => 'MUTE1',
-		'UNMUTE'    => 'MUTE2',
-		'TV'        => 'IAVD0',
-		'PLEX'      => 'IAVD7',
-		'VOL_CHECK' => 'VOLM?',
-		'VOL6'      => 'VOLM6',
-		'VOL12'     => 'VOLM12',
-		'VOL24'     => 'VOLM24',
-		'VOL+'      => 'VOLM',
-		'VOL-'      => 'VOLM'
+		'INIT'   => 'RSPW1   ',
+		'ON'     => 'POWR1   ',
+		'OFF'    => 'POWR0   ',
+		'STATUS' => 'POWR?   ',
+		'MUTE'   => 'MUTE1   ',
+		'UNMUTE' => 'MUTE2   ',
+		'INPUT'  => 'IAVD?   ',
+		'TV'     => 'ITVD0   ',
+		'PLEX'   => 'IAVD7   ',
+		'VOL'    => 'VOLM?   ',
+		'CH+'    => 'CHUP1   ',
+		'CH-'    => 'CHDW1   ',
+		'CC'     => 'CLCP1   ',
+		'VOL0'   => 'VOLM0   ',
+		'VOL1'   => 'VOLM1   ',
+		'VOL2'   => 'VOLM2   ',
+		'VOL3'   => 'VOLM3   ',
+		'VOL4'   => 'VOLM4   ',
+		'VOL5'   => 'VOLM5   ',
+		'VOL6'   => 'VOLM6   ',
+		'VOL7'   => 'VOLM7   ',
+		'VOL8'   => 'VOLM8   ',
+		'VOL9'   => 'VOLM9   ',
+		'VOL10'  => 'VOLM10  ',
+		'VOL11'  => 'VOLM11  ',
+		'VOL12'  => 'VOLM12  ',
+		'VOL13'  => 'VOLM13  ',
+		'VOL14'  => 'VOLM14  ',
+		'VOL15'  => 'VOLM15  ',
+		'VOL16'  => 'VOLM16  ',
+		'VOL17'  => 'VOLM17  ',
+		'VOL18'  => 'VOLM18  ',
+		'VOL19'  => 'VOLM19  ',
+		'VOL20'  => 'VOLM20  ',
+		'VOL21'  => 'VOLM21  ',
+		'VOL22'  => 'VOLM22  ',
+		'VOL23'  => 'VOLM23  ',
+		'VOL24'  => 'VOLM24  ',
+		'VOL25'  => 'VOLM25  ',
+		'VOL26'  => 'VOLM26  ',
+		'VOL27'  => 'VOLM27  ',
+		'VOL28'  => 'VOLM28  ',
+		'VOL29'  => 'VOLM29  ',
+		'VOL30'  => 'VOLM30  ',
+		'VOL31'  => 'VOLM31  ',
+		'VOL32'  => 'VOLM32  ',
+		'VOL33'  => 'VOLM33  ',
+		'VOL34'  => 'VOLM34  ',
+		'VOL35'  => 'VOLM35  ',
+		'VOL36'  => 'VOLM36  ',
+		'VOL37'  => 'VOLM37  ',
+		'VOL38'  => 'VOLM38  ',
+		'VOL39'  => 'VOLM39  ',
+		'VOL40'  => 'VOLM40  ',
+		'VOL41'  => 'VOLM41  ',
+		'VOL42'  => 'VOLM42  ',
+		'VOL43'  => 'VOLM43  ',
+		'VOL44'  => 'VOLM44  ',
+		'VOL45'  => 'VOLM45  ',
+		'VOL46'  => 'VOLM46  ',
+		'VOL47'  => 'VOLM47  ',
+		'VOL48'  => 'VOLM48  ',
+		'VOL49'  => 'VOLM49  ',
+		'VOL50'  => 'VOLM50  ',
+		'VOL51'  => 'VOLM51  ',
+		'VOL52'  => 'VOLM52  ',
+		'VOL53'  => 'VOLM53  ',
+		'VOL54'  => 'VOLM54  ',
+		'VOL55'  => 'VOLM55  ',
+		'VOL56'  => 'VOLM56  ',
+		'VOL57'  => 'VOLM57  ',
+		'VOL58'  => 'VOLM58  ',
+		'VOL59'  => 'VOLM59  ',
+		'VOL60'  => 'VOLM60  ',
 	);
-	%STATUS_CMDS = ('STATUS' => { 'EQUAL' => '1' },);
+	%STATUS_CMDS = (
+		'STATUS' => { 'MATCH' => [ qr/\d/,       qr/1/ ] },
+		'VOL'    => { 'EVAL'  => [ qr/\d/,       '' ] },
+		'INPUT'  => { 'EVAL'  => [ qr/(\d|ERR)/, 'if ($a =~ /7/i) { $a = "PLEX" } elsif ($a =~ /\d/i) { $a = "OTHER" } else { $a = "TV" }' ] },
+	);
+} elsif (basename($0) =~ /HDMI/i) {
+	$DEV       = 'HDMI';
+	$BLUETOOTH = 0;
+	$BAUD      = 19200;
+	$CRLF      = "\r";
+	$DELIMITER = "\r";
+	%CMDS      = (
+		'INIT'    => '',
+		'PLEX'    => 'sw i01',
+		'GAME'    => 'sw i02',
+		'IN_3'    => 'sw i03',
+		'IN_4'    => 'sw i04',
+		'IN_NEXT' => 'sw +',
+		'IN_PREV' => 'sw -',
+		'POD_ON'  => 'pod on',
+		'POD_OFF' => 'pod off',
+	);
+
+	$PORT = `$ENV{'HOME'}/bin/video/serial/findDevice.sh 1d111300`;
+	$PORT =~ s/\s*$//;
+	if (!($PORT =~ /^\/dev\/tty\.usbserial/)) {
+		die("Unable to find serial device by USB location\n");
+	}
+
+	%STATUS_CMDS = ();
 } else {
 	die("No device specified\n");
 }
@@ -122,7 +214,6 @@ if (basename($0) =~ /PROJECTOR/i) {
 my $DATA_DIR        = DMX::dataDir();
 my $CMD_FILE        = uc($DEV);
 my $BT_CHECK        = $ENV{'HOME'} . '/bin/btcheck';
-my $DELAY_STATUS    = 1;
 my $BYTE_TIMEOUT    = 50;
 my $SILENCE_TIMEOUT = $BYTE_TIMEOUT * 10;
 
@@ -136,7 +227,7 @@ if ($ENV{'DEBUG'}) {
 # Command-line arguments
 my ($DELAY) = @ARGV;
 if (!$DELAY) {
-	$DELAY = 15;
+	$DELAY = 1;
 }
 
 # Sanity check
@@ -150,7 +241,7 @@ if (!-r $PORT) {
 if ($BLUETOOTH) {
 	system($BT_CHECK, $DEV);
 	if ($? != 0) {
-		sleep($DELAY_STATUS);
+		sleep($DELAY);
 		die('Bluetooth device "' . $DEV . "\" not available\n");
 	}
 }
@@ -161,6 +252,18 @@ my $select = DMX::selectSock($CMD_FILE);
 # Port init
 my $port = new Device::SerialPort($PORT)
   or die('Unable to open serial connection: ' . $PORT . ": ${!}\n");
+if ($BAUD) {
+	$port->baudrate($BAUD);
+}
+if ($DBITS) {
+	$port->databits($DBITS);
+}
+if ($SBITS) {
+	$port->stopbits($SBITS);
+}
+if ($PARITY) {
+	$port->parity($PARITY);
+}
 $port->read_const_time($BYTE_TIMEOUT);
 
 # Init (clear any previous state)
@@ -170,10 +273,13 @@ sendQuery($port, $CMDS{'INIT'});
 my $lastStatus = 0;
 my %STATUS     = ();
 foreach my $cmd (keys(%STATUS_CMDS)) {
-	my %tmp = ('status' => 0, 'last' => 0);
+	my %tmp = ('status' => 0, 'last' => '');
 	$tmp{'path'} = $DATA_DIR . uc($DEV);
 	if ($cmd ne 'STATUS') {
 		$tmp{'path'} .= '_' . uc($cmd);
+	}
+	if (-r $tmp{'path'}) {
+		unlink($tmp{'path'});
 	}
 
 	$STATUS{$cmd} = \%tmp;
@@ -183,8 +289,8 @@ foreach my $cmd (keys(%STATUS_CMDS)) {
 while (1) {
 
 	# Calculate our next timeout
-	# Hold on select() but not more than $DELAY_STATUS after our last update
-	my $timeout = ($lastStatus + $DELAY_STATUS) - time();
+	# Hold on select() but not more than $DELAY after our last update
+	my $timeout = ($lastStatus + $DELAY) - time();
 	if ($timeout < 0) {
 		$timeout = 0;
 	}
@@ -232,7 +338,7 @@ while (1) {
 	}
 
 	# Read periodic data, but not too frequently
-	if (time() > $lastStatus + $DELAY_STATUS) {
+	if (time() > $lastStatus + $DELAY) {
 
 		# Record the last status update time
 		$lastStatus = time();
@@ -251,30 +357,35 @@ while (1) {
 			}
 			my $result = sendQuery($port, $CMDS{$cmd});
 
-			# Process the result as requested
-			if ($result) {
-				if ($scmd->{'MATCH'}) {
-					if ($result =~ $scmd->{'MATCH'}[0]) {
-						if ($result =~ $scmd->{'MATCH'}[1]) {
-							$STATUS{$cmd}->{'status'} = 1;
-						} else {
-							$STATUS{$cmd}->{'status'} = 0;
-						}
+			# On read error wait a short while for the device to recover
+			if (!defined($result) || $result eq '' || !($result =~ /[[:print:]]/)) {
+				print STDERR 'Read error. Delaying ' . (4 * $DELAY) . " seconds\n";
+				sleep(4 * $DELAY);
+				next;
+			}
+
+			# Process the (non-empty) result as requested
+			if ($scmd->{'MATCH'}) {
+				if ($result =~ $scmd->{'MATCH'}[0]) {
+					if ($result =~ $scmd->{'MATCH'}[1]) {
+						$STATUS{$cmd}->{'status'} = 1;
+					} else {
+						$STATUS{$cmd}->{'status'} = 0;
 					}
-				} elsif ($scmd->{'REPLACE'}) {
-					if ($result =~ $scmd->{'REPLACE'}) {
-						$STATUS{$cmd}->{'status'} = $result;
-						$STATUS{$cmd}->{'status'} =~ s/$scmd->{'REPLACE'}/$1/;
-					}
-				} elsif ($scmd->{'EVAL'}) {
-					my $a = $result;
-					if ($result =~ $scmd->{'EVAL'}[0]) {
-						eval($scmd->{'EVAL'}[1]);
-						$STATUS{$cmd}->{'status'} = $a;
-					}
-				} else {
-					die('Invalid status match type "' . (keys(%{$scmd}))[0] . '" in command: ' . $cmd . "\n");
 				}
+			} elsif ($scmd->{'REPLACE'}) {
+				if ($result =~ $scmd->{'REPLACE'}) {
+					$STATUS{$cmd}->{'status'} = $result;
+					$STATUS{$cmd}->{'status'} =~ s/$scmd->{'REPLACE'}/$1/;
+				}
+			} elsif ($scmd->{'EVAL'}) {
+				my $a = $result;
+				if ($result =~ $scmd->{'EVAL'}[0]) {
+					eval($scmd->{'EVAL'}[1]);
+					$STATUS{$cmd}->{'status'} = $a;
+				}
+			} else {
+				die('Invalid status match type "' . (keys(%{$scmd}))[0] . '" in command: ' . $cmd . "\n");
 			}
 
 			# Ensure the data is clean
@@ -334,15 +445,14 @@ sub clearBuffer($) {
 }
 
 sub collectUntil($$) {
-	my ($port, $char) = @_;
-	if (length($char) != 1) {
-		die('Invalid collection delimiter: ' . $char . "\n");
-	}
+	my ($port, $delim) = @_;
+	my $char = substr($delim, 0, 1);
 
 	# This byte-by-byte reading is not efficient, but it's safe
 	# Allow reading forever as long as we don't exceed the silence timeout
 	my $count  = 0;
 	my $string = '';
+	my $end    = undef();
 	while ($count < $SILENCE_TIMEOUT / $BYTE_TIMEOUT) {
 		my $byte = $port->read(1);
 		if (length($byte)) {
@@ -353,8 +463,19 @@ sub collectUntil($$) {
 				print STDERR "\tRead: " . $byte . "\n";
 			}
 
-			if ($byte eq $char) {
-				last;
+			if (defined($end)) {
+				$end .= $byte;
+				if ($end eq $delim) {
+					last;
+				} elsif ($end ne substr($delim, 0, length($end))) {
+					undef($end);
+				}
+			} elsif ($byte eq $char) {
+				if (length($delim) == 1) {
+					last;
+				} else {
+					$end = $byte;
+				}
 			}
 		} else {
 			$count++;

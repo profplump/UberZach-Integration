@@ -4,11 +4,6 @@
 <dict>
 	<key>LimitLoadToSessionType</key>
 	<string>Aqua</string>
-	<key>LimitLoadToHosts</key>
-	<array>
-		<string>loki.uberzach.com</string>
-		<string>Loki.local</string>
-	</array>
 	<key>RunAtLoad</key>
 	<true/>
 	<key>Label</key>
@@ -34,7 +29,7 @@
 			<string>1</string>
 		</dict>
 		<key>StandardErrorPath</key>
-		<string>/Users/tv/com.uberzach.amplifierPower_errlog.txt</string>
+		<string>/Users/tv/Library/Logs/com.uberzach.amplifierPower.log</string>
 	-->
 </dict>
 </plist>
