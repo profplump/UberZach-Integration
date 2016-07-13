@@ -76,7 +76,7 @@ while (1) {
 
     # Calculate the new state
     $stateLast = $state;
-    if ($masterState != 'OFF') {
+    if ($masterState ne 'OFF') {
         $state = 'ON';
     } else {
         $state = 'OFF';
