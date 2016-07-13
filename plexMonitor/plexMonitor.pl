@@ -218,8 +218,12 @@ sub xbmcJSON($$) {
 	# Send the request
 	if ($JSON_DEBUG) {
 		print STDERR 'Sending command: ' . $cmd . "\n";
+		if ($DEBUG) {
+			print STDERR 'Escaped URL: ' . $BASE_URL . uri_escape($cmd) . "\n";
+		}
 	}
 	my $data = get($BASE_URL . uri_escape($cmd));
+	print STDERR 'Returned data: ' . $data . "\n";
 	if (!defined($data)) {
 		if ($DEBUG) {
 			print STDERR "No data returned from RPC call\n";
