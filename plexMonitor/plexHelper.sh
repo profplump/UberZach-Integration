@@ -10,7 +10,11 @@ if ! ~/bin/video/isMediaMounted; then
 fi
 
 # Kill previous instances
-killall Plex
+killall OpenPHT
+killall 'Plex Home Theater'
+killall 'Plex Media Player'
 
 # Exec
-exec '/Applications/Zach/Media/Plex Home Theater.app/Contents/MacOS/Plex Home Theater'
+exec '/Applications/Zach/Media/OpenPHT.app/Contents/MacOS/OpenPHT'
+#exec '/Applications/Zach/Media/Plex Home Theater.app/Contents/MacOS/Plex Home Theater'
+#exec '/Applications/Zach/Media/Plex Media Player.app/Contents/MacOS/Plex Media Player'
