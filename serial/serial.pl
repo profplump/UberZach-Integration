@@ -82,7 +82,7 @@ if (basename($0) =~ /PROJECTOR/i) {
 
 	);
 
-	$PORT = `$ENV{'HOME'}/bin/video/serial/findDevice.sh 1d111200`;
+	$PORT = `$ENV{'HOME'}/bin/video/serial/findDevice.sh 1d131000`;
 	$PORT =~ s/\s*$//;
 	if (!($PORT =~ /^\/dev\/tty\.usbserial/)) {
 		die("Unable to find serial device by USB location\n");
@@ -199,7 +199,7 @@ if (basename($0) =~ /PROJECTOR/i) {
 		'POD_OFF' => 'pod off',
 	);
 
-	$PORT = `$ENV{'HOME'}/bin/video/serial/findDevice.sh 1d111300`;
+	$PORT = `$ENV{'HOME'}/bin/video/serial/findDevice.sh 1d132000`;
 	$PORT =~ s/\s*$//;
 	if (!($PORT =~ /^\/dev\/tty\.usbserial/)) {
 		die("Unable to find serial device by USB location\n");
