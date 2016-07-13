@@ -152,7 +152,7 @@ while (1) {
 }
 
 # Send the requested command and enforce an inter-command delay
-sub sendCmd($$) {
+sub sendCmd($) {
 	my ($cmd) = @_;
 
 	# Send the command
