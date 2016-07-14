@@ -567,6 +567,7 @@ while (1) {
     # Calculate the PLEX state
     if ( exists( $files{'FRONT_APP'} ) ) {
         if (   $files{'FRONT_APP'}->{'value'} =~ 'com.plexapp.plexhometheater'
+            || $files{'FRONT_APP'}->{'value'} =~ 'tv.openpht.openpht'
             || $files{'FRONT_APP'}->{'value'} eq
             'com.apple.ScreenSaver.Engine' )
         {
