@@ -515,13 +515,13 @@ sub parseConfig($) {
 # The UDP listener would be more portable, but I already know how to do this
 # The PMS playback API would work too, but this script currently knows nothing of the PMS
 sub playPausePlex() {
-	my @cmd = ('tell application "Plex" to activate', 'tell application "System Events" to key code 49');
+	my @cmd = ('tell application "OpenPHT" to activate', 'tell application "System Events" to key code 49');
 	Audio::runApplescript(join("\n", @cmd));
 }
 
 # Send a noop keycode to Plex to fend off the screen saver
 sub ticklePlex() {
-	my @cmd = ('tell application "Plex" to activate', 'tell application "System Events" to key code 1');
+	my @cmd = ('tell application "OpenPHT" to activate', 'tell application "System Events" to key code 1');
 	Audio::runApplescript(join("\n", @cmd));
 }
 

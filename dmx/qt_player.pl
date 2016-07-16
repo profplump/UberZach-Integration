@@ -136,8 +136,8 @@ sub init() {
 	# Always load and play the SILENCE file (for sanity and general init)
 	load('SILENCE', 'DMX/Silence.wav');
 
-	# Bring Plex back to the front
-	cmdApp('Plex', 'activate');
+	# Bring OpenPHT back to the front
+	cmdApp('OpenPHT', 'activate');
 }
 
 # Open the named file and record the handle
@@ -199,8 +199,8 @@ sub load($$) {
 	$FILES{$name} = $doc;
 	printFiles();
 
-	# Bring Plex back to the front
-	cmdApp('Plex', 'activate');
+	# Bring OpenPHT back to the front
+	cmdApp('OpenPHT', 'activate');
 }
 
 # Close the named file
