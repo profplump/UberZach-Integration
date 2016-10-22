@@ -46,6 +46,13 @@ my %COLORS    = (
 		'low'  => 'THEATER_BLACK_1',
 	},
 );
+%COLORS    = (
+	'100' => {
+		'high' => 'NATURAL',
+		'play' => 'NATURAL',
+		'low'  => 'NATURAL',
+	},
+);
 
 # App config
 my $DATA_DIR     = DMX::dataDir();
