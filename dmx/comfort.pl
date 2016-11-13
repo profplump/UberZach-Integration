@@ -78,6 +78,8 @@ while (1) {
     $stateLast = $state;
     if ($masterState ne 'OFF') {
         $state = 'ON';
+    } elsif (exists($exists{'NO_MOTION'}) && $exists{'NO_MOTION'}) {
+        $state = 'ON';
     } else {
         $state = 'OFF';
     }
