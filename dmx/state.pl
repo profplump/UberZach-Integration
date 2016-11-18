@@ -284,9 +284,7 @@ foreach my $name (keys(%MON_FILES)) {
 foreach my $file (values(%files)) {
     if (-e $file->{'path'}) {
         if ($DEBUG) {
-            print STDERR 'Deleting '
-              . $file->{'name'} . ': '
-              . $file->{'path'} . "\n";
+            print STDERR 'Deleting ' . $file->{'name'} . ': ' . $file->{'path'} . "\n";
         }
         unlink($file->{'path'});
     }
@@ -376,7 +374,7 @@ while (1) {
     # Monitor files of all types
     foreach my $file (values(%files)) {
 
-		# Record the previous status and clear the new one, unless the file is type EXTRA
+        # Record the previous status and clear the new one, unless the file is type EXTRA
         if (!$file->{'attr'}->{'extra'}) {
             $file->{'last'}  = $file->{'value'};
             $file->{'value'} = 0;
@@ -406,20 +404,15 @@ while (1) {
                 if (exists($DISPLAY_DEVS{ $file->{'name'} })) {
                     $DISPLAY = $file->{'name'};
                     if ($DEBUG) {
-                        print STDERR 'Selecting display device: ' . $DISPLAY
-                          . "\n";
+                        print STDERR 'Selecting display device: ' . $DISPLAY . "\n";
                     }
                 }
 
                 if ($DEBUG) {
                     if ($file->{'attr'}->{'available'}) {
-                        print STDERR 'Added file '
-                          . $file->{'name'} . ': '
-                          . $file->{'path'} . "\n";
+                        print STDERR 'Added file ' . $file->{'name'} . ': ' . $file->{'path'} . "\n";
                     } else {
-                        print STDERR 'Dropped file '
-                          . $file->{'name'} . ': '
-                          . $file->{'path'} . "\n";
+                        print STDERR 'Dropped file ' . $file->{'name'} . ': ' . $file->{'path'} . "\n";
                     }
                 }
             }
@@ -434,7 +427,7 @@ while (1) {
         if ($file->{'attr'}->{'mtime'}) {
             my $mtime = mtime($file->{'path'});
 
-			# All EXISTS files have MTIME set, and mtime returns 0 if the file does not exist, so we can overload this check
+            # All EXISTS files have MTIME set, and mtime returns 0 if the file does not exist, so we can overload this check
             if ($file->{'attr'}->{'exists'}) {
                 if ($mtime > 0) {
                     $file->{'update'} = $mtime;
@@ -445,17 +438,14 @@ while (1) {
             } else {
                 $file->{'update'} = $mtime;
 
-				# Set the value if the update is recent -- VALUE and STATUS will overwrite as needed
+                # Set the value if the update is recent -- VALUE and STATUS will overwrite as needed
                 if ($mtime >= $now) {
                     $file->{'value'} = 1;
                 }
             }
 
             if ($DEBUG) {
-                print STDERR 'Mtime: '
-                  . $file->{'name'} . ': '
-                  . $file->{'value'} . ':'
-                  . $file->{'update'} . "\n";
+                print STDERR 'Mtime: ' . $file->{'name'} . ': ' . $file->{'value'} . ':' . $file->{'update'} . "\n";
             }
         }
 
@@ -494,9 +484,7 @@ while (1) {
                 }
             }
             if ($DEBUG) {
-                print STDERR 'Status: '
-                  . $file->{'name'} . ': '
-                  . $file->{'value'} . "\n";
+                print STDERR 'Status: ' . $file->{'name'} . ': ' . $file->{'value'} . "\n";
             }
 
             # Handle extras, if any
@@ -513,9 +501,7 @@ while (1) {
                     }
 
                     if ($DEBUG) {
-                        print STDERR "\t"
-                          . $name . ': '
-                          . $files{$name}{'value'} . "\n";
+                        print STDERR "\t" . $name . ': ' . $files{$name}{'value'} . "\n";
                     }
                 }
             }
@@ -594,7 +580,7 @@ while (1) {
     $stateLast = $state;
     if (!defined($DISPLAY) || !exists($files{$DISPLAY})) {
 
-		# If there's no display the state is always PLAY or PAUSE, as indicated by the master
+        # If there's no display the state is always PLAY or PAUSE, as indicated by the master
         if ($playing) {
             $state = 'PLAY';
         } else {
@@ -614,7 +600,7 @@ while (1) {
 
     } else {
 
-		# If the display exists but is off, check the timeouts to determine MOTION vs. OFF
+        # If the display exists but is off, check the timeouts to determine MOTION vs. OFF
         if ($timeSinceUpdate > $STATE_TIMEOUT) {
             $state = 'OFF';
         } elsif ($timeSinceUpdate < $STATE_TIMEOUT) {
@@ -649,7 +635,7 @@ while (1) {
         $files{'ALARM'}->{'value'} = $alarm;
     }
 
-	# Clear EXISTS_ON files when the main state is "OFF" (and before we append their status)
+    # Clear EXISTS_ON files when the main state is "OFF" (and before we append their status)
     foreach my $file (values(%files)) {
         if (   $file->{'attr'}->{'clear_off'}
             && $file->{'value'}
@@ -658,13 +644,12 @@ while (1) {
             unlink($file->{'path'});
             $file->{'status'} = 0;
             if ($DEBUG) {
-                print STDERR 'Clearing exists flag for: '
-                  . $file->{'name'} . "\n";
+                print STDERR 'Clearing exists flag for: ' . $file->{'name'} . "\n";
             }
         }
     }
 
-	# Clear EXISTS_TIMEOUT files when the main state is "OFF" and EXISTS_TIMEOUT has expired (and before we append their status)
+    # Clear EXISTS_TIMEOUT files when the main state is "OFF" and EXISTS_TIMEOUT has expired (and before we append their status)
     foreach my $file (values(%files)) {
         if (   $file->{'attr'}->{'clear_timeout'}
             && $file->{'value'}
@@ -675,8 +660,7 @@ while (1) {
             unlink($file->{'path'});
             $file->{'status'} = 0;
             if ($DEBUG) {
-                print STDERR 'Clearing exists flag for: '
-                  . $file->{'name'} . "\n";
+                print STDERR 'Clearing exists flag for: ' . $file->{'name'} . "\n";
             }
         }
     }
@@ -689,8 +673,7 @@ while (1) {
             my $text = $file->{'value'};
             $text =~ s/\s/ /g;
             $text =~ s/\|/-/g;
-            push(@statTime,
-                $file->{'name'} . '|' . $text . '|' . $file->{'update'});
+            push(@statTime, $file->{'name'} . '|' . $text . '|' . $file->{'update'});
         }
         $status = "\n" . join("\n", @statTime);
     }
@@ -701,8 +684,7 @@ while (1) {
             unlink($file->{'path'});
             $file->{'status'} = 0;
             if ($DEBUG) {
-                print STDERR 'Clearing exists flag for: '
-                  . $file->{'name'} . "\n";
+                print STDERR 'Clearing exists flag for: ' . $file->{'name'} . "\n";
             }
         }
     }
@@ -728,9 +710,7 @@ while (1) {
         foreach my $file (values(%files)) {
             if ($file->{'update'} > $pushLast) {
                 if ($DEBUG) {
-                    print STDERR 'Mtime change: '
-                      . $file->{'name'} . ' ('
-                      . $file->{'update'} . ")\n";
+                    print STDERR 'Mtime change: ' . $file->{'name'} . ' (' . $file->{'update'} . ")\n";
                 }
                 $update = 1;
                 last;
@@ -743,10 +723,7 @@ while (1) {
         foreach my $file (values(%files)) {
             if ($file->{'value'} ne $file->{'last'}) {
                 if ($DEBUG) {
-                    print STDERR 'Value change: '
-                      . $file->{'name'} . ' ('
-                      . $file->{'last'} . ' => '
-                      . $file->{'value'} . ")\n";
+                    print STDERR 'Value change: ' . $file->{'name'} . ' (' . $file->{'last'} . ' => ' . $file->{'value'} . ")\n";
                 }
                 $update = 1;
                 last;
@@ -763,17 +740,13 @@ while (1) {
         # Send notifications to all subscribers
         my $msg = $state . $status;
         if ($DEBUG) {
-            print STDERR '<STATE ('
-              . length($msg) . ")>\n"
-              . $msg
-              . "\n<END STATE>\n\n";
+            print STDERR '<STATE (' . length($msg) . ")>\n" . $msg . "\n<END STATE>\n\n";
         }
         foreach my $sub (@subscribers) {
 
             # Drop subscribers that are not available
             if (!eval { $sub->{'socket'}->send($state . $status) }) {
-                print STDERR 'Dropping bad socket from subscriber list: '
-                  . $sub->{'path'} . "\n";
+                print STDERR 'Dropping bad socket from subscriber list: ' . $sub->{'path'} . "\n";
 
                 my @new_subscribers = ();
                 foreach my $new (@subscribers) {
@@ -798,10 +771,8 @@ sub mtime($) {
     my ($file) = @_;
     my $mtime = 0;
     if (-r $file) {
-        (
-            undef(), undef(), undef(), undef(), undef(), undef(), undef(),
-            undef(), undef(), $mtime,  undef(), undef(), undef()
-        ) = stat($file);
+        (undef(), undef(), undef(), undef(), undef(), undef(), undef(), undef(), undef(), $mtime, undef(), undef(), undef()) =
+          stat($file);
     }
     return $mtime;
 }
