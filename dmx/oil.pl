@@ -88,7 +88,9 @@ while (1) {
 
 	# Calculate the new state
 	$stateLast = $state;
-	if ($mtime{'MOTION_GARAGE'} > $now - $MOTION_TIMEOUT) {
+	if (exists($exists{'OIL_DISABLE'}) && $exists{'OIL_DISABLE'}) {
+		$state = 'OFF';
+	} elsif ($mtime{'MOTION_GARAGE'} > $now - $MOTION_TIMEOUT) {
 		$state = 'ON';
 	} elsif (($masterState eq 'PAUSE' || $masterState eq 'MOTION')
 		&& $PREHEAT_TIMEOUT > $elapsed && $PREHEAT_DELAY < $elapsed)
