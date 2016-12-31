@@ -106,7 +106,8 @@ if ($HOST =~ /loki/i) {
     $MON_FILES{'LOCK'} = 'EXISTS-NOUPDATE';
 
     # Alarm
-    $MON_FILES{'ALARM'} = 'NONE';
+    $MON_FILES{'ALARM'}        = 'NONE';
+    $MON_FILES{'ALARM_ENABLE'} = 'EXISTS-NOUPDATE';
 
     # OS State
     $MON_FILES{'FRONT_APP'}   = 'LINE-NOUPDATE';
@@ -614,10 +615,10 @@ while (1) {
         $state = 'OFF';
     }
 
-    # ALARM if LOCK exists and the master state is not OFF or any motion exists
+    # ALARM if ALARM_ENABLE exists and the master state is not OFF or any motion exists
     {
         my $alarm = 0;
-        if (exists($files{'LOCK'}) && $files{'LOCK'}->{'value'}) {
+        if (exists($files{'ALARM_ENABLE'}) && $files{'ALARM_ENABLE'}->{'value'}) {
             if (
                    $state ne 'OFF'
                 || (exists($files{'MOTION'}) && $files{'MOTION'}->{'value'})
