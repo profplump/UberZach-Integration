@@ -190,6 +190,16 @@ while (1) {
 		DMX::say('System ' . lc($mode));
 	}
 
+	# Speak when ALARM_ENABLE changes
+	if (exists($exists{'ALARM_ENABLE'}) && exists($last{'ALARM_ENABLE'}) && $exists{'ALARM_ENABLE'} ne $last{'ALARM_ENABLE'}) {
+		my $mode = 'DISABLED';
+		if ($exists{'ALARM_ENABLE'}) {
+			$mode = 'ENABLED';
+		}
+
+		DMX::say('Alarm ' . lc($mode));
+	}
+
 	# Email when ALARM is asserted
 	if (exists($exists{'ALARM'}) && exists($last{'ALARM'}) && $exists{'ALARM'} && !$last{'ALARM'}) {
 		my @exists_tmp = ();
