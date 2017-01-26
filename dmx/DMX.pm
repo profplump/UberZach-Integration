@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-use POSIX;
+use POSIX qw(strftime);
 use File::Temp;
 use IO::Select;
 use IO::Socket::UNIX;
@@ -153,7 +153,8 @@ sub parseState($$$) {
 	if ($DEBUG) {
 		my @exists_tmp = ();
 		foreach my $key (sort(keys(%{$exists}))) {
-			push(@exists_tmp, $key . ":\t" . $exists->{$key} . ' @ ' . $mtime->{$key});
+			push(@exists_tmp,
+				$key . ":\t" . $exists->{$key} . ' @ ' . POSIX::strftime('%Y-%m-%d %H:%M:%S', localtime($mtime->{$key})));
 		}
 		print STDERR 'Got state: ' . $cmdState . "\n" . join("\n", @exists_tmp) . "\n";
 	}
