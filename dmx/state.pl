@@ -98,8 +98,8 @@ if ($HOST =~ /loki/i) {
     $MON_FILES{'FAN_CMD'} = 'EXISTS-TIMEOUT';
 
     # Oil
-    $MON_FILES{'OIL'}         = 'LINE-NOUPDATE';
-    $MON_FILES{'OIL_DISABLE'} = 'EXISTS-NOUPDATE';
+    $MON_FILES{'OIL'}        = 'LINE-NOUPDATE';
+    $MON_FILES{'OIL_ENABLE'} = 'EXISTS-NOUPDATE';
 
     # Garage
     $MON_FILES{'DOOR'} = 'LINE-NOUPDATE';

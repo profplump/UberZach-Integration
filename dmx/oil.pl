@@ -9,9 +9,10 @@ use lib dirname(abs_path($0));
 use DMX;
 
 # User config
-my $PREHEAT_DELAY   = 5;
+my $PREHEAT_DELAY   = 2;
 my $PREHEAT_TIMEOUT = $PREHEAT_DELAY + 60;
 my $MOTION_TIMEOUT  = 300;
+my $ENABLE_TIMEOUT  = 1800;
 my %DIM             = (
 	'OFF'     => [ { 'channel' => 20, 'value' => 0,   'time' => 0 }, ],
 	'ON'      => [ { 'channel' => 20, 'value' => 255, 'time' => 0 }, ],
@@ -65,7 +66,7 @@ while (1) {
 	# Record only valid states
 	if (defined($cmdState)) {
 		$masterState = $cmdState;
-		$pullLast = $now;
+		$pullLast    = $now;
 	}
 
 	# Die if we don't see regular updates
@@ -88,12 +89,11 @@ while (1) {
 
 	# Calculate the new state
 	$stateLast = $state;
-	if (exists($exists{'OIL_DISABLE'}) && $exists{'OIL_DISABLE'}) {
-		$state = 'OFF';
-	} elsif ($mtime{'MOTION_GARAGE'} > $now - $MOTION_TIMEOUT) {
+	if ($mtime{'OIL_ENABLE'} > $now - $ENABLE_TIMEOUT && $mtime{'MOTION_GARAGE'} > $now - $MOTION_TIMEOUT) {
 		$state = 'ON';
 	} elsif (($masterState eq 'PAUSE' || $masterState eq 'MOTION')
-		&& $PREHEAT_TIMEOUT > $elapsed && $PREHEAT_DELAY < $elapsed)
+		&& $PREHEAT_TIMEOUT > $elapsed
+		&& $PREHEAT_DELAY < $elapsed)
 	{
 		$state = 'PREHEAT';
 	} else {
