@@ -87,17 +87,24 @@ while (1) {
 		$DELAY = $MAX_DELAY;
 	}
 
+	# Overall enable state
+	my $enable = 0;
+	if ($exists{'OIL_ENABLE'} && $mtime{'OIL_ENABLE'} > $now - $ENABLE_TIMEOUT) {
+		$enable = 1;
+	}
+
 	# Calculate the new state
 	$stateLast = $state;
-	if ($mtime{'OIL_ENABLE'} > $now - $ENABLE_TIMEOUT && $mtime{'MOTION_GARAGE'} > $now - $MOTION_TIMEOUT) {
-		$state = 'ON';
-	} elsif (($masterState eq 'PAUSE' || $masterState eq 'MOTION')
-		&& $PREHEAT_TIMEOUT > $elapsed
-		&& $PREHEAT_DELAY < $elapsed)
-	{
-		$state = 'PREHEAT';
-	} else {
-		$state = 'OFF';
+	$state     = 'OFF';
+	if ($enable) {
+		if ($mtime{'MOTION_GARAGE'} > $now - $MOTION_TIMEOUT) {
+			$state = 'ON';
+		} elsif (($masterState eq 'PAUSE' || $masterState eq 'MOTION')
+			&& $PREHEAT_TIMEOUT > $elapsed
+			&& $PREHEAT_DELAY < $elapsed)
+		{
+			$state = 'PREHEAT';
+		}
 	}
 
 	# Force updates on a periodic basis
