@@ -91,6 +91,8 @@ while (1) {
 	my $enable = 0;
 	if ($exists{'OIL_ENABLE'} && $mtime{'OIL_ENABLE'} > $now - $ENABLE_TIMEOUT) {
 		$enable = 1;
+	} elsif ($exists{'LOCK'}) {
+		$enable = 1;
 	}
 
 	# Calculate the new state
