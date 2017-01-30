@@ -121,6 +121,7 @@ if ($HOST =~ /loki/i) {
 
     # Lights
     $MON_FILES{'LED'}          = 'LINE-NOUPDATE';
+    $MON_FILES{'SHELF_HIGH'}   = 'LINE-NOUPDATE';
     $MON_FILES{'OVERHEAD'}     = 'LINE-NOUPDATE';
     $MON_FILES{'ROPE'}         = 'LINE-NOUPDATE';
     $MON_FILES{'STAIRS'}       = 'LINE-NOUPDATE';

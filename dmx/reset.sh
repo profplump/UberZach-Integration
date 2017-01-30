@@ -1,5 +1,5 @@
 #!/bin/bash
-PROCS="amplifierPower.pl audio.pl bias.pl color.pl comfort.pl debug.pl door.pl fan.pl garage.pl garage_leds.pl garage_shelf.pl leds.pl oil.pl overhead.pl projectorPower.pl rave.pl rifftrax.pl rope.pl frontApp stairs.pl announce.pl rumbleCtl.pl HDMIctrl.pl vr.pl"
+PROCS="amplifierPower.pl audio.pl bias.pl color.pl comfort.pl debug.pl door.pl fan.pl garage.pl garage_leds.pl garage_shelf.pl leds.pl oil.pl overhead.pl projectorPower.pl rave.pl rifftrax.pl rope.pl frontApp shelf_high.pl stairs.pl announce.pl rumbleCtl.pl HDMIctrl.pl vr.pl"
 
 # Find the PID for each named process
 PIDS=""

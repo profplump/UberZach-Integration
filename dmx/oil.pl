@@ -45,6 +45,8 @@ my $pushLast    = 0;
 my $pullLast    = time();
 my $update      = 0;
 my $lastPlay    = 0;
+my $enable      = 0;
+my $enableLast  = $enable;
 
 # Always force the heater into OFF at launch
 $state = 'OFF';
@@ -88,7 +90,8 @@ while (1) {
 	}
 
 	# Overall enable state
-	my $enable = 0;
+	$enableLast = $enable;
+	$enable = 0;
 	if ($exists{'OIL_ENABLE'} && $mtime{'OIL_ENABLE'} > $now - $ENABLE_TIMEOUT) {
 		$enable = 1;
 	} elsif ($exists{'LOCK'}) {
@@ -125,11 +128,23 @@ while (1) {
 		$update = 1;
 	}
 
+	# Force updates on any enabled change
+	if (!$update && $enableLast != $enable) {
+		if ($DEBUG) {
+			print STDERR 'Enable change: ' . $enableLast . ' => ' . $enable . "\n";
+		}
+		$update = 1;
+	}
+
 	# Update the lighting
 	if ($update) {
 
 		# Update
-		DMX::applyDataset($DIM{$state}, $state, $OUTPUT_FILE);
+		my $stateTxt = $state;
+		if ($enable) {
+			$stateTxt .= ' (Enabled)';
+		}
+		DMX::applyDataset($DIM{$state}, $stateTxt, $OUTPUT_FILE);
 
 		# Update the push time
 		$pushLast = $now;

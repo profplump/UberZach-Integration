@@ -28,6 +28,9 @@
 #	26 => Rear Comfort (Switch)
 #	27 => <Unused>
 #	28 => <Unused>
+#	29 => Shelf-High Blue
+#	30 => Shelf-High Red
+#	31 => Shelf-High Green
 #	64 => Rumble
 #	65 => <Unused>
 #	66 => VR Back (Switch)
