@@ -329,5 +329,10 @@ sub say($) {
 	  or die('Unable to write command to socket: SPEAK: ' . $str . ": ${!}\n");
 }
 
+# Allow programatic debug control
+sub debug($) {
+	($DEBUG) = @_;
+}
+
 # Always return true
 1;
