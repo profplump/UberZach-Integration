@@ -2,9 +2,6 @@
 use strict;
 use warnings;
 
-# Always debug
-BEGIN { $ENV{'DEBUG'} = 1; }
-
 # Local modules
 use Cwd qw(abs_path);
 use File::Basename qw(dirname);
@@ -18,6 +15,14 @@ my $DELAY = 10;
 # App config
 my $STATE_SOCK = 'DEBUG';
 
+# Allow one-shot mode or force debug
+my $KEY = undef();
+if (scalar(@ARGV) > 0) {
+	$KEY = $ARGV[0];
+} else {
+	DMX::debug(1);
+}
+
 # Sockets
 DMX::stateSocket($STATE_SOCK);
 DMX::stateSubscribe($STATE_SOCK);
@@ -29,6 +34,16 @@ while (1) {
 	my $state = DMX::readState($DELAY, \%exists, \%mtime, undef());
 
 	if ($state) {
+
+		# One-shot mode
+		if (defined($KEY)) {
+			if (exists($exists{$KEY})) {
+				print $exists{$KEY} . '@' . $mtime{$KEY} . "\n";
+			} else {
+				print STDERR 'No such element: ' . $KEY . "\n";
+			}
+			exit 0;
+		}
 
 		# Find the latest modification timestamp
 		my $file = undef();
