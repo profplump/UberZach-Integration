@@ -3,6 +3,7 @@ use strict;
 use warnings;
 
 # Local modules
+use POSIX;
 use Cwd qw(abs_path);
 use File::Basename qw(dirname);
 use lib dirname(abs_path($0));
@@ -38,7 +39,8 @@ while (1) {
 		# One-shot mode
 		if (defined($KEY)) {
 			if (exists($exists{$KEY})) {
-				print $exists{$KEY} . '@' . $mtime{$KEY} . "\n";
+				print $KEY . ' => ' . $exists{$KEY} . ' @ ' .
+				  POSIX::strftime('%Y-%m-%d %H:%M:%S', localtime($mtime{$KEY})) . "\n";
 			} else {
 				print STDERR 'No such element: ' . $KEY . "\n";
 			}
