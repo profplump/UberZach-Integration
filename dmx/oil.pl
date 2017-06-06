@@ -10,9 +10,10 @@ use DMX;
 
 # User config
 my $PREHEAT_DELAY   = 2;
-my $PREHEAT_TIMEOUT = $PREHEAT_DELAY + 60;
+my $PREHEAT_TIMEOUT = $PREHEAT_DELAY + 300;
 my $MOTION_TIMEOUT  = 1200;
-my $ENABLE_TIMEOUT  = 2400;
+my $PLAYING_TIMEOUT = $PREHEAT_TIMEOUT;
+my $ENABLE_TIMEOUT  = 3600;
 my %DIM             = (
 	'OFF'     => [ { 'channel' => 20, 'value' => 0,   'time' => 0 }, ],
 	'ON'      => [ { 'channel' => 20, 'value' => 255, 'time' => 0 }, ],
@@ -76,13 +77,13 @@ while (1) {
 		die('No update on state socket in past ' . $PULL_TIMEOUT . " seconds. Exiting...\n");
 	}
 
-	# Remember the last master PLAY mtime
+	# Remember the last master PLAY mtime and elapsed seconds since then
 	if ($masterState eq 'PLAY') {
 		$lastPlay = $now;
 	}
+	my $elapsed = $now - $lastPlay;
 
 	# Reduce our minimum update rate to make timer-based modes more accurate
-	my $elapsed = $now - $lastPlay;
 	if ($elapsed && $elapsed < $PREHEAT_TIMEOUT) {
 		$DELAY = $MIN_DELAY;
 	} else {
@@ -91,11 +92,32 @@ while (1) {
 
 	# Overall enable state
 	$enableLast = $enable;
-	$enable = 0;
-	if ($exists{'OIL_ENABLE'} && $mtime{'OIL_ENABLE'} > $now - $ENABLE_TIMEOUT) {
-		$enable = 1;
-	} elsif ($exists{'LOCK'}) {
-		$enable = 1;
+	$enable     = 0;
+	{
+		# Time
+		my (undef(), undef(), $hour, undef(), undef(), undef(), $wday, undef(), undef()) = localtime($now);
+
+		if ($exists{'OIL_DISABLE'}) {
+
+			# When explicitly disabled, overriding all else
+			$enable = 0;
+		} elsif ($exists{'OIL_ENABLE'} && $mtime{'OIL_ENABLE'} > $now - $ENABLE_TIMEOUT) {
+
+			# When explictly enabled, for $ENABLE_TIMEOUT seconds
+			$enable = 1;
+		} elsif ($elapsed < $PLAYING_TIMEOUT) {
+
+			# When playing, and for $PLAYING_TIMEOUT seconds afterward
+			$enable = 1;
+		} elsif ($hour > 23 || $hour < 6) {
+
+			# Late nights
+			$enable = 1;
+		} elsif ($wday == 0 || $wday == 6) {
+
+			# Always-on weekends
+			$enable = 1;
+		}
 	}
 
 	# Calculate the new state
