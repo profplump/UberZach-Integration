@@ -133,8 +133,8 @@ while (1) {
 		$lastUser = $now;
 	}
 
-	# Motion counts as activity when GAME is active
-	if ($exists{'GAME'} && $mtime{'MOTION'} > $lastUser) {
+	# Motion counts as activity
+	if ($mtime{'MOTION'} > $lastUser) {
 		$lastUser = $mtime{'MOTION'};
 	}
 

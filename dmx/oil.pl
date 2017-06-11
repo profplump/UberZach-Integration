@@ -12,8 +12,8 @@ use DMX;
 my $PREHEAT_DELAY   = 2;
 my $PREHEAT_TIMEOUT = $PREHEAT_DELAY + 300;
 my $MOTION_TIMEOUT  = 1200;
-my $PLAYING_TIMEOUT = $PREHEAT_TIMEOUT;
 my $ENABLE_TIMEOUT  = 3600;
+my $PLAYING_TIMEOUT = int($ENABLE_TIMEOUT / 2);
 my %DIM             = (
 	'OFF'     => [ { 'channel' => 20, 'value' => 0,   'time' => 0 }, ],
 	'ON'      => [ { 'channel' => 20, 'value' => 255, 'time' => 0 }, ],
