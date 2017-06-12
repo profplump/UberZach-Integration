@@ -133,9 +133,11 @@ while (1) {
 		$lastUser = $now;
 	}
 
-	# Motion counts as activity
+	# Motion counts as activity, unless we're about to turn off
 	if ($mtime{'MOTION'} > $lastUser) {
-		$lastUser = $mtime{'MOTION'};
+		if (!$shutdown || $timeLeftLast > $OFF_DELAY) {
+			$lastUser = $mtime{'MOTION'};
+		}
 	}
 
 	# Motion counts as activity when PLEX is not active
