@@ -46,6 +46,7 @@ my $pushLast    = 0;
 my $pullLast    = time();
 my $update      = 0;
 my $lastPlay    = 0;
+my $lastPause   = 0;
 my $enable      = 0;
 my $enableLast  = $enable;
 
@@ -80,11 +81,14 @@ while (1) {
 	# Remember the last master PLAY mtime and elapsed seconds since then
 	if ($masterState eq 'PLAY') {
 		$lastPlay = $now;
+	} elsif ($masterState eq 'PAUSE') {
+		$lastPause = $now;
 	}
-	my $elapsed = $now - $lastPlay;
+	my $elaspedPlay = $now - $lastPlay;
+	my $elaspedPause = $now - $lastPause;
 
 	# Reduce our minimum update rate to make timer-based modes more accurate
-	if ($elapsed && $elapsed < $PREHEAT_TIMEOUT) {
+	if ($elaspedPlay && $elaspedPlay < $PREHEAT_TIMEOUT) {
 		$DELAY = $MIN_DELAY;
 	} else {
 		$DELAY = $MAX_DELAY;
@@ -105,9 +109,13 @@ while (1) {
 
 			# When explictly enabled, for $ENABLE_TIMEOUT seconds
 			$enable = 1;
-		} elsif ($elapsed < $PLAYING_TIMEOUT) {
+		} elsif ($elaspedPlay < $PLAYING_TIMEOUT) {
 
 			# When playing, and for $PLAYING_TIMEOUT seconds afterward
+			$enable = 1;
+		} elsif ($elaspedPause < $PLAYING_TIMEOUT) {
+
+			# When paused, and for $PLAYING_TIMEOUT seconds afterward
 			$enable = 1;
 		} elsif ($hour > 23 || $hour < 6) {
 
@@ -127,8 +135,8 @@ while (1) {
 		if ($mtime{'MOTION_GARAGE'} > $now - $MOTION_TIMEOUT) {
 			$state = 'ON';
 		} elsif (($masterState eq 'PAUSE' || $masterState eq 'MOTION')
-			&& $PREHEAT_TIMEOUT > $elapsed
-			&& $PREHEAT_DELAY < $elapsed)
+			&& $PREHEAT_TIMEOUT > $elaspedPlay
+			&& $PREHEAT_DELAY < $elaspedPlay)
 		{
 			$state = 'PREHEAT';
 		}
