@@ -3,8 +3,8 @@
 # Config
 RESTART_DELAY=600
 UNWATCHED_SECTION="2"
-UNWATCHED_SLEEP=60
-UNWATCHED_RETRIES=5
+UNWATCHED_SLEEP=30
+UNWATCHED_RETRIES=3
 MIN_UNWATCHED_COUNT=10
 MAX_MEM=$(( 14 * 1024 * 1024 )) # GB in kB
 ADMIN_EMAIL="zach@kotlarek.com"
@@ -20,7 +20,7 @@ if [ -z "${PMS_URL}" ]; then
 	if [ -z "${PMS_PORT}" ]; then
 		PMS_PORT=32400
 	fi
-	PMS_URL="http://${PMS_HOST}:${PMS_PORT}"
+	PMS_URL="https://${PMS_HOST}:${PMS_PORT}"
 fi
 if [ -z "${PMS_TOKEN}" ]; then
 	echo "No PMS_TOKEN provided" 1>&2
@@ -71,8 +71,8 @@ while [ $LOOP -ne 0 ]; do
 		FAILED="Too few unwatched series"
 		while [ $TRY -le $UNWATCHED_RETRIES ] && [ -n "${FAILED}" ]; do
 			TRY=$(( $TRY + 1 ))
-			PAGE="`curl ${CURL_OPTS[@]} --max-time "${UNWATCHED_TIMEOUT}" "${UNWATCHED_URL}"`"
-			COUNT="`echo "${PAGE}" | grep '</Directory>' | wc -l`"
+			PAGE="`curl ${CURL_OPTS[@]} --max-time "${UNWATCHED_TIMEOUT}" "${UNWATCHED_URL}" 2>&1`"
+			COUNT="`echo "${PAGE}" | grep '</Directory>' | wc -l | awk '{print $1}'`"
 			if [ $COUNT -ge $MIN_UNWATCHED_COUNT ]; then
 				FAILED=""
 			else
