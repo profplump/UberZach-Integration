@@ -2,6 +2,7 @@
 
 # Append the path to help find our OLA packages
 import sys
+sys.path.append('/usr/local/lib/python2.7/site-packages')
 sys.path.append('/opt/local/lib/python2.7/site-packages')
 sys.path.append('/opt/local/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/site-packages')
 
@@ -46,9 +47,12 @@ cmds      = {
 # Wrapper callback -- exit on errors
 # ====================================
 def DmxSent(state):
-  # Stop on errors
   if not state.Succeeded():
-    wrapper.Stop()
+    print 'Error: %s' % state.message
+
+    global wrapper
+    if wrapper:
+      wrapper.Stop()
 
 # ====================================
 # Main calculation
@@ -75,7 +79,7 @@ def SendDMXFrame():
   while (True):
     try:
       cmd = sock.recvfrom(max_mesg_len)[0]
-    except socket.error:
+    except socket.error, msg:
       break
     channel, duration, intensity, delay = string.split(cmd, ':')
     try:
@@ -117,6 +121,7 @@ def SendDMXFrame():
   
   # Update values for each channel
   for i in range(state_len):
+    print 'I', i
     delta = 0
     if (cmds['value'][i] != state[i]):
       if (cmds['delay'][i] > 0):
@@ -185,6 +190,8 @@ if (os.path.exists(cmd_file)):
 sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
 sock.bind(cmd_file)
 sock.setblocking(0)
+if (DEBUG):
+  print 'Opened socket: %s' % cmd_file
 
 # Start the DMX loop
 wrapper = ClientWrapper()

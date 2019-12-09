@@ -25,7 +25,8 @@ DEV="`ioreg -c IOSerialBSDClient | \
 	grep -C 12 "${TTY_ID}" | \
 	grep 'IODialinDevice' | \
 	cut -d '=' -f 2 | \
-	awk -F '"' '{print $2}'`"
+	awk -F '"' '{print $2}' | \
+	head -n 1`"
 if [ -z "${DEV}" ]; then
 	echo "Unable to find DEV for TTY_ID: ${TTY_ID}" 1>&2
 	exit 2
