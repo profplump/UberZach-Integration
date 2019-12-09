@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Build URL and cURL opts
+source ~/bin/video/pms/curl.sh
+
 # Skip
 if [ -z "${2}" ]; then
 	echo "CLI optimization disabled" 1>&2
@@ -27,4 +30,4 @@ while ~/bin/video/pms/isScanning.sh; do
 done
 
 # Optimize
-exec curl --silent --upload-file /dev/null 'http://localhost:32400/library/optimize'
+exec curl ${CURL_OPTS[@]} --upload-file /dev/null "${PMS_URL}/library/optimize"

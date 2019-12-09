@@ -1,36 +1,18 @@
 #!/bin/bash
 
+# Build URL and cURL opts
+source ~/bin/video/pms/curl.sh
+
 # Config
+RETRY_DELAY=30
 RESTART_DELAY=600
-UNWATCHED_SECTION="2"
+UNWATCHED_SECTION="28"
 UNWATCHED_SLEEP=30
 UNWATCHED_RETRIES=3
-MIN_UNWATCHED_COUNT=10
+MIN_UNWATCHED_COUNT=5
 MAX_MEM=$(( 14 * 1024 * 1024 )) # GB in kB
 ADMIN_EMAIL="zach@kotlarek.com"
 IFS=''
-CURL_TIMEOUT=15
-CURL_OPTS=(--silent --connect-timeout 5 --max-time $CURL_TIMEOUT)
-
-# Construct URL components from the environment
-if [ -z "${PMS_URL}" ]; then
-	if [ -z "${PMS_HOST}" ]; then
-		PMS_HOST="localhost"
-	fi
-	if [ -z "${PMS_PORT}" ]; then
-		PMS_PORT=32400
-	fi
-	PMS_URL="https://${PMS_HOST}:${PMS_PORT}"
-fi
-if [ -z "${PMS_TOKEN}" ]; then
-	echo "No PMS_TOKEN provided" 1>&2
-fi
-CURL_OPTS+=(-H "X-Plex-Token: ${PMS_TOKEN}")
-
-# Heady allows 0 unwatched
-if hostname | grep -qi heady; then
-	MIN_UNWATCHED_COUNT=0
-fi
 
 # Command-line config
 LOOP=-1
@@ -64,22 +46,22 @@ while [ $LOOP -ne 0 ]; do
 	fi
 
 	# Ask Plex for a list of unwatched TV series
-	UNWATCHED_TIMEOUT=$(( $CURL_TIMEOUT ))
 	if [ -z "${FAILED}" ]; then
-		UNWATCHED_URL="${PMS_URL}/library/sections/${UNWATCHED_SECTION}/all?type=2&unwatched=1&sort=titleSort:asc&X-Plex-Container-Start=0&X-Plex-Container-Size=10000"
 		TRY=1
 		FAILED="Too few unwatched series"
-		while [ $TRY -le $UNWATCHED_RETRIES ] && [ -n "${FAILED}" ]; do
-			TRY=$(( $TRY + 1 ))
-			PAGE="`curl ${CURL_OPTS[@]} --max-time "${UNWATCHED_TIMEOUT}" "${UNWATCHED_URL}" 2>&1`"
+		UNWATCHED_URL="${PMS_URL}/library/sections/${UNWATCHED_SECTION}/all?type=2&unwatched=1"
+			UNWATCHED_URL+="&X-Plex-Container-Start=0&X-Plex-Container-Size=$(( $MIN_UNWATCHED_COUNT + 2 ))"
+		while [ $TRY -le $UNWATCHED_RETRIES ]; do
+			PAGE="`curl ${CURL_OPTS[@]} "${UNWATCHED_URL}" 2>&1`"
 			COUNT="`echo "${PAGE}" | grep '</Directory>' | wc -l | awk '{print $1}'`"
 			if [ $COUNT -ge $MIN_UNWATCHED_COUNT ]; then
 				FAILED=""
-			else
-				sleep $UNWATCHED_SLEEP
-				FAILED="${FAILED} ${COUNT}"
-				UNWATCHED_TIMEOUT=$(( $UNWATCHED_TIMEOUT + $CURL_TIMEOUT ))
+				break
 			fi
+
+			sleep $RETRY_DELAY
+			FAILED="${FAILED} ${COUNT}"
+			TRY=$(( $TRY + 1 ))
 		done
 	fi
 
@@ -108,17 +90,6 @@ while [ $LOOP -ne 0 ]; do
 
 		# Give plex a breather to get restarted before we check again
 		sleep "${RESTART_DELAY}"
-
-		# Re-index (in the background)
-		~/bin/video/pms/optimize.sh &
-
-	# If Plex was super slow, optimize it
-	elif [ $UNWATCHED_TIMEOUT -gt $(( $CURL_TIMEOUT * $(( $UNWATCHED_RETRIES / 2 )) )) ]; then
-		ERR_MSG="PMS is slow (${UNWATCHED_TIMEOUT}). Optimizing..."
-		echo "${ERR_MSG}" 1>&2
-
-		# Re-index (in the background)
-		~/bin/video/pms/optimize.sh &
 	fi
 
 	# Sleep for the next loop or exit

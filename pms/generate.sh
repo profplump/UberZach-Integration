@@ -1,8 +1,7 @@
 #!/bin/bash
 
-BASE_URL="http://localhost:32400"
-
-IFS=$'\n'
+# Build URL and cURL opts
+source ~/bin/video/pms/curl.sh
 
 SECTION="${1}"
 if [ -z "${SECTION}" ] || [ $SECTION -lt 1 ] || [ $SECTION -gt 100 ]; then
@@ -10,17 +9,20 @@ if [ -z "${SECTION}" ] || [ $SECTION -lt 1 ] || [ $SECTION -gt 100 ]; then
 	exit 1
 fi
 
-SERIES="`curl --silent "${BASE_URL}/library/sections/${SECTION}/all" | \
+SERIES="`curl ${CURL_OPTS[@]} "${PMS_URL}/library/sections/${SECTION}/all" | \
 	grep 'key="/library/metadata/[0-9]*/children"' | \
 	sed 's%^.*key="\(/library/metadata/[0-9]*/children\)".*$%\1%'`"
 
+IFS=$'\n'
 for i in $SERIES; do
-	SEASONS="`curl --silent "${BASE_URL}${i}" | \
+	SEASONS="`curl ${CURL_OPTS[@]} "${PMS_URL}${i}" | \
 	grep 'key="/library/metadata/[0-9]*/children"' | \
 	sed 's%^.*key="\(/library/metadata/[0-9]*/children\)".*$%\1%'`"
 
+	IFS=$'\n'
 	for j in $SEASONS; do
-		EPISODES="`curl --silent "${BASE_URL}${j}" | \
+		IFS=''
+		EPISODES="`curl ${CURL_OPTS[@]} "${PMS_URL}${j}" | \
 		grep '<Video ' | \
 		sed 's%^.*ratingKey="\([0-9]*\)".*$%\1%'`"
 

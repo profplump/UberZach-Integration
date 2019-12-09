@@ -1,4 +1,8 @@
 #!/bin/bash
 
-curl --silent 'http://localhost:32400/library/sections' | \
+# Build URL and cURL opts
+source ~/bin/video/pms/curl.sh
+
+IFS=''
+curl ${CURL_OPTS[@]} "${PMS_URL}/library/sections" | \
 	grep '<Directory ' | sed 's%^.* key="\([0-9]*\)".*$%\1%'

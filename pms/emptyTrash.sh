@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Build URL and cURL opts
+source ~/bin/video/pms/curl.sh
+
 # Bail if the media share isn't mounted
 if ! ~/bin/video/isMediaMounted; then
 	exit 0
@@ -11,6 +14,7 @@ if ~/bin/video/pms/isScanning.sh; then
 fi
 
 # Empty the trash for each section
+IFS=$'\n'
 for i in `~/bin/video/pms/sections.sh`; do
-	curl --silent --upload-file /dev/null "http://localhost:32400/library/sections/${i}/emptyTrash"
+	curl ${CURL_OPTS[@]} --upload-file /dev/null "${PMS_URL}/library/sections/${i}/emptyTrash"
 done

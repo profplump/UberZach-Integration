@@ -22,21 +22,15 @@ if echo "${@}" | grep -q -E -- '--(section|item|directory|file)'; then
 	"${SCAN_CMD}" ${@}
 else
 	for i in `~/bin/video/pms/sections.sh`; do
-		"${SCAN_CMD}" --section "${i}" ${@}
+		if [ -n "${QUIET}" ]; then
+			"${SCAN_CMD}" --section "${i}" ${@} >/dev/null 2>&1
+		else
+			"${SCAN_CMD}" --section "${i}" ${@}
+		fi
 	done
-fi
-
-# Check the return code; kill the PMS if things did not go well
-if [ $? -ne 0 ]; then
-	~/bin/video/pms/killPMS.sh
 fi
 
 # Empty the trash if we scanned and conditions are safe
 if echo "${@}" | grep -q -- '--scan'; then
 	~/bin/video/pms/emptyTrash.sh
-fi
-
-# Force an optimization after deep scans
-if echo "${@}" | grep -q -- '--deep'; then
-	~/bin/video/pms/optimize.sh
 fi
