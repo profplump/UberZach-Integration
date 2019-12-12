@@ -121,7 +121,6 @@ def SendDMXFrame():
   
   # Update values for each channel
   for i in range(state_len):
-    print 'I', i
     delta = 0
     if (cmds['value'][i] != state[i]):
       if (cmds['delay'][i] > 0):
