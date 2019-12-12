@@ -14,9 +14,16 @@ if [ ! -x "${BIN}" ]; then
 fi
 
 # Unload the jerky version
-launchctl unload com.uberzach.ola.plist
+launchctl unload com.uberzach.ola.dmx.plist
 # Unload all deps, which will automatially stop when OLA does
 for i in com.uberzach.ola.*.plist; do
+	if [ "${i}" == "com.uberzach.ola.plist" ]; then
+		continue
+	elif [ "${i}" == "com.uberzach.ola.dmx.plist" ]; then
+		continue
+	elif [ "${i}" == "com.uberzach.ola.rave.plist" ]; then
+		continue
+	fi
 	launchctl unload "${i}"
 done
 
@@ -26,9 +33,17 @@ sleep 2
 
 # Reload all the deps
 for i in com.uberzach.ola.*.plist; do
+	if [ "${i}" == "com.uberzach.ola.plist" ]; then
+		continue
+	elif [ "${i}" == "com.uberzach.ola.dmx.plist" ]; then
+		continue
+	elif [ "${i}" == "com.uberzach.ola.rave.plist" ]; then
+		continue
+	fi
 	launchctl load "${i}"
 done
 
+launchctl list | grep uberzach
 echo
-echo "Success"
+echo "launchctl list | grep uberzach"
 exit 0
