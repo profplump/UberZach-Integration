@@ -55,7 +55,9 @@ if (basename($0) =~ /PROJECTOR/i) {
 	);
 } elsif (basename($0) =~ /AMPLIFIER/i) {
 	$DEV       = 'Amplifier';
+	$PORT      = '/dev/tty.usbserial-AK06MIYD';
 	$BLUETOOTH = 0;
+	$BAUD      = 9600;
 	$CRLF      = "\r";
 	$DELIMITER = "\r";
 	%CMDS      = (
@@ -81,12 +83,6 @@ if (basename($0) =~ /PROJECTOR/i) {
 		'INPUT_EXT'    => 'SDEXT.IN-1',
 
 	);
-
-	$PORT = `$ENV{'HOME'}/bin/video/serial/findDevice.sh 1d131000`;
-	$PORT =~ s/\s*$//;
-	if (!($PORT =~ /^\/dev\/tty\.usbserial/)) {
-		die("Unable to find serial device by USB location\n");
-	}
 
 	%STATUS_CMDS = (
 		'STATUS' => { 'MATCH' => [ qr/^PW/, qr/$CMDS{'ON'}/ ] },
