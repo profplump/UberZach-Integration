@@ -96,36 +96,9 @@ while (1) {
 
 	# Overall enable state
 	$enableLast = $enable;
-	$enable     = 0;
-	{
-		# Time
-		my (undef(), undef(), $hour, undef(), undef(), undef(), $wday, undef(), undef()) = localtime($now);
-
-		if ($exists{'OIL_DISABLE'}) {
-
-			# When explicitly disabled, overriding all else
-			$enable = 0;
-		} elsif ($exists{'OIL_ENABLE'} && $mtime{'OIL_ENABLE'} > $now - $ENABLE_TIMEOUT) {
-
-			# When explictly enabled, for $ENABLE_TIMEOUT seconds
-			$enable = 1;
-		} elsif ($elaspedPlay < $PLAYING_TIMEOUT) {
-
-			# When playing, and for $PLAYING_TIMEOUT seconds afterward
-			$enable = 1;
-		} elsif ($elaspedPause < $PLAYING_TIMEOUT) {
-
-			# When paused, and for $PLAYING_TIMEOUT seconds afterward
-			$enable = 1;
-		} elsif ($hour > 23 || $hour < 6) {
-
-			# Late nights
-			$enable = 1;
-		} elsif ($wday == 0 || $wday == 6) {
-
-			# Always-on weekends
-			$enable = 1;
-		}
+	$enable     = 1;
+	if ($exists{'OIL_DISABLE'}) {
+		$enable = 0;
 	}
 
 	# Calculate the new state
